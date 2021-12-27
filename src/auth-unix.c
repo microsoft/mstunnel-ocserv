@@ -45,7 +45,7 @@ unsigned found;
 	if (pwd != NULL) {
 		if (suggested != NULL) {
 			gid_t groups[MAX_GROUPS];
-			int ngroups = sizeof(groups)/sizeof(groups[0]);
+			int ngroups = ARRAY_SIZE(groups);
 			unsigned i;
 
 			ret = getgrouplist(username, pwd->pw_gid, groups, &ngroups);

@@ -1128,7 +1128,7 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 			hmac_components[2].data = &ws->session_start_time;
 			hmac_components[2].length = sizeof(ws->session_start_time);
 
-			generate_hmac(sizeof(s->hmac_key), s->hmac_key, sizeof(hmac_components) / sizeof(hmac_components[0]), hmac_components, (uint8_t*) ws->sec_auth_init_hmac);
+			generate_hmac(sizeof(s->hmac_key), s->hmac_key, ARRAY_SIZE(hmac_components), hmac_components, (uint8_t*) ws->sec_auth_init_hmac);
 
 			// Clear the HMAC key
 			safe_memset((uint8_t*)s->hmac_key, 0, sizeof(s->hmac_key));
