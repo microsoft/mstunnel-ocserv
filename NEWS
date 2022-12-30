@@ -1,5 +1,6 @@
 * Version 1.1.7 (unreleased)
 - Enhanced the seccomp filters for ARMv7 compatibility and musl libc
+- HTTP headers always capitalised as in RFC 9110
 
 
 * Version 1.1.6 (released 2022-02-17)

@@ -43,7 +43,7 @@
 int response_404(worker_st *ws, unsigned http_ver)
 {
 	if (cstp_printf(ws, "HTTP/1.%u 404 Not found\r\n", http_ver) < 0 ||
-	    cstp_printf(ws, "Content-length: %u\r\n", (unsigned)(sizeof(HTML_404) - 1)) < 0 ||
+	    cstp_printf(ws, "Content-Length: %u\r\n", (unsigned)(sizeof(HTML_404) - 1)) < 0 ||
 	    cstp_puts  (ws, "Connection: close\r\n\r\n") < 0 ||
 	    cstp_puts  (ws, HTML_404) < 0)
 		return -1;
