@@ -113,7 +113,7 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned flags)
 	if (proc->active_sid && !(flags & RPROC_QUIT)) {
 		if (session_close(&(s->sec_mod_instances[proc->sec_mod_instance_index]), proc) < 0) {
 			mslog(s, proc, LOG_ERR, "error closing session (communication with sec-mod issue)");
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 

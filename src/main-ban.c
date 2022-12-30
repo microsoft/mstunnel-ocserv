@@ -73,7 +73,7 @@ void *main_ban_db_init(main_server_st *s)
 	struct htable *db = talloc(s, struct htable);
 	if (db == NULL) {
 		fprintf(stderr, "error initializing ban DB\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	htable_init(db, rehash, NULL);

@@ -648,7 +648,7 @@ static void check_other_work(sec_mod_st *sec)
 		tls_cache_deinit(&sec->tls_db);
 		talloc_free(sec->config_pool);
 		talloc_free(sec->sec_mod_pool);
-		exit(0);
+		exit(EXIT_SUCCESS);
 	}
 
 	if (need_reload) {
@@ -792,7 +792,7 @@ static int load_keys(sec_mod_st *sec, unsigned force)
 		ret = load_pins(GETPCONFIG(sec), &vhost->pins);
 		if (ret < 0) {
 			seclog(sec, LOG_ERR, "error loading PIN files");
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 
 		/* Reminder: the number of private keys or their filenames cannot be changed on reload
@@ -802,7 +802,7 @@ static int load_keys(sec_mod_st *sec, unsigned force)
 			vhost->key = talloc_zero_size(sec, sizeof(*vhost->key) * vhost->perm_config.key_size);
 			if (vhost->key == NULL) {
 				seclog(sec, LOG_ERR, "error in memory allocation");
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 		}
 
@@ -924,13 +924,13 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 	sec_mod_pool = talloc_init("sec-mod");
 	if (sec_mod_pool == NULL) {
 		seclog(sec, LOG_ERR, "error in memory allocation");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	sec = talloc_zero(sec_mod_pool, sec_mod_st);
 	if (sec == NULL) {
 		seclog(sec, LOG_ERR, "error in memory allocation");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	sec->vconfig = vconfig;
@@ -966,7 +966,7 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 
 	if (sec_mod_client_db_init(sec) == NULL) {
 		seclog(sec, LOG_ERR, "error in client db initialization");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	sd = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -974,7 +974,7 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 		e = errno;
 		seclog(sec, LOG_ERR, "could not create socket '%s': %s", SOCKET_FILE,
 		       strerror(e));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	set_cloexec_flag(sd, 1);
 
@@ -984,7 +984,7 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 		e = errno;
 		seclog(sec, LOG_ERR, "could not bind socket '%s': %s", SOCKET_FILE,
 		       strerror(e));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	ret = chown(SOCKET_FILE, GETPCONFIG(sec)->uid, GETPCONFIG(sec)->gid);
@@ -999,13 +999,13 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 		e = errno;
 		seclog(sec, LOG_ERR, "could not listen to socket '%s': %s",
 		       SOCKET_FILE, strerror(e));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	ret = load_keys(sec, 1);
 	if (ret < 0) {
 		seclog(sec, LOG_ERR, "error loading private key files");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	sigprocmask(SIG_BLOCK, &blockset, &sig_default_set);
@@ -1046,7 +1046,7 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 			e = errno;
 			seclog(sec, LOG_ERR, "Error in pselect(): %s",
 			       strerror(e));
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 
 		/* we do a new allocation, to also use it as pool for the
@@ -1055,7 +1055,7 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 		buffer = talloc_size(sec, buffer_size);
 		if (buffer == NULL) {
 			seclog(sec, LOG_ERR, "error in memory allocation");
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 
 		/* we use two fds for communication with main. The synchronous is for
@@ -1065,7 +1065,7 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 			ret = serve_request_main(sec, cmd_fd_sync, buffer, buffer_size);
 			if (ret < 0 && ret == ERR_BAD_COMMAND) {
 				seclog(sec, LOG_ERR, "error processing sync command from main");
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 		}
 
@@ -1073,7 +1073,7 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 			ret = serve_request_main(sec, cmd_fd, buffer, buffer_size);
 			if (ret < 0 && ret == ERR_BAD_COMMAND) {
 				seclog(sec, LOG_ERR, "error processing async command from main");
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 		}
 

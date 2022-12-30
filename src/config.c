@@ -78,7 +78,7 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 #define READ_MULTI_LINE(varname, num) { \
 	if (_add_multi_line_val(pool, &varname, &num, value) < 0) { \
 		fprintf(stderr, ERRSTR"memory\n"); \
-		exit(1); \
+		exit(EXIT_FAILURE); \
 	}}
 
 #define READ_MULTI_BRACKET_LINE(varname, varname2, num) { \
@@ -88,7 +88,7 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 		varname2 = talloc_size(pool, sizeof(char*)*DEFAULT_CONFIG_ENTRIES); \
 		if (varname == NULL || varname2 == NULL) { \
 			fprintf(stderr, ERRSTR"memory\n"); \
-			exit(1); \
+			exit(EXIT_FAILURE); \
 		} \
 	} \
 	if (num < DEFAULT_CONFIG_ENTRIES) { \
@@ -204,7 +204,7 @@ static void check_for_duplicate_password_auth(struct perm_cfg_st *config, const 
 				break;
 			if (config->auth[i].type & AUTH_TYPE_USERNAME_PASS) {
 				fprintf(stderr, ERRSTR"%s: you cannot mix multiple password authentication methods\n", vhostname);
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 		}
 	}
@@ -234,7 +234,7 @@ static void figure_auth_funcs(void *pool, const char *vhostname,
 
 					if (config->auth[0].amod != NULL && avail_auth_types[i].mod != NULL) {
 						fprintf(stderr, ERRSTR"%s: you cannot mix multiple authentication methods of %s type\n", vhostname, auth[j]);
-						exit(1);
+						exit(EXIT_FAILURE);
 					}
 
 					if (config->auth[0].amod == NULL)
@@ -257,7 +257,7 @@ static void figure_auth_funcs(void *pool, const char *vhostname,
 
 			if (found == 0) {
 				fprintf(stderr, ERRSTR"%s: unknown or unsupported auth method: %s\n", vhostname, auth[j]);
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 			talloc_free(auth[j]);
 		}
@@ -283,7 +283,7 @@ static void figure_auth_funcs(void *pool, const char *vhostname,
 					x++;
 					if (x >= MAX_AUTH_METHODS) {
 						fprintf(stderr, ERRSTR"%s: you cannot enable more than %d authentication methods\n", vhostname, x);
-						exit(1);
+						exit(EXIT_FAILURE);
 					}
 					break;
 				}
@@ -291,7 +291,7 @@ static void figure_auth_funcs(void *pool, const char *vhostname,
 
 			if (found == 0) {
 				fprintf(stderr, ERRSTR"%s: unknown or unsupported auth method: %s\n", vhostname, auth[j]);
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 			talloc_free(auth[j]);
 		}
@@ -336,7 +336,7 @@ static void figure_acct_funcs(void *pool, const char *vhostname, struct perm_cfg
 
 			if ((avail_acct_types[i].mod->auth_types & config->auth[0].type) == 0) {
 				fprintf(stderr, ERRSTR"%s: you cannot mix the '%s' accounting method with the '%s' authentication method\n", vhostname, acct, config->auth[0].name);
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 
 			config->acct.amod = avail_acct_types[i].mod;
@@ -348,7 +348,7 @@ static void figure_acct_funcs(void *pool, const char *vhostname, struct perm_cfg
 
 	if (found == 0) {
 		fprintf(stderr, ERRSTR"%s: unknown or unsupported accounting method: %s\n", vhostname, acct);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	fprintf(stderr, NOTESTR"%ssetting '%s' as accounting method\n", vhostname, config->acct.name);
 }
@@ -366,7 +366,7 @@ static void parse_kkdcp(struct cfg_st *config, char **urlfw, unsigned urlfw_size
 	config->kkdcp = talloc_zero_size(config, urlfw_size*sizeof(kkdcp_st));
 	if (config->kkdcp == NULL) {
 		fprintf(stderr, ERRSTR"memory\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	config->kkdcp_size = 0;
@@ -380,7 +380,7 @@ static void parse_kkdcp(struct cfg_st *config, char **urlfw, unsigned urlfw_size
 		if (ret != 0) {
 			fprintf(stderr, ERRSTR"getaddrinfo(%s) failed: %s\n", server,
 				gai_strerror(ret));
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 
 		kkdcp = NULL;
@@ -399,7 +399,7 @@ static void parse_kkdcp(struct cfg_st *config, char **urlfw, unsigned urlfw_size
 
 		if (kkdcp->realms_size >= MAX_KRB_REALMS) {
 			fprintf(stderr, ERRSTR"reached maximum number (%d) of realms per URL\n", MAX_KRB_REALMS);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 
 		kkdcp_realm = &kkdcp->realms[kkdcp->realms_size];
@@ -487,7 +487,7 @@ static void append_iroutes_from_file(struct cfg_st *config, const char *file)
 
 	for (j=0;j<config->known_iroutes_size;j++) {
 		if (ip_route_sanity_check(config->known_iroutes, &config->known_iroutes[j]) != 0)
-			exit(1);
+			exit(EXIT_FAILURE);
 	}
 
 	return;
@@ -555,12 +555,12 @@ static void cfg_new(struct vhost_cfg_st *vhost, unsigned reload)
 {
 	vhost->perm_config.config = talloc_zero(vhost->pool, struct cfg_st);
 	if (vhost->perm_config.config == NULL)
-		exit(1);
+		exit(EXIT_FAILURE);
 
 	vhost->perm_config.config->usage_count = talloc_zero(vhost->perm_config.config, int);
 	if (vhost->perm_config.config->usage_count == NULL) {
 		fprintf(stderr, ERRSTR"memory\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	apply_default_conf(vhost, reload);
@@ -572,7 +572,7 @@ static vhost_cfg_st *vhost_add(void *pool, struct list_head *head, const char *n
 
 	vhost = talloc_zero(pool, struct vhost_cfg_st);
 	if (vhost == NULL)
-		exit(1);
+		exit(EXIT_FAILURE);
 	vhost->pool = vhost;
 
 	cfg_new(vhost, reload);
@@ -581,7 +581,7 @@ static vhost_cfg_st *vhost_add(void *pool, struct list_head *head, const char *n
 		vhost->name = talloc_strdup(vhost, name);
 		if (vhost->name == NULL) {
 			fprintf(stderr, ERRSTR"memory\n");
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -1082,7 +1082,7 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 		// Don't use sanitized input since http header values can contain optional trailing blanks and double quotes
 		if (_add_multi_line_val(pool, &(config->included_http_headers), &(config->included_http_headers_size), _value) < 0) {
 			fprintf(stderr, ERRSTR"memory\n");
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	} else if (strcmp(name, "route") == 0) {
 		READ_MULTI_LINE(config->network.routes, config->network.routes_size);
@@ -1152,7 +1152,7 @@ static void replace_file_with_snapshot(char ** file_name)
 			*file_name,
 			&snapshot_file_name) < 0) {
 		fprintf(stderr, ERRSTR"cannot find snapshot for file %s\n", *file_name);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	talloc_free(*file_name);
@@ -1187,13 +1187,13 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 		if ((snapshot_lookup_filename(config_snapshot, file, &snapshot_file) < 0) &&
 			(snapshot_lookup_filename(config_snapshot, OLD_DEFAULT_CFG_FILE, &snapshot_file) < 0)) {
 			fprintf(stderr, ERRSTR"snapshot_lookup failed for file %s\n", file);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 
 		ret = ini_parse(snapshot_file, cfg_ini_handler, &ctx);
 		if (ret != 0) {
 			CONFIG_ERROR(file, ret);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 		talloc_free(snapshot_file);
 
@@ -1211,7 +1211,7 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 
 		if (local_cfg_file == NULL) {
 			fprintf(stderr, ERRSTR"no config file!\n");
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 
 		/* parse configuration
@@ -1224,13 +1224,13 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 
 		if (ret != 0) {
 			CONFIG_ERROR(local_cfg_file, ret);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 
 		ret = snapshot_create(config_snapshot, local_cfg_file);
 		if (ret < 0){
 			fprintf(stderr, ERRSTR"cannot snapshot config file %s\n", local_cfg_file);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 		list_for_each(head, vhost, list) {
 			size_t index;
@@ -1247,7 +1247,7 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 
 	if (local_cfg_file == NULL) {
 		fprintf(stderr, ERRSTR"no config file!\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	/* parse configuration
@@ -1260,7 +1260,7 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 
 	if (ret != 0) {
 		CONFIG_ERROR(local_cfg_file, ret);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 #endif
 
@@ -1274,7 +1274,7 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 		if (vhost->auth_init == 0) {
 			if (vhost->auth_size == 0) {
 				fprintf(stderr, ERRSTR"%sthe 'auth' configuration option was not specified!\n", PREFIX_VHOST(vhost));
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 
 			figure_auth_funcs(vhost, PREFIX_VHOST(vhost), &vhost->perm_config, vhost->auth, vhost->auth_size, 1);
@@ -1346,7 +1346,7 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 
 	if (vhost->perm_config.auth[0].enabled == 0) {
 		fprintf(stderr, ERRSTR"%sno authentication method was specified!\n", PREFIX_VHOST(vhost));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (vhost->perm_config.socket_file_prefix == NULL) {
@@ -1355,7 +1355,7 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 		} else {
 			/* The 'socket-file' is not mandatory on main server */
 			fprintf(stderr, ERRSTR"%sthe 'socket-file' configuration option must be specified!\n", PREFIX_VHOST(vhost));
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -1365,38 +1365,38 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 				vhost->perm_config.port = defvhost->perm_config.port;
 		} else {
 			fprintf(stderr, ERRSTR"%sthe tcp-port option is mandatory!\n", PREFIX_VHOST(vhost));
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 
 	if (vhost->perm_config.cert_size == 0 || vhost->perm_config.key_size == 0) {
 		fprintf(stderr, ERRSTR"%sthe 'server-cert' and 'server-key' configuration options must be specified!\n", PREFIX_VHOST(vhost));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (config->network.ipv4 == NULL && config->network.ipv6 == NULL) {
 		fprintf(stderr, ERRSTR"%sno ipv4-network or ipv6-network options set.\n", PREFIX_VHOST(vhost));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (config->network.ipv4 != NULL && config->network.ipv4_netmask == NULL) {
 		fprintf(stderr, ERRSTR"%sno mask found for IPv4 network.\n", PREFIX_VHOST(vhost));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (config->network.ipv6 != NULL && config->network.ipv6_prefix == 0) {
 		fprintf(stderr, ERRSTR"%sno prefix found for IPv6 network.\n", PREFIX_VHOST(vhost));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (config->banner && strlen(config->banner) > MAX_BANNER_SIZE) {
 		fprintf(stderr, ERRSTR"%sbanner size is too long\n", PREFIX_VHOST(vhost));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (vhost->perm_config.cert_size != vhost->perm_config.key_size) {
 		fprintf(stderr, ERRSTR"%sthe specified number of keys doesn't match the certificates\n", PREFIX_VHOST(vhost));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if ((vhost->perm_config.auth[0].type & AUTH_TYPE_CERTIFICATE) && vhost->perm_config.auth_methods == 1) {
@@ -1416,13 +1416,13 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 
 	if (config->cert_req != 0 && config->cert_user_oid == NULL) {
 		fprintf(stderr, ERRSTR"%sa certificate is requested by the option 'cert-user-oid' is not set\n", PREFIX_VHOST(vhost));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (config->cert_req != 0 && config->cert_user_oid != NULL) {
 		if (!c_isdigit(config->cert_user_oid[0]) && strcmp(config->cert_user_oid, "SAN(rfc822name)") != 0) {
 			fprintf(stderr, ERRSTR"%sthe option 'cert-user-oid' has a unsupported value\n", PREFIX_VHOST(vhost));
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -1441,12 +1441,12 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 
 			if (config->xml_config_hash == NULL) {
 				fprintf(stderr, ERRSTR"%scannot open file '%s'\n", PREFIX_VHOST(vhost), path);
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 		}
 		if (config->xml_config_hash == NULL) {
 			fprintf(stderr, ERRSTR"%scannot open file '%s'\n", PREFIX_VHOST(vhost), config->xml_config_file);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 #endif
@@ -1474,12 +1474,12 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 	if (config->network.ipv6_prefix && config->network.ipv6_prefix >= config->network.ipv6_subnet_prefix) {
 		fprintf(stderr, ERRSTR"%sthe subnet prefix (%u) cannot be smaller or equal to network's (%u)\n",
 				PREFIX_VHOST(vhost), config->network.ipv6_subnet_prefix, config->network.ipv6_prefix);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (!vhost->name && config->network.name[0] == 0) {
 		fprintf(stderr, ERRSTR"%sthe 'device' configuration option must be specified!\n", PREFIX_VHOST(vhost));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (config->mobile_dpd == 0)
@@ -1495,7 +1495,7 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 	if (config->match_dtls_and_tls) {
 		if (config->dtls_legacy) {
 			fprintf(stderr, ERRSTR"%s'match-tls-dtls-ciphers' cannot be applied when 'dtls-legacy' or 'cisco-client-compat' is on\n", PREFIX_VHOST(vhost));
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -1520,7 +1520,7 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 
 	for (j=0;j<config->network.routes_size;j++) {
 		if (ip_route_sanity_check(config->network.routes, &config->network.routes[j]) != 0)
-			exit(1);
+			exit(EXIT_FAILURE);
 
 		if (strcmp(config->network.routes[j], "0.0.0.0/0") == 0 ||
 		    strcmp(config->network.routes[j], "default") == 0) {
@@ -1534,13 +1534,13 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 
 	for (j=0;j<config->network.no_routes_size;j++) {
 		if (ip_route_sanity_check(config->network.no_routes, &config->network.no_routes[j]) != 0)
-			exit(1);
+			exit(EXIT_FAILURE);
 	}
 
 	for (j=0;j<config->network.dns_size;j++) {
 		if (strcmp(config->network.dns[j], "local") == 0) {
 			fprintf(stderr, ERRSTR"%sthe 'local' DNS keyword is no longer supported.\n", PREFIX_VHOST(vhost));
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -1548,7 +1548,7 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 		if (vhost->perm_config.sup_config_type != SUP_CONFIG_FILE) {
 			fprintf(stderr, ERRSTR"%sspecified config-per-user or config-per-group but supplemental config is '%s'\n",
 				PREFIX_VHOST(vhost), sup_config_name(vhost->perm_config.sup_config_type));
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -1630,10 +1630,10 @@ int cmd_parser (void *pool, int argc, char **argv, struct list_head *head, bool 
 				break;
 			case 'h':
 				usage();
-				exit(0);
+				exit(EXIT_SUCCESS);
 			case 'v':
 				print_version();
-				exit(0);
+				exit(EXIT_SUCCESS);
 			case 'x':
 				vhost->perm_config.pr_dumpable = 1;
 				break;
@@ -1642,19 +1642,19 @@ int cmd_parser (void *pool, int argc, char **argv, struct list_head *head, bool 
 
 	if (optind != argc) {
 		fprintf(stderr, ERRSTR"no additional command line options are allowed\n\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (access(cfg_file, R_OK) != 0) {
 		fprintf(stderr, ERRSTR"cannot access config file: %s\n", cfg_file);
 		fprintf(stderr, "Usage: %s -c [config]\nUse %s --help for more information.\n", argv[0], argv[0]);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	parse_cfg_file(pool, cfg_file, head, worker ? CFG_FLAG_WORKER : 0);
 
 	if (test_only)
-		exit(0);
+		exit(EXIT_SUCCESS);
 
 	return 0;
 
@@ -1809,7 +1809,7 @@ void write_pid_file(void)
 	fp = fopen(pid_file, "w");
 	if (fp == NULL) {
 		fprintf(stderr, ERRSTR"cannot open pid file '%s'\n", pid_file);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	fprintf(fp, "%u", (unsigned)getpid());
@@ -2009,7 +2009,7 @@ const char *secmod_socket_file_name(struct perm_cfg_st *perm_config)
 
 	ret = gnutls_rnd(GNUTLS_RND_NONCE, &rnd, sizeof(rnd));
 	if (ret < 0)
-		exit(1);
+		exit(EXIT_FAILURE);
 
 	/* make socket name */
 	snprintf(secmod_socket_file_name_socket_file, sizeof(secmod_socket_file_name_socket_file), "%s.%x",

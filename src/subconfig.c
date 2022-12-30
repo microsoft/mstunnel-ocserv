@@ -63,7 +63,7 @@ unsigned expand_brackets_string(void *pool, const char *str, subcfg_val_st out[M
 		p2 = strchr(p, '=');
 		if (p2 == NULL) {
 			fprintf(stderr, "error parsing %s\n", str);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 		len = p2 - p;
 
@@ -76,7 +76,7 @@ unsigned expand_brackets_string(void *pool, const char *str, subcfg_val_st out[M
 			p3 = strchr(p2, ']');
 			if (p3 == NULL) {
 				fprintf(stderr, "error parsing %s\n", str);
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 			finish = 1;
 		}
@@ -125,17 +125,17 @@ void *gssapi_get_brackets_string(void *pool, struct perm_cfg_st *config, const c
 			additional->ticket_freshness_secs = atoi(vals[i].value);
 			if (additional->ticket_freshness_secs == 0) {
 				fprintf(stderr, "Invalid value for '%s': %s\n", vals[i].name, vals[i].value);
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 		} else if (c_strcasecmp(vals[i].name, "gid-min") == 0) {
 			additional->gid_min = atoi(vals[i].value);
 			if (additional->gid_min < 0) {
 				fprintf(stderr, "error in gid-min value: %d\n", additional->gid_min);
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 		} else {
 			fprintf(stderr, "unknown option '%s'\n", vals[i].name);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 	free_expanded_brackets_string(vals, vals_size);
@@ -161,7 +161,7 @@ void *get_brackets_string1(void *pool, const char *str)
 		p2 = strchr(p, ']');
 		if (p2 == NULL) {
 			fprintf(stderr, "error parsing %s\n", str);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -196,7 +196,7 @@ static void *get_brackets_string2(void *pool, const char *str)
 		p2 = strchr(p, ']');
 		if (p2 == NULL) {
 			fprintf(stderr, "error parsing %s\n", str);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -226,7 +226,7 @@ void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config, const c
 		if (p != NULL) {
 			if (strcasecmp(p, "groupconfig") != 0) {
 				fprintf(stderr, "No known configuration option: %s\n", p);
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 			config->sup_config_type = SUP_CONFIG_RADIUS;
 		}
@@ -245,7 +245,7 @@ void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config, const c
 					config->sup_config_type = SUP_CONFIG_RADIUS;
 			} else {
 				fprintf(stderr, "unknown option '%s'\n", vals[i].name);
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 		}
 		free_expanded_brackets_string(vals, vals_size);
@@ -253,7 +253,7 @@ void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config, const c
 
 	if (additional->config == NULL) {
 		fprintf(stderr, "No radius configuration specified: %s\n", str);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	return additional;
@@ -279,11 +279,11 @@ void *pam_get_brackets_string(void *pool, struct perm_cfg_st *config, const char
 			additional->gid_min = atoi(vals[i].value);
 			if (additional->gid_min < 0) {
 				fprintf(stderr, "error in gid-min value: %d\n", additional->gid_min);
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 		} else {
 			fprintf(stderr, "unknown option '%s'\n", vals[i].name);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -319,7 +319,7 @@ void *plain_get_brackets_string(void *pool, struct perm_cfg_st *config, const ch
 #endif
 			} else {
 				fprintf(stderr, "unknown option '%s'\n", vals[i].name);
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 		}
 		free_expanded_brackets_string(vals, vals_size);
@@ -327,7 +327,7 @@ void *plain_get_brackets_string(void *pool, struct perm_cfg_st *config, const ch
 
 	if (additional->passwd == NULL && additional->otp_file == NULL) {
 		fprintf(stderr, "plain: no password or OTP file specified\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	return additional;

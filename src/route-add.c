@@ -51,7 +51,7 @@ int ret, status = 0;
 		ret = execl("/bin/sh", "sh", "-c", cmd, NULL);
 		if (ret == -1) {
 			mslog(s, proc, LOG_ERR, "Could not execute route script %s", cmd);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 
 		exit(77);

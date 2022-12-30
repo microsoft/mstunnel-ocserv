@@ -68,7 +68,7 @@ static void plain_vhost_init(void **vctx, void *pool, void *additional)
 
 	if (config == NULL) {
 		fprintf(stderr, "plain: no configuration passed!\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	*vctx = (void*)config;

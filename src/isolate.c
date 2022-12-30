@@ -32,7 +32,7 @@ void init_fd_limits_default(main_server_st * s)
 	int ret = getrlimit(RLIMIT_NOFILE, &s->fd_limits_default_set);
 	if (ret < 0) {
 		fprintf(stderr, "error in getrlimit: %s\n", strerror(errno));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 #endif
 }
@@ -130,7 +130,7 @@ void drop_privileges(main_server_st * s)
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "cannot chdir to %s: %s",
 			      GETPCONFIG(s)->chroot_dir, strerror(e));
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 
 		ret = chroot(GETPCONFIG(s)->chroot_dir);
@@ -138,7 +138,7 @@ void drop_privileges(main_server_st * s)
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "cannot chroot to %s: %s",
 			      GETPCONFIG(s)->chroot_dir, strerror(e));
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -148,7 +148,7 @@ void drop_privileges(main_server_st * s)
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "cannot set gid to %d: %s\n",
 			      (int)GETPCONFIG(s)->gid, strerror(e));
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 
 		ret = setgroups(1, &GETPCONFIG(s)->gid);
@@ -156,7 +156,7 @@ void drop_privileges(main_server_st * s)
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "cannot set groups to %d: %s\n",
 			      (int)GETPCONFIG(s)->gid, strerror(e));
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -166,7 +166,7 @@ void drop_privileges(main_server_st * s)
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "cannot set uid to %d: %s\n",
 			      (int)GETPCONFIG(s)->uid, strerror(e));
-			exit(1);
+			exit(EXIT_FAILURE);
 
 		}
 	}

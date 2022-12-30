@@ -227,19 +227,19 @@ void ocsigaltstack(struct worker_st *ws)
 	if (posix_memalign((void**)&ss.ss_sp, getpagesize(), SIGSTKSZ) != 0) {
 		oclog(ws, LOG_ERR,
 		      "could not allocate memory for signal stack");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	if (mprotect(ss.ss_sp, SIGSTKSZ, PROT_READ|PROT_WRITE) == -1) {
 		e = errno;
 		oclog(ws, LOG_ERR, "mprotect: %s\n", strerror(e));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	ss.ss_size = SIGSTKSZ;
 	ss.ss_flags = 0;
 	if (sigaltstack(&ss, NULL) == -1) {
 		e = errno;
 		oclog(ws, LOG_ERR, "sigaltstack: %s\n", strerror(e));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 #endif
 }

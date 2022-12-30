@@ -86,14 +86,14 @@ static void radius_vhost_init(void **_vctx, void *pool, void *additional)
 
 	if (rc_read_dictionary(vctx->rh, rc_conf_str(vctx->rh, "dictionary")) != 0) {
 		fprintf(stderr, "error reading the radius dictionary\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	*_vctx = vctx;
 
 	return;
  fail:
 	fprintf(stderr, "radius initialization error\n");
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 static void radius_vhost_deinit(void *_vctx)

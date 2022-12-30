@@ -273,7 +273,7 @@ static int handle_reset_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *pa
 
 static int handle_exit_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params)
 {
-	exit(0);
+	exit(EXIT_SUCCESS);
 }
 
 /* checks whether an input command of type "  list   users" matches
@@ -410,7 +410,7 @@ static char *merge_args(int argc, char **argv)
 	data = malloc(size);
 	if (data == NULL) {
 		fprintf(stderr, "memory error\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	p = data;
@@ -565,7 +565,7 @@ int main(int argc, char **argv)
 	gl_pool = talloc_init("occtl");
 	if (gl_pool == NULL) {
 		fprintf(stderr, "talloc init error\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	ocsignal(SIGPIPE, SIG_IGN);
@@ -597,7 +597,7 @@ int main(int argc, char **argv)
 			} else if (argv[1][1] == 'v'
 			    || (argv[1][1] == '-' && argv[1][2] == 'v')) {
 				version();
-				exit(0);
+				exit(EXIT_SUCCESS);
 			} else if (argc > 2 && (argv[1][1] == 's'
 			    || (argv[1][1] == '-' && argv[1][2] == 's'))) {
 				file = talloc_strdup(gl_pool, argv[2]);
@@ -611,7 +611,7 @@ int main(int argc, char **argv)
 				argc -= 2;
 			} else {
 				usage();
-				exit(0);
+				exit(EXIT_SUCCESS);
 			}
   		}
 

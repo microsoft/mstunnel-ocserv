@@ -52,7 +52,7 @@ void sigsys_action(int sig, siginfo_t * info, void* ucontext)
 {
 	char * call_addr = *backtrace_symbols(&info->si_call_addr, 1);
 	fprintf(stderr, "Function %s called disabled syscall %d\n", call_addr, info->si_syscall);
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 int set_sigsys_handler(struct worker_st *ws)

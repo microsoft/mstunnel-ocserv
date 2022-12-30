@@ -65,7 +65,7 @@ static void oidc_vhost_init(void **vctx, void *pool, void *additional)
 	vc = talloc(pool, struct oidc_vctx_st);
 	if (vc == NULL) {
 		syslog(LOG_ERR, "ocserv-oidc allocation failure!\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	vc->config = NULL;
 	vc->jwks = NULL;
@@ -73,31 +73,31 @@ static void oidc_vhost_init(void **vctx, void *pool, void *additional)
 
 	if (config == NULL) {
 		syslog(LOG_ERR, "ocserv-oidc: no configuration passed!\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	vc->config = json_load_file(config, 0, &err);
 	if (vc->config == NULL) {
 		syslog(LOG_ERR, "ocserv-oidc: failed to load config file: %s\n", config);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (!json_object_get(vc->config, "openid_configuration_url")) {
 		syslog(LOG_ERR,
 		       "ocserv-oidc: config file missing openid_configuration_url\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (!json_object_get(vc->config, "required_claims")) {
 		syslog(LOG_ERR,
 		       "ocserv-oidc: config file missing required_claims\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (!json_object_get(vc->config, "user_name_claim")) {
 		syslog(LOG_ERR,
 		       "ocserv-oidc: config file missing user_name_claim\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (json_object_get(vc->config, "minimum_jwk_refresh_time")) {
@@ -108,7 +108,7 @@ static void oidc_vhost_init(void **vctx, void *pool, void *additional)
 
 	if (!oidc_fetch_oidc_keys(vc)) {
 		syslog(LOG_ERR, "ocserv-oidc: failed to load jwks\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	*vctx = (void *)vc;

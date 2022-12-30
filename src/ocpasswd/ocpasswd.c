@@ -71,7 +71,7 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 	if (ret < 0) {
 		fprintf(stderr, "Error generating nonce: %s\n",
 			gnutls_strerror(ret));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 #ifdef TRY_SHA2_CRYPT
@@ -97,26 +97,26 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 	}
 	if (cr_passwd == NULL) {
 		fprintf(stderr, "Error in crypt().\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	tmp_passwd_len = fpasswd_len + 5;
 	tmp_passwd = malloc(tmp_passwd_len);
 	if (tmp_passwd == NULL) {
 		fprintf(stderr, "memory error\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	snprintf(tmp_passwd, tmp_passwd_len, "%s.tmp", fpasswd);
 	if (stat(tmp_passwd, &st) != -1) {
 		fprintf(stderr, "file '%s' is locked.\n", fpasswd);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	fd2 = fopen(tmp_passwd, "w");
 	if (fd2 == NULL) {
 		fprintf(stderr, "Cannot open '%s' for writing.\n", tmp_passwd);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	fd = fopen(fpasswd, "r");
@@ -149,7 +149,7 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 	ret = rename(tmp_passwd, fpasswd);
 	if (ret < 0) {
 		fprintf(stderr, "Cannot write to '%s'.\n", fpasswd);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	free(tmp_passwd);
 }
@@ -174,19 +174,19 @@ delete_user(const char *fpasswd, const char *username)
 	snprintf(tmp_passwd, tmp_passwd_len, "%s.tmp", fpasswd);
 	if (stat(tmp_passwd, &st) != -1) {
 		fprintf(stderr, "file '%s' is locked.\n", fpasswd);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	fd = fopen(fpasswd, "r");
 	if (fd == NULL) {
 		fprintf(stderr, "Cannot open '%s' for reading.\n", fpasswd);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	fd2 = fopen(tmp_passwd, "w");
 	if (fd2 == NULL) {
 		fprintf(stderr, "Cannot open '%s' for writing.\n", tmp_passwd);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	line = NULL;
@@ -210,7 +210,7 @@ delete_user(const char *fpasswd, const char *username)
 	ret = rename(tmp_passwd, fpasswd);
 	if (ret == -1) {
 		fprintf(stderr, "Cannot write to '%s'.\n", fpasswd);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	free(tmp_passwd);
 }
@@ -235,19 +235,19 @@ lock_user(const char *fpasswd, const char *username)
 	snprintf(tmp_passwd, tmp_passwd_len, "%s.tmp", fpasswd);
 	if (stat(tmp_passwd, &st) != -1) {
 		fprintf(stderr, "file '%s' is locked.\n", fpasswd);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	fd = fopen(fpasswd, "r");
 	if (fd == NULL) {
 		fprintf(stderr, "Cannot open '%s' for reading.\n", fpasswd);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	fd2 = fopen(tmp_passwd, "w");
 	if (fd2 == NULL) {
 		fprintf(stderr, "Cannot open '%s' for writing.\n", tmp_passwd);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	line = NULL;
@@ -283,7 +283,7 @@ lock_user(const char *fpasswd, const char *username)
 	ret = rename(tmp_passwd, fpasswd);
 	if (ret == -1) {
 		fprintf(stderr, "Cannot write to '%s'.\n", fpasswd);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	free(tmp_passwd);
 }
@@ -308,19 +308,19 @@ unlock_user(const char *fpasswd, const char *username)
 	snprintf(tmp_passwd, tmp_passwd_len, "%s.tmp", fpasswd);
 	if (stat(tmp_passwd, &st) != -1) {
 		fprintf(stderr, "file '%s' is locked.\n", fpasswd);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	fd = fopen(fpasswd, "r");
 	if (fd == NULL) {
 		fprintf(stderr, "Cannot open '%s' for reading.\n", fpasswd);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	fd2 = fopen(tmp_passwd, "w");
 	if (fd2 == NULL) {
 		fprintf(stderr, "Cannot open '%s' for writing.\n", tmp_passwd);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	line = NULL;
@@ -354,7 +354,7 @@ unlock_user(const char *fpasswd, const char *username)
 	ret = rename(tmp_passwd, fpasswd);
 	if (ret == -1) {
 		fprintf(stderr, "Cannot write to '%s'.\n", fpasswd);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	free(tmp_passwd);
 }
@@ -418,7 +418,7 @@ int main(int argc, char **argv)
 
 	if ((ret = gnutls_global_init()) < 0) {
 		fprintf(stderr, "global_init: %s\n", gnutls_strerror(ret));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	umask(066);
@@ -432,44 +432,44 @@ int main(int argc, char **argv)
 			case 'c':
 				if (fpasswd) {
 					fprintf(stderr, "-c option cannot be specified multiple time\n");
-					exit(1);
+					exit(EXIT_FAILURE);
 				}
 				fpasswd = strdup(optarg);
 				break;
 			case 'g':
 				if (groupname) {
 					fprintf(stderr, "-g option cannot be specified multiple time\n");
-					exit(1);
+					exit(EXIT_FAILURE);
 				}
 				groupname = strdup(optarg);
 				break;
 			case 'd':
 				if (flags) {
 					usage();
-					exit(1);
+					exit(EXIT_FAILURE);
 				}
 				flags |= FLAG_DELETE;
 				break;
 			case 'u':
 				if (flags) {
 					usage();
-					exit(1);
+					exit(EXIT_FAILURE);
 				}
 				flags |= FLAG_UNLOCK;
 				break;
 			case 'l':
 				if (flags) {
 					usage();
-					exit(1);
+					exit(EXIT_FAILURE);
 				}
 				flags |= FLAG_LOCK;
 				break;
 			case 'h':
 				usage();
-				exit(0);
+				exit(EXIT_SUCCESS);
 			case 'v':
 				version();
-				exit(0);
+				exit(EXIT_SUCCESS);
 		}
 	}
 
@@ -477,7 +477,7 @@ int main(int argc, char **argv)
 		username = argv[optind++];
 	} else {
 		usage();
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (!groupname)
@@ -499,7 +499,7 @@ int main(int argc, char **argv)
 			passwd = getpass("Enter password: ");
 			if (passwd == NULL) {
 				fprintf(stderr, "Please specify a password\n");
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 
 
@@ -507,12 +507,12 @@ int main(int argc, char **argv)
 			passwd = getpass("Re-enter password: ");
 			if (passwd == NULL) {
 				fprintf(stderr, "Please specify a password\n");
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 
 			if (p2 == NULL || strcmp(passwd, p2) != 0) {
 				fprintf(stderr, "Passwords do not match\n");
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 			free(p2);
 		} else {
@@ -520,7 +520,7 @@ int main(int argc, char **argv)
 			l = getline(&passwd, &i, stdin);
 			if (l <= 1) {
 				fprintf(stderr, "Please specify a password\n");
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 
 			free_passwd = 1;
