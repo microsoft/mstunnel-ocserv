@@ -358,7 +358,7 @@ const char* script, *next_script = NULL;
 			snprintf(remote, sizeof(remote), "%lu", (unsigned long)proc->bytes_out);
 			setenv("STATS_BYTES_OUT", remote, 1);
 			if (proc->conn_time > 0) {
-				snprintf(remote, sizeof(remote), "%lu", (unsigned long)(time(0)-proc->conn_time));
+				snprintf(remote, sizeof(remote), "%lu", (unsigned long)(time(NULL)-proc->conn_time));
 				setenv("STATS_DURATION", remote, 1);
 			}
 			setenv("REASON", "disconnect", 1);

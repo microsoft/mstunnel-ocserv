@@ -607,7 +607,7 @@ static void reset_stats(main_server_st *s, time_t now)
 static void update_main_stats(main_server_st * s, struct proc_st *proc)
 {
 	uint64_t kb_in, kb_out;
-	time_t now = time(0), stime;
+	time_t now = time(NULL), stime;
 	vhost_cfg_st *vhost = proc->vhost;
 
 	if (vhost->perm_config.stats_reset_time != 0 &&
@@ -668,7 +668,7 @@ int session_close(sec_mod_instance_st * sec_mod_instance, struct proc_st *proc)
 	CliStatsMsg *msg = NULL;
 	PROTOBUF_ALLOCATOR(pa, proc);
 
-	ireq.uptime = time(0)-proc->conn_time;
+	ireq.uptime = time(NULL) - proc->conn_time;
 	ireq.has_uptime = 1;
 	ireq.bytes_in = proc->bytes_in;
 	ireq.has_bytes_in = 1;

@@ -579,7 +579,7 @@ static void handle_sigterm(int signo)
 static void send_stats_to_main(sec_mod_st *sec)
 {
 	int ret;
-	time_t now = time(0);
+	time_t now = time(NULL);
 	SecmStatsMsg msg = SECM_STATS_MSG__INIT;
 
 	if (GETPCONFIG(sec)->stats_reset_time != 0 &&
@@ -787,7 +787,7 @@ static int load_keys(sec_mod_st *sec, unsigned force)
 				continue;
 		}
 
-		vhost->cert_last_access = time(0);
+		vhost->cert_last_access = time(NULL);
 
 		ret = load_pins(GETPCONFIG(sec), &vhost->pins);
 		if (ret < 0) {

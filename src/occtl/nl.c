@@ -84,7 +84,7 @@ void print_iface_stats(const char *iface, time_t since, FILE * out, cmd_params_s
 {
 	uint64_t tx, rx;
 	char buf1[32], buf2[32];
-	time_t diff = time(0) - since;
+	time_t diff = time(NULL) - since;
 	int ret;
 	struct rtnl_link *rlink = NULL;
 

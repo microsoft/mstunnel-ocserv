@@ -721,7 +721,7 @@ int sfd = -1;
 	}
 
 	/* search for the IP and the session ID in all procs */
-	now = time(0);
+	now = time(NULL);
 
 	if (match_ip_only == 0) {
 		proc_to_send = proc_search_dtls_id(s, session_id, session_id_size);
@@ -1116,7 +1116,7 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 			set_cloexec_flag(fd, false);
 			ws->conn_fd = fd;
 			ws->conn_type = stype;
-			ws->session_start_time = time(0);
+			ws->session_start_time = time(NULL);
 
 			human_addr2((const struct sockaddr *)&ws->remote_addr, ws->remote_addr_len, ws->remote_ip_str, sizeof(ws->remote_ip_str), 0);
 			human_addr2((const struct sockaddr *)&ws->our_addr, ws->our_addr_len, ws->our_ip_str, sizeof(ws->our_ip_str), 0);
@@ -1347,7 +1347,7 @@ int main(int argc, char** argv)
 	}
 	s->main_pool = main_pool;
 	s->config_pool = config_pool;
-	s->stats.start_time = s->stats.last_reset = time(0);
+	s->stats.start_time = s->stats.last_reset = time(NULL);
 	s->top_fd = -1;
 	s->ctl_fd = -1;
 	s->netns.default_fd = -1;

@@ -562,7 +562,7 @@ void exit_worker_reason(worker_st * ws, unsigned reason)
 {
 	/* send statistics to parent */
 	if (ws->auth_state == S_AUTH_COMPLETE) {
-		send_stats_to_secmod(ws, time(0), reason);
+		send_stats_to_secmod(ws, time(NULL), reason);
 	}
 
 	if (ws->ban_points > 0)
@@ -1873,7 +1873,7 @@ static int connect_handler(worker_st * ws)
 	unsigned rnd;
 	unsigned i;
 	unsigned ip6;
-	time_t now = time(0);
+	time_t now = time(NULL);
 
 	ret = gnutls_rnd(GNUTLS_RND_NONCE, &rnd, sizeof(rnd));
 	if (ret < 0) {

@@ -211,7 +211,7 @@ static int verify_krb5_constraints(struct gssapi_ctx_st *pctx, gss_OID mech_type
 		return -1;
 	}
 
-	if (time(0) > authtime + pctx->vctx->ticket_freshness_secs) {
+	if (time(NULL) > authtime + pctx->vctx->ticket_freshness_secs) {
 		syslog(LOG_INFO, "gssapi: the presented kerberos ticket for %s is too old", pctx->username);
 		return -1;
 	}

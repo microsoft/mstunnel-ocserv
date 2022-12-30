@@ -626,12 +626,12 @@ static void certificate_check(main_server_st *s, const char *vhostname, gnutls_p
 	}
 
 	t = gnutls_x509_crt_get_expiration_time(crt);
-	if (t < time(0)) {
+	if (t < time(NULL)) {
 		mslog(s, NULL, LOG_WARNING, "The %s certificate set is expired!", cert_name);
 	}
 
 	t = gnutls_x509_crt_get_activation_time(crt);
-	if (t > time(0)) {
+	if (t > time(NULL)) {
 		mslog(s, NULL, LOG_WARNING, "The %s certificate set is not yet active!", cert_name);
 	}
 
@@ -964,7 +964,7 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
 		gnutls_global_set_log_level(9);
 	}
 
-	vhost->params_last_access = time(0);
+	vhost->params_last_access = time(NULL);
 
 #ifndef GNUTLS_BROKEN_CERTIFICATE_SET_KEY
 	if (vhost->creds.xcred != NULL)
@@ -1092,7 +1092,7 @@ void tls_reload_crl(main_server_st* s, struct vhost_cfg_st *vhost, unsigned forc
 			return;
 		}
 
-		vhost->crl_last_access = time(0);
+		vhost->crl_last_access = time(NULL);
 
 		ret =
 		    gnutls_certificate_set_x509_crl_file(vhost->creds.xcred,

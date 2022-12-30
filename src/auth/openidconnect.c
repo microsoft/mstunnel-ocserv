@@ -377,7 +377,7 @@ static bool oidc_fetch_oidc_keys(oidc_vctx_st * vctx)
 		json_decref(vctx->jwks);
 	}
 
-	vctx->last_jwks_load_time = time(0);
+	vctx->last_jwks_load_time = time(NULL);
 
 	vctx->jwks = jwks;
 	jwks = NULL;
@@ -575,7 +575,7 @@ static bool oidc_verify_signature(oidc_vctx_st * vctx, cjose_jws_t * jws)
 		       json_string_value(token_kid));
 
 		syslog(LOG_NOTICE, "ocserv-oidc: attempting to download new JWKs");
-		now = time(0);
+		now = time(NULL);
 		if ((now - vctx->last_jwks_load_time) > vctx->minimum_jwk_refresh_time) {
 			oidc_fetch_oidc_keys(vctx);
 		}

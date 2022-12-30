@@ -186,7 +186,7 @@ void expire_tls_sessions(sec_mod_st *sec)
 	struct htable_iter iter;
 	time_t now, exp;
 
-	now = time(0);
+	now = time(NULL);
 
 	cache = htable_first(sec->tls_db.ht, &iter);
 	while (cache != NULL) {

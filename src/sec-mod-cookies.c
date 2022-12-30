@@ -48,7 +48,7 @@ void handle_secm_list_cookies_reply(void *pool, int fd, sec_mod_st *sec)
 	struct htable_iter iter;
 	CookieIntMsg *cookies;
 	int ret;
-	time_t now = time(0);
+	time_t now = time(NULL);
 
 	if (db == NULL) {
 		send_empty_reply(pool, fd, sec);

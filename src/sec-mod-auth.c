@@ -151,7 +151,7 @@ int send_sec_auth_reply(int cfd, sec_mod_st * sec, client_entry_st * entry, AUTH
 		}
 
 		/* calculate time in auth for this client */
-		update_auth_time_stats(sec, time(0) - entry->created);
+		update_auth_time_stats(sec, time(NULL) - entry->created);
 
 		msg.has_sid = 1;
 		msg.sid.data = entry->sid;
@@ -472,7 +472,7 @@ int handle_secm_session_open_cmd(sec_mod_st *sec, int fd, const SecmSessionOpenM
 		return send_failed_session_open_reply(sec, fd);
 	}
 
-	if IS_CLIENT_ENTRY_EXPIRED(sec, e, time(0)) {
+	if IS_CLIENT_ENTRY_EXPIRED(sec, e, time(NULL)) {
 		seclog(sec, LOG_ERR, "session expired; denied session for user '%s' "SESSION_STR, e->acct_info.username, e->acct_info.safe_id);
 		e->status = PS_AUTH_FAILED;
 		return send_failed_session_open_reply(sec, fd);
@@ -541,7 +541,7 @@ int handle_secm_session_open_cmd(sec_mod_st *sec, int fd, const SecmSessionOpenM
 
 	seclog(sec, LOG_INFO, "%sinitiating session for user '%s' "SESSION_STR, PREFIX_VHOST(e->vhost), e->acct_info.username, e->acct_info.safe_id);
 	/* refresh cookie validity */
-	e->exptime = time(0) + e->vhost->perm_config.config->cookie_timeout + AUTH_SLACK_TIME;
+	e->exptime = time(NULL) + e->vhost->perm_config.config->cookie_timeout + AUTH_SLACK_TIME;
 	e->in_use++;
 
 	return 0;
@@ -777,7 +777,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 	vhost_cfg_st *vhost;
 	hmac_component_st hmac_components[3];
 	uint8_t computed_hmac[HMAC_DIGEST_SIZE];
-	time_t now = time(0);
+	time_t now = time(NULL);
 	time_t session_start_time;
 
 	if (req->hmac.len != HMAC_DIGEST_SIZE || !req->hmac.data) {

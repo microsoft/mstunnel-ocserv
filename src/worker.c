@@ -96,7 +96,7 @@ int main(int argc, char **argv)
 	}
 	s->main_pool = main_pool;
 	s->config_pool = config_pool;
-	s->stats.start_time = s->stats.last_reset = time(0);
+	s->stats.start_time = s->stats.last_reset = time(NULL);
 	s->top_fd = -1;
 	s->ctl_fd = -1;
 

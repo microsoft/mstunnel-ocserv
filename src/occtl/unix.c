@@ -239,13 +239,13 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 
 		t = rep->start_time;
 		tm = localtime_r(&t, &_tm);
-		print_time_ival7(buf, time(0), t);
+		print_time_ival7(buf, time(NULL), t);
 		strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 
 		print_single_value_ex(stdout, params, "Up since", str_since, buf, 1);
 		if (HAVE_JSON(params)) {
 			print_single_value_int(stdout, params, "raw_up_since", rep->start_time, 1);
-			print_single_value_int(stdout, params, "uptime", ((long)time(0)) - ((long)rep->start_time), 1);
+			print_single_value_int(stdout, params, "uptime", ((long)time(NULL)) - ((long)rep->start_time), 1);
 		}
 		print_single_value_int(stdout, params, "Active sessions", rep->active_clients, 1);
 		print_single_value_int(stdout, params, "Total sessions", rep->total_sessions_closed, 1);
@@ -285,7 +285,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 		t = rep->last_reset;
 		if (t > 0) {
 			tm = localtime_r(&t, &_tm);
-			print_time_ival7(buf, time(0), t);
+			print_time_ival7(buf, time(NULL), t);
 			strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 
 			print_single_value_ex(stdout, params, "Last stats reset", str_since, buf, 1);
@@ -657,7 +657,7 @@ void common_user_list(struct unix_ctx *ctx, UserListRep *rep, FILE *out, cmd_par
 		tm = localtime_r(&t, &_tm);
 		strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 
-		print_time_ival7(tmpbuf, time(0), t);
+		print_time_ival7(tmpbuf, time(NULL), t);
 
 		fprintf(out, "%8d %8s %8s %14s %14s %6s ",
 			(int)rep->user[i]->id, username, rep->user[i]->vhost, rep->user[i]->ip, vpn_ip, rep->user[i]->tun);
@@ -761,7 +761,7 @@ void session_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out,
 		if (t > 0) {
 			tm = localtime_r(&t, &_tm);
 			strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
-			print_time_ival7(tmpbuf, time(0), t);
+			print_time_ival7(tmpbuf, time(NULL), t);
 		}
 
 		sid = shorten(rep->cookies[i]->safe_id.data, rep->cookies[i]->safe_id.len, 1);
@@ -1020,7 +1020,7 @@ int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st 
 			}
 			print_start_block(out, params);
 
-			print_time_ival7(tmpbuf, t, time(0));
+			print_time_ival7(tmpbuf, t, time(NULL));
 
 			if (HAVE_JSON(params)) {
 				print_single_value(out, params, "IP", txt_ip, 1);
@@ -1179,7 +1179,7 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 
 		print_single_value(out, params, "Hostname", args->user[i]->hostname, 1);
 
-		print_time_ival7(tmpbuf, time(0), t);
+		print_time_ival7(tmpbuf, time(NULL), t);
 		print_single_value_ex(out, params, "Connected at", str_since, tmpbuf, 1);
 
 		if (HAVE_JSON(params)) {
@@ -1568,7 +1568,7 @@ int handle_events_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 
 				entries_add(ctx, rep2->user->user[0]->username, strlen(rep2->user->user[0]->username), rep2->user->user[0]->id);
 			} else {
-				print_time_ival7(tmpbuf, time(0), rep2->user->user[0]->conn_time);
+				print_time_ival7(tmpbuf, time(NULL), rep2->user->user[0]->conn_time);
 				printf("%s: disconnect user '%s' (%u) from %s with IP %s (reason: %s, time: %s)\n",
 					rep2->user->user[0]->vhost,
 					rep2->user->user[0]->username,
