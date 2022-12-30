@@ -2060,9 +2060,18 @@ static int connect_handler(worker_st * ws)
 	if (ws->full_ipv6 == 0) {
 		req->no_ipv6 = 1;
 		oclog(ws, LOG_INFO, "IPv6 routes/DNS disabled because IPv6 support was not requested.");
-	} else if (req->user_agent_type != AGENT_OPENCONNECT && req->user_agent_type != AGENT_ANYCONNECT) {
-		req->no_ipv6 = 1;
-		oclog(ws, LOG_INFO, "IPv6 routes/DNS disabled because the agent is not known.");
+	} else {
+		switch (req->user_agent_type) {
+			case AGENT_OPENCONNECT:
+			case AGENT_ANYCONNECT:
+			case AGENT_OPENCONNECT_CLAVISTER:
+				break;
+			case AGENT_OPENCONNECT_V3:
+			case AGENT_UNKNOWN:
+			default:
+				req->no_ipv6 = 1;
+				oclog(ws, LOG_INFO, "IPv6 routes/DNS disabled because the agent is not known.");
+		}
 	}
 
 	for (i = 0; i < ws->user_config->n_dns; i++) {
