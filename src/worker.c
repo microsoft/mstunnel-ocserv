@@ -68,20 +68,20 @@ int main(int argc, char **argv)
 	if (!getenv(OCSERV_ENV_WORKER_STARTUP_MSG)) {
 		fprintf(stderr,
 			"This application is part of ocserv and should not be run in isolation\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	/* main pool */
 	main_pool = talloc_init("main");
 	if (main_pool == NULL) {
 		fprintf(stderr, "talloc init error\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	config_pool = talloc_init("config");
 	if (config_pool == NULL) {
 		fprintf(stderr, "talloc init error\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (snapshot_init(config_pool, &config_snapshot, "/tmp/ocserv_") < 0) {
@@ -92,18 +92,18 @@ int main(int argc, char **argv)
 	s = talloc_zero(main_pool, main_server_st);
 	if (s == NULL) {
 		fprintf(stderr, "memory error\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	s->main_pool = main_pool;
 	s->config_pool = config_pool;
-	s->stats.start_time = s->stats.last_reset = time(0);
+	s->stats.start_time = s->stats.last_reset = time(NULL);
 	s->top_fd = -1;
 	s->ctl_fd = -1;
 
 	worker_pool = talloc_init("worker");
 	if (worker_pool == NULL) {
 		fprintf(stderr, "talloc init error\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	s->ws = talloc_zero(worker_pool, worker_st);
@@ -111,7 +111,7 @@ int main(int argc, char **argv)
 
 	if (ws == NULL) {
 		fprintf(stderr, "talloc init error\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (!set_ws_from_env(ws)) {
@@ -135,14 +135,14 @@ int main(int argc, char **argv)
 	s->vconfig = talloc_zero(config_pool, struct list_head);
 	if (s->vconfig == NULL) {
 		fprintf(stderr, "memory error\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	list_head_init(s->vconfig);
 
 	ret = cmd_parser(config_pool, argc, argv, s->vconfig, true);
 	if (ret < 0) {
 		fprintf(stderr, "Error in arguments\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	snapshot_terminate(config_snapshot);
@@ -165,7 +165,7 @@ int main(int argc, char **argv)
 	ret = asn1_array2tree(kkdcp_asn1_tab, &_kkdcp_pkix1_asn, NULL);
 	if (ret != ASN1_SUCCESS) {
 		mslog(s, NULL, LOG_ERR, "KKDCP ASN.1 initialization error");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 #endif
 

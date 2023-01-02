@@ -100,7 +100,7 @@ static void gssapi_vhost_init(void **_vctx, void *pool, void *additional)
 	vctx = talloc_zero(pool, struct gssapi_vhost_ctx_st);
 	if (vctx == NULL) {
 		fprintf(stderr, "auth-gssapi: memory error\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (config) {
@@ -123,7 +123,7 @@ static void gssapi_vhost_init(void **_vctx, void *pool, void *additional)
 		if (ret != GSS_S_COMPLETE) {
 			ret = -1;
 			print_gss_err("gss_acquire_cred(keytab)", GSS_C_NO_OID, ret, minor);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	} else {
 		ret = gss_acquire_cred(&minor, name, 0, (gss_OID_set)&desired_mechs, 2,
@@ -132,7 +132,7 @@ static void gssapi_vhost_init(void **_vctx, void *pool, void *additional)
 		if (ret != GSS_S_COMPLETE) {
 			ret = -1;
 			print_gss_err("gss_acquire_cred", GSS_C_NO_OID, ret, minor);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -211,7 +211,7 @@ static int verify_krb5_constraints(struct gssapi_ctx_st *pctx, gss_OID mech_type
 		return -1;
 	}
 
-	if (time(0) > authtime + pctx->vctx->ticket_freshness_secs) {
+	if (time(NULL) > authtime + pctx->vctx->ticket_freshness_secs) {
 		syslog(LOG_INFO, "gssapi: the presented kerberos ticket for %s is too old", pctx->username);
 		return -1;
 	}

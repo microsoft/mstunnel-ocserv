@@ -607,7 +607,7 @@ static void reset_stats(main_server_st *s, time_t now)
 static void update_main_stats(main_server_st * s, struct proc_st *proc)
 {
 	uint64_t kb_in, kb_out;
-	time_t now = time(0), stime;
+	time_t now = time(NULL), stime;
 	vhost_cfg_st *vhost = proc->vhost;
 
 	if (vhost->perm_config.stats_reset_time != 0 &&
@@ -668,7 +668,7 @@ int session_close(sec_mod_instance_st * sec_mod_instance, struct proc_st *proc)
 	CliStatsMsg *msg = NULL;
 	PROTOBUF_ALLOCATOR(pa, proc);
 
-	ireq.uptime = time(0)-proc->conn_time;
+	ireq.uptime = time(NULL) - proc->conn_time;
 	ireq.has_uptime = 1;
 	ireq.bytes_in = proc->bytes_in;
 	ireq.has_bytes_in = 1;
@@ -771,7 +771,7 @@ void run_sec_mod(sec_mod_instance_st * sec_mod_instance, unsigned int instance_i
 			       GETPCONFIG(s)->chroot_dir, sec_mod_instance->socket_file);
 		if (ret != strlen(sec_mod_instance->full_socket_file)) {
 			mslog(s, NULL, LOG_ERR, "too long chroot path; cannot create socket: %s", sec_mod_instance->full_socket_file);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	} else {
 		strlcpy(sec_mod_instance->full_socket_file, sec_mod_instance->socket_file, sizeof(sec_mod_instance->full_socket_file));
@@ -782,13 +782,13 @@ void run_sec_mod(sec_mod_instance_st * sec_mod_instance, unsigned int instance_i
 	ret = socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_ERR, "error creating sec-mod command socket");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	ret = socketpair(AF_UNIX, SOCK_STREAM, 0, sfd);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_ERR, "error creating sec-mod sync command socket");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	pid = fork();
@@ -808,7 +808,7 @@ void run_sec_mod(sec_mod_instance_st * sec_mod_instance, unsigned int instance_i
 		set_cloexec_flag (sfd[0], 1);
 		clear_unneeded_mem(s->vconfig);
 		sec_mod_server(s->main_pool, s->config_pool, s->vconfig, p, fd[0], sfd[0], sizeof(s->hmac_key), s->hmac_key, instance_index);
-		exit(0);
+		exit(EXIT_SUCCESS);
 	} else if (pid > 0) {	/* parent */
 		close(fd[0]);
 		close(sfd[0]);
@@ -821,6 +821,6 @@ void run_sec_mod(sec_mod_instance_st * sec_mod_instance, unsigned int instance_i
 	} else {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "error in fork(): %s", strerror(e));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 }

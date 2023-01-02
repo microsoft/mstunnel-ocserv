@@ -209,8 +209,8 @@ int icmp_ping4(main_server_st * s, struct sockaddr_in *addr1)
 		      sizeof(*addr1) == -1) && retry(errno));
 	/* listen for replies */
 
-	now = time(0);
-	while (time(0) - now < PING_TIMEOUT
+	now = time(NULL);
+	while (time(NULL) - now < PING_TIMEOUT
 	       && (unreachable + gotreply) < 2) {
 		struct sockaddr_in from;
 		socklen_t fromlen = sizeof(from);
@@ -308,8 +308,8 @@ int icmp_ping6(main_server_st * s,
 		      sizeof(*addr1) == -1) && retry(errno));
 
 	/* listen for replies */
-	now = time(0);
-	while (time(0) - now < PING_TIMEOUT
+	now = time(NULL);
+	while (time(NULL) - now < PING_TIMEOUT
 	       && (unreachable + gotreply) < 2) {
 		struct sockaddr_in6 from;
 		socklen_t fromlen = sizeof(from);

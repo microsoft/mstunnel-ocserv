@@ -81,7 +81,7 @@ size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac
                 CMD; \
         }
 
-#define DTLS_FATAL_ERR(x) DTLS_FATAL_ERR_CMD(x, exit(1))
+#define DTLS_FATAL_ERR(x) DTLS_FATAL_ERR_CMD(x, exit(EXIT_FAILURE))
 
 #define CSTP_FATAL_ERR_CMD(ws, x, CMD) \
         if (ws->session != NULL) { \
@@ -96,7 +96,7 @@ size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac
 	        } \
 	}
 
-#define CSTP_FATAL_ERR(ws, x) CSTP_FATAL_ERR_CMD(ws, x, exit(1))
+#define CSTP_FATAL_ERR(ws, x) CSTP_FATAL_ERR_CMD(ws, x, exit(EXIT_FAILURE))
 
 void tls_close(gnutls_session_t session);
 

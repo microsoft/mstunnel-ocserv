@@ -124,7 +124,7 @@ client_entry_st *new_client_entry(sec_mod_st *sec, struct vhost_cfg_st *vhost, c
 	}
 
 	calc_safe_id(e->sid, SID_SIZE, (char *)e->acct_info.safe_id, sizeof(e->acct_info.safe_id));
-	now = time(0);
+	now = time(NULL);
 	e->exptime = now + vhost->perm_config.config->cookie_timeout + AUTH_SLACK_TIME;
 	e->created = now;
 
@@ -173,7 +173,7 @@ void cleanup_client_entries(sec_mod_st *sec)
 	struct htable *db = sec->client_db;
 	client_entry_st *t;
 	struct htable_iter iter;
-	time_t now = time(0);
+	time_t now = time(NULL);
 
 	t = htable_first(db, &iter);
 	while (t != NULL) {
@@ -208,7 +208,7 @@ void expire_client_entry(sec_mod_st *sec, client_entry_st * e)
 			/* immediately disconnect the user */
 			del_client_entry(sec, e);
 		} else {
-			now = time(0);
+			now = time(NULL);
 			/* We intentionally don't close the session immediately on
 			 * REASON_USER_DISCONNECT, as some anyconect clients
 			 * explicitly disconnect with the intention to reconnect

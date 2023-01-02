@@ -47,7 +47,7 @@ void parse_kkdcp_string(char *str, int *socktype, char **_port, char **_server, 
 	realm = find_space(path);
 	if (realm == NULL) {
 		fprintf(stderr, "Cannot parse kkdcp string: %s\n", path);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	*realm = 0;
@@ -58,7 +58,7 @@ void parse_kkdcp_string(char *str, int *socktype, char **_port, char **_server, 
 	server = find_space(realm);
 	if (server == NULL) {
 		fprintf(stderr, "Cannot parse kkdcp string: %s\n", realm);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	/* null terminate the realm */
@@ -74,7 +74,7 @@ void parse_kkdcp_string(char *str, int *socktype, char **_port, char **_server, 
 		*socktype = SOCK_STREAM;
 	} else {
 		fprintf(stderr, "cannot handle protocol %s\n", server);
-			exit(1);
+			exit(EXIT_FAILURE);
 	}
 	server += 4;
 
@@ -93,7 +93,7 @@ void parse_kkdcp_string(char *str, int *socktype, char **_port, char **_server, 
 
 	if (port == NULL) {
 		fprintf(stderr, "No server port specified in: %s\n", server);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	*port = 0;
 	port++;

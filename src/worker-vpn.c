@@ -128,7 +128,7 @@ static void handle_alarm(int signo)
 	if (global_ws)
 		exit_worker_reason(global_ws, terminate_reason);
 
-	_exit(1);
+	_exit(EXIT_FAILURE);
 }
 
 static void handle_term(int signo)
@@ -486,7 +486,7 @@ void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final, unsigned
 
 	if (final ==0 && reply->reply != AUTH__REP__OK) {
 		/* we have exceeded the maximum score */
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	ban_ip_reply_msg__free_unpacked(reply, &pa);
@@ -562,7 +562,7 @@ void exit_worker_reason(worker_st * ws, unsigned reason)
 {
 	/* send statistics to parent */
 	if (ws->auth_state == S_AUTH_COMPLETE) {
-		send_stats_to_secmod(ws, time(0), reason);
+		send_stats_to_secmod(ws, time(NULL), reason);
 	}
 
 	if (ws->ban_points > 0)
@@ -570,7 +570,7 @@ void exit_worker_reason(worker_st * ws, unsigned reason)
 
 	talloc_free(ws->main_pool);
 	closelog();
-	_exit(1);
+	_exit(EXIT_FAILURE);
 }
 
 #define HANDSHAKE_SESSION_ID_POS (34)
@@ -1873,7 +1873,7 @@ static int connect_handler(worker_st * ws)
 	unsigned rnd;
 	unsigned i;
 	unsigned ip6;
-	time_t now = time(0);
+	time_t now = time(NULL);
 
 	ret = gnutls_rnd(GNUTLS_RND_NONCE, &rnd, sizeof(rnd));
 	if (ret < 0) {

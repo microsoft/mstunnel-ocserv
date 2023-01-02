@@ -75,7 +75,7 @@ struct proc_st *new_proc(main_server_st * s, pid_t pid, int cmd_fd,
 	ctmp->tun_lease.fd = -1;
 	ctmp->fd = cmd_fd;
 	set_cloexec_flag (cmd_fd, 1);
-	ctmp->conn_time = time(0);
+	ctmp->conn_time = time(NULL);
 
 	memcpy(&ctmp->remote_addr, remote_addr, remote_addr_len);
 	ctmp->remote_addr_len = remote_addr_len;
@@ -113,7 +113,7 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned flags)
 	if (proc->active_sid && !(flags & RPROC_QUIT)) {
 		if (session_close(&(s->sec_mod_instances[proc->sec_mod_instance_index]), proc) < 0) {
 			mslog(s, proc, LOG_ERR, "error closing session (communication with sec-mod issue)");
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 

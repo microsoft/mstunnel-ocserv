@@ -408,7 +408,7 @@ void tls_cache_init(void *pool, tls_sess_db_st* db)
 {
 	db->ht = talloc(pool, struct htable);
 	if (db->ht == NULL)
-		exit(1);
+		exit(EXIT_FAILURE);
 
 	htable_init(db->ht, rehash, NULL);
 	db->entries = 0;
@@ -626,12 +626,12 @@ static void certificate_check(main_server_st *s, const char *vhostname, gnutls_p
 	}
 
 	t = gnutls_x509_crt_get_expiration_time(crt);
-	if (t < time(0)) {
+	if (t < time(NULL)) {
 		mslog(s, NULL, LOG_WARNING, "The %s certificate set is expired!", cert_name);
 	}
 
 	t = gnutls_x509_crt_get_activation_time(crt);
-	if (t > time(0)) {
+	if (t > time(NULL)) {
 		mslog(s, NULL, LOG_WARNING, "The %s certificate set is not yet active!", cert_name);
 	}
 
@@ -964,7 +964,7 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
 		gnutls_global_set_log_level(9);
 	}
 
-	vhost->params_last_access = time(0);
+	vhost->params_last_access = time(NULL);
 
 #ifndef GNUTLS_BROKEN_CERTIFICATE_SET_KEY
 	if (vhost->creds.xcred != NULL)
@@ -978,7 +978,7 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
 
 	if (vhost->perm_config.key_size == 0 || vhost->perm_config.cert_size == 0) {
 		mslog(s, NULL, LOG_ERR, "no certificate or key files were specified");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	/* on reload reduce any checks done */
@@ -991,7 +991,7 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
 	ret = load_cert_files(s, vhost);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_ERR, "error loading the certificate or key file");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (vhost->perm_config.config->cert_req != GNUTLS_CERT_IGNORE) {
@@ -1003,7 +1003,7 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
 			if (ret < 0) {
 				mslog(s, NULL, LOG_ERR, "error setting the CA (%s) file",
 					vhost->perm_config.ca);
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 
 			mslog(s, NULL, LOG_INFO, "processed %d CA certificate(s)", ret);
@@ -1092,7 +1092,7 @@ void tls_reload_crl(main_server_st* s, struct vhost_cfg_st *vhost, unsigned forc
 			return;
 		}
 
-		vhost->crl_last_access = time(0);
+		vhost->crl_last_access = time(NULL);
 
 		ret =
 		    gnutls_certificate_set_x509_crl_file(vhost->creds.xcred,
@@ -1112,7 +1112,7 @@ void tls_reload_crl(main_server_st* s, struct vhost_cfg_st *vhost, unsigned forc
 			/* ignore the CRL file when empty */
 			mslog(s, NULL, LOG_ERR, "error reading the CRL (%s) file: %s",
 				vhost->perm_config.config->crl, gnutls_strerror(ret));
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 		mslog(s, NULL, LOG_INFO, "loaded CRL: %s", vhost->perm_config.config->crl);
 	}
@@ -1164,14 +1164,14 @@ void *calc_sha1_hash(void *pool, char* file, unsigned cert)
 
 	if (ret < 0) {
 		fprintf(stderr, "error calculating hash of '%s': %s", file, gnutls_strerror(ret));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	size_t ret_size = sizeof(digest)*2+1;
 	retval = talloc_size(pool, ret_size);
 	if (retval == NULL) {
 		fprintf(stderr, "memory error");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	data.data = digest;
@@ -1179,7 +1179,7 @@ void *calc_sha1_hash(void *pool, char* file, unsigned cert)
 	ret = gnutls_hex_encode(&data, retval, &ret_size);
 	if (ret < 0) {
 		fprintf(stderr, "error in hex encode: %s", gnutls_strerror(ret));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	if (retval[ret_size-1] == 0) ret_size--; /* remove the null terminator */
 

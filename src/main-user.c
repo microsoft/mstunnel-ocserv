@@ -53,7 +53,7 @@
 			ret = str_append_str(str, val); \
 			if (ret < 0) { \
 				mslog(s, proc, LOG_ERR, "could not append value to environment\n"); \
-				exit(1); \
+				exit(EXIT_FAILURE); \
 			}
 
 typedef enum script_type_t {
@@ -95,17 +95,17 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 
 	if (str4.length > 0 && setenv("OCSERV_ROUTES4", (char*)str4.data, 1) == -1) {
 		mslog(s, proc, LOG_ERR, "could not export routes\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (str6.length > 0 && setenv("OCSERV_ROUTES6", (char*)str6.data, 1) == -1) {
 		mslog(s, proc, LOG_ERR, "could not export routes\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (str_common.length > 0 && setenv("OCSERV_ROUTES", (char*)str_common.data, 1) == -1) {
 		mslog(s, proc, LOG_ERR, "could not export routes\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	/* export the No-routes */
@@ -130,23 +130,23 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 
 	if (str4.length > 0 && setenv("OCSERV_NO_ROUTES4", (char*)str4.data, 1) == -1) {
 		mslog(s, proc, LOG_ERR, "could not export no-routes\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (str6.length > 0 && setenv("OCSERV_NO_ROUTES6", (char*)str6.data, 1) == -1) {
 		mslog(s, proc, LOG_ERR, "could not export no-routes\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (str_common.length > 0 && setenv("OCSERV_NO_ROUTES", (char*)str_common.data, 1) == -1) {
 		mslog(s, proc, LOG_ERR, "could not export no-routes\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (proc->config->restrict_user_to_routes) {
 		if (setenv("OCSERV_RESTRICT_TO_ROUTES", "1", 1) == -1) {
 			mslog(s, proc, LOG_ERR, "could not export OCSERV_RESTRICT_TO_ROUTES\n");
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 	/* export the DNS servers */
@@ -172,17 +172,17 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 
 	if (str4.length > 0 && setenv("OCSERV_DNS4", (char*)str4.data, 1) == -1) {
 		mslog(s, proc, LOG_ERR, "could not export DNS servers\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (str6.length > 0 && setenv("OCSERV_DNS6", (char*)str6.data, 1) == -1) {
 		mslog(s, proc, LOG_ERR, "could not export DNS servers\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (str_common.length > 0 && setenv("OCSERV_DNS", (char*)str_common.data, 1) == -1) {
 		mslog(s, proc, LOG_ERR, "could not export DNS servers\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	str_clear(&str4);
@@ -223,7 +223,7 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 
 			if (ret < 0) {
 				mslog(s, proc, LOG_ERR, "could not append value to environment\n");
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 		}
 	}
@@ -232,12 +232,12 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 		if (negate) {
 			if (setenv("OCSERV_DENY_PORTS", (char*)str_common.data, 1) == -1) {
 				mslog(s, proc, LOG_ERR, "could not export DENY_PORTS\n");
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 		} else {
 			if (setenv("OCSERV_ALLOW_PORTS", (char*)str_common.data, 1) == -1) {
 				mslog(s, proc, LOG_ERR, "could not export ALLOW_PORTS\n");
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 		}
 	}
@@ -283,7 +283,7 @@ const char* script, *next_script = NULL;
 		if (proc->remote_addr_len > 0) {
 			if ((ret=getnameinfo((void*)&proc->remote_addr, proc->remote_addr_len, real, sizeof(real), NULL, 0, NI_NUMERICHOST)) != 0) {
 				mslog(s, proc, LOG_DEBUG, "cannot determine peer address: %s; script failed", gai_strerror(ret));
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 			setenv("IP_REAL", real, 1);
 		}
@@ -300,7 +300,7 @@ const char* script, *next_script = NULL;
 			if (proc->ipv4 && proc->ipv4->lip_len > 0) {
 				if (getnameinfo((void*)&proc->ipv4->lip, proc->ipv4->lip_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0) {
 					mslog(s, proc, LOG_DEBUG, "cannot determine local VPN address; script failed");
-					exit(1);
+					exit(EXIT_FAILURE);
 				}
 				setenv("IP_LOCAL", local, 1);
 			}
@@ -308,7 +308,7 @@ const char* script, *next_script = NULL;
 			if (proc->ipv6 && proc->ipv6->lip_len > 0) {
 				if (getnameinfo((void*)&proc->ipv6->lip, proc->ipv6->lip_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0) {
 					mslog(s, proc, LOG_DEBUG, "cannot determine local VPN PtP address; script failed");
-					exit(1);
+					exit(EXIT_FAILURE);
 				}
 				if (local[0] == 0)
 					setenv("IP_LOCAL", local, 1);
@@ -318,14 +318,14 @@ const char* script, *next_script = NULL;
 			if (proc->ipv4 && proc->ipv4->rip_len > 0) {
 				if (getnameinfo((void*)&proc->ipv4->rip, proc->ipv4->rip_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0) {
 					mslog(s, proc, LOG_DEBUG, "cannot determine local VPN address; script failed");
-					exit(1);
+					exit(EXIT_FAILURE);
 				}
 				setenv("IP_REMOTE", remote, 1);
 			}
 			if (proc->ipv6 && proc->ipv6->rip_len > 0) {
 				if (getnameinfo((void*)&proc->ipv6->rip, proc->ipv6->rip_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0) {
 					mslog(s, proc, LOG_DEBUG, "cannot determine local VPN PtP address; script failed");
-					exit(1);
+					exit(EXIT_FAILURE);
 				}
 				if (remote[0] == 0)
 					setenv("IP_REMOTE", remote, 1);
@@ -358,7 +358,7 @@ const char* script, *next_script = NULL;
 			snprintf(remote, sizeof(remote), "%lu", (unsigned long)proc->bytes_out);
 			setenv("STATS_BYTES_OUT", remote, 1);
 			if (proc->conn_time > 0) {
-				snprintf(remote, sizeof(remote), "%lu", (unsigned long)(time(0)-proc->conn_time));
+				snprintf(remote, sizeof(remote), "%lu", (unsigned long)(time(NULL)-proc->conn_time));
 				setenv("STATS_DURATION", remote, 1);
 			}
 			setenv("REASON", "disconnect", 1);
@@ -382,7 +382,7 @@ const char* script, *next_script = NULL;
 		ret = execl(script, script, NULL);
 		if (ret == -1) {
 			mslog(s, proc, LOG_ERR, "Could not execute script %s", script);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 
 		exit(77);

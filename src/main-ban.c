@@ -73,7 +73,7 @@ void *main_ban_db_init(main_server_st *s)
 	struct htable *db = talloc(s, struct htable);
 	if (db == NULL) {
 		fprintf(stderr, "error initializing ban DB\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	htable_init(db, rehash, NULL);
@@ -99,7 +99,7 @@ unsigned main_ban_db_elems(main_server_st *s)
 	struct htable *db = s->ban_db;
 	ban_entry_st *t;
 	struct htable_iter iter;
-	time_t now = time(0);
+	time_t now = time(NULL);
 	unsigned banned = 0;
 
 	if (db == NULL || GETCONFIG(s)->max_ban_score == 0)
@@ -129,7 +129,7 @@ int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip, unsigned ip_s
 	struct htable *db = s->ban_db;
 	struct ban_entry_st *e;
 	ban_entry_st t;
-	time_t now = time(0);
+	time_t now = time(NULL);
 	time_t expiration = now + GETCONFIG(s)->min_reauth_time;
 	int ret = 0;
 	char str_ip[MAX_IP_STR];
@@ -299,7 +299,7 @@ unsigned check_if_banned(main_server_st *s, struct sockaddr_storage *addr, sockl
 	/* add its current connection points */
 	add_ip_to_ban_list(s, t.ip.ip, t.ip.size, GETCONFIG(s)->ban_points_connect);
 
-	now = time(0);
+	now = time(NULL);
 	e = htable_get(db, rehash(&t, NULL), ban_entry_cmp, &t);
 	if (e != NULL) {
 		if (now > e->expires)
@@ -318,7 +318,7 @@ void cleanup_banned_entries(main_server_st *s)
 	struct htable *db = s->ban_db;
 	ban_entry_st *t;
 	struct htable_iter iter;
-	time_t now = time(0);
+	time_t now = time(NULL);
 
 	if (db == NULL)
 		return;

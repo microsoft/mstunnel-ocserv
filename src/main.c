@@ -327,7 +327,7 @@ listen_ports(void *pool, struct perm_cfg_st* config,
 
 		if (list->total == 0) {
 			fprintf(stderr, "no useful sockets were provided by systemd\n");
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 
 		if (config->foreground != 0)
@@ -371,7 +371,7 @@ listen_ports(void *pool, struct perm_cfg_st* config,
 
 	if (list->total == 0) {
 		fprintf(stderr, "Could not listen to any TCP or UNIX ports\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (config->udp_port) {
@@ -721,7 +721,7 @@ int sfd = -1;
 	}
 
 	/* search for the IP and the session ID in all procs */
-	now = time(0);
+	now = time(NULL);
 
 	if (match_ip_only == 0) {
 		proc_to_send = proc_search_dtls_id(s, session_id, session_id_size);
@@ -1116,7 +1116,7 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 			set_cloexec_flag(fd, false);
 			ws->conn_fd = fd;
 			ws->conn_type = stype;
-			ws->session_start_time = time(0);
+			ws->session_start_time = time(NULL);
 
 			human_addr2((const struct sockaddr *)&ws->remote_addr, ws->remote_addr_len, ws->remote_ip_str, sizeof(ws->remote_ip_str), 0);
 			human_addr2((const struct sockaddr *)&ws->our_addr, ws->our_addr_len, ws->our_ip_str, sizeof(ws->our_ip_str), 0);
@@ -1134,7 +1134,7 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 			safe_memset((uint8_t*)s->hmac_key, 0, sizeof(s->hmac_key));
 
 			if (!set_env_from_ws(s))
-				exit(1);
+				exit(EXIT_FAILURE);
 
 #if defined(PROC_FS_SUPPORTED)
 			{
@@ -1143,18 +1143,18 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 				path_length = readlink("/proc/self/exe", path, sizeof(path)-1);
 				if (path_length == -1) {
 					mslog(s, NULL, LOG_ERR, "readlink failed %s", strerror(ret));
-					exit(1);
+					exit(EXIT_FAILURE);
 				}
 				path[path_length] = '\0';
 				if (snprintf(worker_path, sizeof(worker_path), "%s-worker", path) >= sizeof(worker_path)) {
 					mslog(s, NULL, LOG_ERR, "snprint of path %s and ocserv-worker failed", path);
-					exit(1);
+					exit(EXIT_FAILURE);
 				}
 			}
 #else
 			if (snprintf(worker_path, sizeof(worker_path), "%s-worker", worker_argv[0]) >= sizeof(worker_path)) {
 				mslog(s, NULL, LOG_ERR, "snprint of path %s and ocserv-worker failed", worker_argv[0]);
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 #endif
 
@@ -1162,7 +1162,7 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 			execv(worker_path, worker_argv);
 			ret = errno;
 			mslog(s, NULL, LOG_ERR, "exec %s failed %s", worker_path, strerror(ret));
-			exit(1);
+			exit(EXIT_FAILURE);
 		} else if (pid == -1) {
 fork_failed:
 			mslog(s, NULL, LOG_ERR, "fork failed");
@@ -1326,28 +1326,28 @@ int main(int argc, char** argv)
 	main_pool = talloc_init("main");
 	if (main_pool == NULL) {
 		fprintf(stderr, "talloc init error\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	config_pool = talloc_init("config");
 	if (config_pool == NULL) {
 		fprintf(stderr, "talloc init error\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (snapshot_init(config_pool, &config_snapshot, "/tmp/ocserv_") < 0) {
 		fprintf(stderr, "failed to init snapshot");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	s = talloc_zero(main_pool, main_server_st);
 	if (s == NULL) {
 		fprintf(stderr, "memory error\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	s->main_pool = main_pool;
 	s->config_pool = config_pool;
-	s->stats.start_time = s->stats.last_reset = time(0);
+	s->stats.start_time = s->stats.last_reset = time(NULL);
 	s->top_fd = -1;
 	s->ctl_fd = -1;
 	s->netns.default_fd = -1;
@@ -1355,7 +1355,7 @@ int main(int argc, char** argv)
 
 	if (!hmac_init_key(sizeof(s->hmac_key), (uint8_t*)(s->hmac_key))) {
 		fprintf(stderr, "unable to generate hmac key\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	// getopt processing mutates argv. Save a copy to pass to the child.
@@ -1363,13 +1363,13 @@ int main(int argc, char** argv)
 	worker_argv = talloc_zero_array(main_pool, char*, worker_argc + 1);
 	if (!worker_argv) {
 		fprintf(stderr, "memory error\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	for (i = 0; i < argc; i ++) {
 		worker_argv[i] = talloc_strdup(main_pool, argv[i]);
 		if (!worker_argv[i]) {
 			fprintf(stderr, "memory error\n");
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -1387,7 +1387,7 @@ int main(int argc, char** argv)
 	if (if_address_init(s) == 0)
 	{
 		fprintf(stderr, "failed to initialize local addresses\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	sigemptyset(&sig_default_set);
@@ -1401,32 +1401,32 @@ int main(int argc, char** argv)
 	s->vconfig = talloc_zero(config_pool, struct list_head);
 	if (s->vconfig == NULL) {
 		fprintf(stderr, "memory error\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	list_head_init(s->vconfig);
 
 	ret = cmd_parser(config_pool, argc, argv, s->vconfig, false);
 	if (ret < 0) {
 		fprintf(stderr, "Error in arguments\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	setproctitle(PACKAGE_NAME"-main");
 
 	if (getuid() != 0) {
 		fprintf(stderr, "This server requires root access to operate.\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (GETPCONFIG(s)->listen_netns_name && open_namespaces(&s->netns, GETPCONFIG(s)) < 0) {
 		fprintf(stderr, "cannot init listen namespaces\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	/* Listen to network ports */
 	ret = listen_ports(s, GETPCONFIG(s), &s->listen_list, &s->netns);
 	if (ret < 0) {
 		fprintf(stderr, "Cannot listen to specified ports\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	flags = LOG_PID|LOG_NDELAY;
@@ -1445,7 +1445,7 @@ int main(int argc, char** argv)
 		if (daemon(GETPCONFIG(s)->no_chdir, 0) == -1) {
 			e = errno;
 			fprintf(stderr, "daemon failed: %s\n", strerror(e));
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -1485,13 +1485,13 @@ int main(int argc, char** argv)
 	ret = ctl_handler_init(s);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_ERR, "Cannot create command handler");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	main_loop = EV_DEFAULT;
 	if (main_loop == NULL) {
 		mslog(s, NULL, LOG_ERR, "could not initialise libev");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	mslog(s, NULL, LOG_INFO, "initialized %s", PACKAGE_STRING);
@@ -1502,7 +1502,7 @@ int main(int argc, char** argv)
 		if (chdir(GETPCONFIG(s)->chroot_dir) != 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "cannot chdir to %s: %s", GETPCONFIG(s)->chroot_dir, strerror(e));
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 	ms_sleep(100); /* give some time for sec-mod to initialize */
@@ -1520,13 +1520,13 @@ int main(int argc, char** argv)
 	worker_pool = talloc_named(main_pool, 0, "worker");
 	if (worker_pool == NULL) {
 		mslog(s, NULL, LOG_ERR, "talloc init error");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	s->ws = talloc_zero(worker_pool, struct worker_st);
 	if (s->ws == NULL) {
 		mslog(s, NULL, LOG_ERR, "memory error");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 #ifdef HAVE_GSSAPI
@@ -1534,7 +1534,7 @@ int main(int argc, char** argv)
 	ret = asn1_array2tree(kkdcp_asn1_tab, &_kkdcp_pkix1_asn, NULL);
 	if (ret != ASN1_SUCCESS) {
 		mslog(s, NULL, LOG_ERR, "KKDCP ASN.1 initialization error");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 #endif
 
@@ -1618,7 +1618,7 @@ int main(int argc, char** argv)
 
 	if (GETPCONFIG(s)->listen_netns_name && close_namespaces(&s->netns) < 0) {
 		fprintf(stderr, "cannot close listen namespaces\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	clear_lists(s);
 	clear_vhosts(s->vconfig);
