@@ -1,4 +1,5 @@
 * Version 1.1.7 (unreleased)
+- Emit a LOG_ERR error message with plain authentication fails
 - The bundled inih was updated to r56.
 - The bundled protobuf-c was updated to 1.4.1.
 - Enhanced the seccomp filters for ARMv7 compatibility and musl libc
