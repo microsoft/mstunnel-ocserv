@@ -67,16 +67,15 @@ on 1 byte), but shoehorning those bytes into integers efficiently is messy.
 #endif
 #endif /* old hash.c headers. */
 
+#include <config.h>
 #include "hash.h"
 
-#if HAVE_LITTLE_ENDIAN
-#define HASH_LITTLE_ENDIAN 1
-#define HASH_BIG_ENDIAN 0
-#elif HAVE_BIG_ENDIAN
+#ifdef WORDS_BIGENDIAN
 #define HASH_LITTLE_ENDIAN 0
 #define HASH_BIG_ENDIAN 1
 #else
-#error Unknown endian
+#define HASH_LITTLE_ENDIAN 1
+#define HASH_BIG_ENDIAN 0
 #endif
 
 #define hashsize(n) ((uint32_t)1<<(n))
