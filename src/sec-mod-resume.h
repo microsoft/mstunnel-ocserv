@@ -24,14 +24,14 @@
 #include <sec-mod.h>
 
 int handle_resume_delete_req(sec_mod_st* sec,
-  			   const SessionResumeFetchMsg * req);
+			     const SessionResumeFetchMsg * req);
 
 int handle_resume_fetch_req(sec_mod_st* sec,
-  			   const SessionResumeFetchMsg * req,
-  			   SessionResumeReplyMsg* rep);
+			    const SessionResumeFetchMsg * req,
+			    SessionResumeReplyMsg* rep);
 
 int handle_resume_store_req(sec_mod_st* sec,
-  			   const SessionResumeStoreReqMsg *);
+			    const SessionResumeStoreReqMsg *);
 
 void expire_tls_sessions(sec_mod_st *sec);
 

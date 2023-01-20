@@ -189,7 +189,7 @@ static auth_types_st avail_auth_types[] =
 #endif
 	{NAME("plain"), &plain_auth_funcs, AUTH_TYPE_PLAIN, plain_get_brackets_string},
 	{NAME("certificate"), NULL, AUTH_TYPE_CERTIFICATE, NULL},
-#ifdef 	SUPPORT_OIDC_AUTH
+#ifdef SUPPORT_OIDC_AUTH
 	{NAME("oidc"), &oidc_auth_funcs, AUTH_TYPE_OIDC, oidc_get_brackets_string},
 #endif
 };

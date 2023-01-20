@@ -99,7 +99,7 @@ static void parse_ssl_tlvs(struct worker_st *ws, uint8_t *data, size_t data_size
 			    (tssl.client & PP2_CLIENT_CERT_SESS) &&
 			    (tssl.verify == 0)) {
 				oclog(ws, LOG_INFO, "proxy-hdr: user has presented valid certificate");
-			    	ws->cert_auth_ok = 1;
+				ws->cert_auth_ok = 1;
 
 			}
 		} else if (tlv.type == PP2_TYPE_SSL_CN && ws->cert_auth_ok) {

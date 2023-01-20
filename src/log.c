@@ -156,7 +156,7 @@ void __attribute__ ((format(printf, 4, 5)))
 }
 
 void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
-    	int priority, const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64)
+	int priority, const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64)
 {
 	char buf[512];
 	int ret;

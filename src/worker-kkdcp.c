@@ -302,10 +302,10 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 	ret = -1;
 
  cleanup:
- 	talloc_free(buf);
- 	if (fd != -1)
-	 	close(fd);
- 	return ret;
+	talloc_free(buf);
+	if (fd != -1)
+		close(fd);
+	return ret;
 }
 
 #else

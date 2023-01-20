@@ -521,7 +521,7 @@ void send_stats_to_secmod(worker_st * ws, time_t now, unsigned discon_reason)
 		}
 
 		msg.remote_ip = human_addr2((void *)&ws->remote_addr, ws->remote_addr_len,
-		       		     buf, sizeof(buf), 0);
+					    buf, sizeof(buf), 0);
 
 		msg.ipv4 = ws->vinfo.ipv4;
 		msg.ipv6 = ws->vinfo.ipv6;
@@ -1285,7 +1285,7 @@ int periodic_check(worker_st * ws, struct timespec *tnow, unsigned dpd)
 	/* check DPD. Otherwise exit */
 	if (DTLS_ACTIVE(ws)->udp_state == UP_ACTIVE &&
 	    now - ws->last_msg_udp > DPD_TRIES * dpd && dpd > 0) {
-	    	unsigned data_mtu = DATA_MTU(ws, ws->link_mtu);
+		unsigned data_mtu = DATA_MTU(ws, ws->link_mtu);
 		oclog(ws, LOG_NOTICE,
 		      "have not received any UDP message or DPD for long (%d secs, DPD is %d)",
 		      (int)(now - ws->last_msg_udp), dpd);
@@ -1512,7 +1512,7 @@ static int dtls_mainloop(worker_st * ws, struct dtls_st * dtls, struct timespec 
 
 	ret = 0;
  cleanup:
- 	packet_deinit(packet);
+	packet_deinit(packet);
 	return ret;
 }
 
@@ -1577,7 +1577,7 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 
 	ret = 0;
  cleanup:
- 	packet_deinit(packet);
+	packet_deinit(packet);
 	return ret;
 }
 
@@ -2646,7 +2646,7 @@ static void syserr_cb (const char *msg)
 
 	oclog(ws, LOG_ERR, "libev fatal error: %s / %s", msg, strerror(err));
 
-  	terminate_reason = REASON_ERROR;
+	terminate_reason = REASON_ERROR;
 	exit_worker_reason(ws, terminate_reason);
 }
 

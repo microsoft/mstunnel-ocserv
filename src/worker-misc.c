@@ -73,10 +73,10 @@ static unsigned recv_from_new_fd(struct worker_st * ws, struct dtls_st *dtls, in
 
 	ret = 0;
  revert:
- 	*tmsg = dtls->dtls_tptr.msg;
- 	dtls->dtls_tptr.fd = saved_fd;
- 	dtls->dtls_tptr.msg = saved_tmsg;
- 	return ret;
+	*tmsg = dtls->dtls_tptr.msg;
+	dtls->dtls_tptr.fd = saved_fd;
+	dtls->dtls_tptr.msg = saved_tmsg;
+	return ret;
 }
 
 int handle_commands_from_main(struct worker_st *ws)

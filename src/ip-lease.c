@@ -97,7 +97,7 @@ struct ip_lease_st t;
 	t.sig_len = sockaddrlen;
 	memcpy(&t.sig, ip, sizeof(*ip));
 
- 	if (htable_get(&s->ip_leases.ht, rehash(&t, NULL), ip_lease_cmp, &t) != 0)
+	if (htable_get(&s->ip_leases.ht, rehash(&t, NULL), ip_lease_cmp, &t) != 0)
 		return 1;
 
 	return 0;
@@ -222,8 +222,8 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 	/* mask the network (just in case it is wrong) */
 	for (i=0;i<sizeof(struct in_addr);i++)
 		SA_IN_U8_P(&network)[i] &= (SA_IN_U8_P(&mask)[i]);
-       	((struct sockaddr_in*)&network)->sin_family = AF_INET;
-       	((struct sockaddr_in*)&network)->sin_port = 0;
+	((struct sockaddr_in*)&network)->sin_family = AF_INET;
+	((struct sockaddr_in*)&network)->sin_port = 0;
 
 	if (proc->config->explicit_ipv4) {
 		ret =
@@ -238,10 +238,10 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 		if (proc->ipv4 == NULL)
 			return ERR_MEM;
 
-        	((struct sockaddr_in*)&tmp)->sin_family = AF_INET;
-        	((struct sockaddr_in*)&tmp)->sin_port = 0;
+		((struct sockaddr_in*)&tmp)->sin_family = AF_INET;
+		((struct sockaddr_in*)&tmp)->sin_port = 0;
 		memcpy(&proc->ipv4->rip, &tmp, sizeof(struct sockaddr_in));
-       		proc->ipv4->rip_len = sizeof(struct sockaddr_in);
+		proc->ipv4->rip_len = sizeof(struct sockaddr_in);
 
 		memcpy(&proc->ipv4->sig, &tmp, sizeof(struct sockaddr_in));
 
@@ -272,8 +272,8 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 		return ERR_MEM;
 	proc->ipv4->db = &s->ip_leases;
 
-       	memcpy(&tmp, &network, sizeof(tmp));
-     	((struct sockaddr_in*)&tmp)->sin_family = AF_INET;
+	memcpy(&tmp, &network, sizeof(tmp));
+	((struct sockaddr_in*)&tmp)->sin_family = AF_INET;
 	((struct sockaddr_in*)&tmp)->sin_port = 0;
 
 	memset(&rnd, 0, sizeof(rnd));
@@ -304,13 +304,13 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 		max_loops--;
 
 		/* Mask the random number with the netmask */
-        	for (i=0;i<sizeof(struct in_addr);i++) {
-        		SA_IN_U8_P(&rnd)[i] &= ~(SA_IN_U8_P(&mask)[i]);
+		for (i=0;i<sizeof(struct in_addr);i++) {
+			SA_IN_U8_P(&rnd)[i] &= ~(SA_IN_U8_P(&mask)[i]);
 		}
 
 		/* Now add the IP to the masked random number */
-        	for (i=0;i<sizeof(struct in_addr);i++)
-        		SA_IN_U8_P(&rnd)[i] |= (SA_IN_U8_P(&network)[i]);
+		for (i=0;i<sizeof(struct in_addr);i++)
+			SA_IN_U8_P(&rnd)[i] |= (SA_IN_U8_P(&network)[i]);
 
 		/* check if it exists in the hash table */
 		if (is_ipv4_ok(s, &rnd, &network, &mask) == 0) {
@@ -320,11 +320,11 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 		}
 
 		memcpy(&proc->ipv4->rip, &rnd, sizeof(struct sockaddr_in));
-       		proc->ipv4->rip_len = sizeof(struct sockaddr_in);
+		proc->ipv4->rip_len = sizeof(struct sockaddr_in);
 
 		memcpy(&proc->ipv4->sig, &rnd, sizeof(struct sockaddr_in));
 
-       		/* LIP = network address + 1 */
+		/* LIP = network address + 1 */
 		memcpy(&proc->ipv4->lip, &network, sizeof(struct sockaddr_in));
 		proc->ipv4->lip_len = sizeof(struct sockaddr_in);
 		SA_IN_U8_P(&proc->ipv4->lip)[3] |= 1;
@@ -336,13 +336,13 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 		mslog(s, proc, LOG_DEBUG, "selected IP: %s",
 		      human_addr((void*)&proc->ipv4->rip, proc->ipv4->rip_len, buf, sizeof(buf)));
 
-       		if (icmp_ping4(s, (void*)&proc->ipv4->rip) == 0)
-       			break;
+		if (icmp_ping4(s, (void*)&proc->ipv4->rip) == 0)
+			break;
 	} while(1);
 
 	return 0;
 
-fail:
+ fail:
 	talloc_free(proc->ipv4);
 	proc->ipv4 = NULL;
 
@@ -420,11 +420,11 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 			goto fail;
 		}
 
-        	((struct sockaddr_in6*)&tmp)->sin6_family = AF_INET6;
+		((struct sockaddr_in6*)&tmp)->sin6_family = AF_INET6;
 		memcpy(&proc->ipv6->rip, &tmp, sizeof(struct sockaddr_in6));
-       		proc->ipv6->rip_len = sizeof(struct sockaddr_in6);
+		proc->ipv6->rip_len = sizeof(struct sockaddr_in6);
 
-       		/* create our sig */
+		/* create our sig */
 		for (i=0;i<sizeof(struct in6_addr);i++)
 			SA_IN6_U8_P(&proc->ipv6->sig)[i] = SA_IN6_U8_P(&proc->ipv6->rip)[i] & SA_IN6_U8_P(&subnet_mask)[i];
 
@@ -441,9 +441,9 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 	/* assign "random" IP */
 	proc->ipv6->db = &s->ip_leases;
 
-  	memcpy(&tmp, &network, sizeof(tmp));
-       	((struct sockaddr_in6*)&tmp)->sin6_family = AF_INET6;
-       	((struct sockaddr_in6*)&tmp)->sin6_port = 0;
+	memcpy(&tmp, &network, sizeof(tmp));
+	((struct sockaddr_in6*)&tmp)->sin6_family = AF_INET6;
+	((struct sockaddr_in6*)&tmp)->sin6_port = 0;
 
 	do {
 		if (max_loops == 0) {
@@ -453,7 +453,7 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 		}
 
 		memset(&rnd, 0, sizeof(rnd));
-	       	((struct sockaddr_in6*)&rnd)->sin6_family = AF_INET6;
+		((struct sockaddr_in6*)&rnd)->sin6_family = AF_INET6;
 
 		if (max_loops == MAX_IP_TRIES) {
 			ip_from_seed(proc->ipv4_seed, 4,
@@ -474,16 +474,16 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 		max_loops--;
 
 		/* Mask the random number with the netmask */
-       		for (i=0;i<sizeof(struct in6_addr);i++)
-       			SA_IN6_U8_P(&rnd)[i] &= ~(SA_IN6_U8_P(&mask)[i]);
+		for (i=0;i<sizeof(struct in6_addr);i++)
+			SA_IN6_U8_P(&rnd)[i] &= ~(SA_IN6_U8_P(&mask)[i]);
 
 		/* Now add the network to the masked random number */
-       		for (i=0;i<sizeof(struct in6_addr);i++)
-       			SA_IN6_U8_P(&rnd)[i] |= (SA_IN6_U8_P(&network)[i]);
+		for (i=0;i<sizeof(struct in6_addr);i++)
+			SA_IN6_U8_P(&rnd)[i] |= (SA_IN6_U8_P(&network)[i]);
 
 		/* make the sig of our subnet */
-	       	((struct sockaddr_in6*)&proc->ipv6->sig)->sin6_family = AF_INET6;
-	       	((struct sockaddr_in6*)&proc->ipv6->sig)->sin6_port = 0;
+		((struct sockaddr_in6*)&proc->ipv6->sig)->sin6_family = AF_INET6;
+		((struct sockaddr_in6*)&proc->ipv6->sig)->sin6_port = 0;
 		for (i=0;i<sizeof(struct in6_addr);i++) {
 			SA_IN6_U8_P(&proc->ipv6->sig)[i] = SA_IN6_U8_P(&rnd)[i] & SA_IN6_U8_P(&subnet_mask)[i];
 		}
@@ -495,21 +495,21 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 			continue;
 		}
 
-       		proc->ipv6->rip_len = sizeof(struct sockaddr_in6);
-       		memcpy(&proc->ipv6->rip, &rnd, proc->ipv6->rip_len);
+		proc->ipv6->rip_len = sizeof(struct sockaddr_in6);
+		memcpy(&proc->ipv6->rip, &rnd, proc->ipv6->rip_len);
 
 		mslog(s, proc, LOG_DEBUG, "selected IP: %s",
 		      human_addr((void*)&proc->ipv6->rip, proc->ipv6->rip_len, buf, sizeof(buf)));
 
-        	if (proc->ipv6->prefix != 128 || icmp_ping6(s, (void*)&proc->ipv6->rip) == 0)
-        		break;
-        } while(1);
+		if (proc->ipv6->prefix != 128 || icmp_ping6(s, (void*)&proc->ipv6->rip) == 0)
+			break;
+	} while(1);
 
  finish:
 	proc->ipv6->prefix = subnet_prefix;
 
 	return 0;
-fail:
+ fail:
 	talloc_free(proc->ipv6);
 	proc->ipv6 = NULL;
 

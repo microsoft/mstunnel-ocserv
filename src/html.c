@@ -108,8 +108,8 @@ char *unescape_html(void *pool, const char *html, unsigned len, unsigned *out_le
 
 	return msg;
  fail:
- 	talloc_free(msg);
- 	return NULL;
+	talloc_free(msg);
+	return NULL;
 }
 
 char *unescape_url(void *pool, const char *url, unsigned len, unsigned *out_len)

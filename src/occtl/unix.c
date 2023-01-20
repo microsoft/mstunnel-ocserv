@@ -347,7 +347,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 	ret = 1;
 
  cleanup:
- 	free_reply(&raw);
+	free_reply(&raw);
 	return ret;
 }
 
@@ -374,7 +374,7 @@ int handle_reload_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 	bool_msg__free_unpacked(rep, &pa);
 
 	if (status != 0)
-        	printf("Server scheduled to reload\n");
+		printf("Server scheduled to reload\n");
 	else
 		goto error_status;
 
@@ -414,7 +414,7 @@ int handle_stop_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params
 	bool_msg__free_unpacked(rep, &pa);
 
 	if (status != 0)
-        	printf("Server scheduled to stop\n");
+		printf("Server scheduled to stop\n");
 	else
 		goto error_status;
 
