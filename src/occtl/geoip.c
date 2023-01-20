@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors:
- *   Nikos Mavrogiannopoulos <nmav@redhat.com>
+ *   Nikos Mavrogiannopoulos <n.mavrogiannopoulos@gmail.com>
  */
 
 #define _GNU_SOURCE		/* asprintf */
