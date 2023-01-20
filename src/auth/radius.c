@@ -214,9 +214,12 @@ static void append_route(struct radius_ctx_st *pctx, const char *route, unsigned
 static void parse_groupnames(struct radius_ctx_st *pctx, const char *full)
 {
 	char *p, *p2;
-	unsigned i;
 
-	if (pctx->groupnames_size == 0 && strncmp(full, "OU=", 3) == 0) {
+	if (pctx->groupnames_size >= MAX_GROUPS) {
+		syslog(LOG_WARNING,
+		       "radius-auth: cannot handle more than %d groups, ignoring group string %s",
+		       MAX_GROUPS, full);
+	} else if (strncmp(full, "OU=", 3) == 0) {
 		syslog(LOG_DEBUG, "radius-auth: found group string %s", full);
 		full += 3;
 
@@ -224,30 +227,23 @@ static void parse_groupnames(struct radius_ctx_st *pctx, const char *full)
 		if (p == NULL)
 			return;
 
-		i = 0;
 		p2 = strsep(&p, ";");
 		while (p2 != NULL) {
-			pctx->groupnames[i++] = p2;
-			pctx->groupnames_size = i;
+			pctx->groupnames[pctx->groupnames_size++] = p2;
 
 			syslog(LOG_DEBUG, "radius-auth: found group %s", p2);
 
 			p2 = strsep(&p, ";");
 
-			if (i == MAX_GROUPS)
+			if (pctx->groupnames_size == MAX_GROUPS)
 				break;
 		}
 	} else {
-		if (pctx->groupnames_size == 0) {
-			syslog(LOG_DEBUG, "radius-auth: found group string %s", full);
-
-			pctx->groupnames[0] = talloc_strdup(pctx, full);
-			if (pctx->groupnames[0] == NULL)
-				return;
-			pctx->groupnames_size = 1;
-		} else {
-			syslog(LOG_DEBUG, "radius-auth: ignoring redundant group string");
-		}
+		syslog(LOG_DEBUG, "radius-auth: found group string %s", full);
+		p = talloc_strdup(pctx, full);
+		if (p == NULL)
+			return;
+		pctx->groupnames[pctx->groupnames_size++] = p;
 	}
 }
 

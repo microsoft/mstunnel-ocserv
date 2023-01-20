@@ -1,4 +1,6 @@
 * Version 1.1.8 (unreleased)
+- Fixed issue with group selection on radius servers sending multiple
+  group class attributes (#489).
 - Enhanced the seccomp filters to open files related to FIPS compliance on Suse
 - Added "Camouflage" functionality that makes ocserv look
   like a web server to unauthorized parties.
