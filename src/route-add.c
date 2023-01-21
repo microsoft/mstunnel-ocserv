@@ -140,7 +140,7 @@ char *cmd = NULL;
 
 	ret = 0;
  fail:
- 	talloc_free(cmd);
+	talloc_free(cmd);
 	return ret;
 }
 
@@ -175,7 +175,7 @@ int ret;
 	proc->applied_iroutes = 1;
 
 	return 0;
-fail:
+ fail:
 	for (j=0;j<i;j++)
 		route_del(s, proc, proc->config->iroutes[j], proc->tun_lease.name);
 

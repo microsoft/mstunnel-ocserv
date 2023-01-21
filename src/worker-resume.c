@@ -112,7 +112,7 @@ static gnutls_datum_t resume_db_fetch(void *dbf, gnutls_datum_t key)
 	recv_resume_fetch_reply(ws, sd, &r);
 
  cleanup:
- 	close(sd);
+	close(sd);
 	return r;
 }
 

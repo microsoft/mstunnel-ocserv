@@ -73,27 +73,27 @@ size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac
 #endif
 
 #define DTLS_FATAL_ERR_CMD(x, CMD) \
-        if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
-                if (syslog_open) \
-                	syslog(LOG_WARNING, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
-                else \
-                        fprintf(stderr, "GnuTLS error (at %s:%d): %s\n", __FILE__, __LINE__, gnutls_strerror(x)); \
-                CMD; \
-        }
+	if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
+		if (syslog_open) \
+			syslog(LOG_WARNING, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
+		else \
+			fprintf(stderr, "GnuTLS error (at %s:%d): %s\n", __FILE__, __LINE__, gnutls_strerror(x)); \
+		CMD; \
+	}
 
 #define DTLS_FATAL_ERR(x) DTLS_FATAL_ERR_CMD(x, exit(EXIT_FAILURE))
 
 #define CSTP_FATAL_ERR_CMD(ws, x, CMD) \
-        if (ws->session != NULL) { \
-	        if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
-               		oclog(ws, LOG_WARNING, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
-	                CMD; \
-	        } \
+	if (ws->session != NULL) { \
+		if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
+			oclog(ws, LOG_WARNING, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
+			CMD; \
+		} \
 	} else { \
-	        if (x < 0 && errno != EINTR && errno != EAGAIN) { \
-               		oclog(ws, LOG_WARNING, "socket error (at %s:%d): %s", __FILE__, __LINE__, strerror(errno)); \
-	                CMD; \
-	        } \
+		if (x < 0 && errno != EINTR && errno != EAGAIN) { \
+			oclog(ws, LOG_WARNING, "socket error (at %s:%d): %s", __FILE__, __LINE__, strerror(errno)); \
+			CMD; \
+		} \
 	}
 
 #define CSTP_FATAL_ERR(ws, x) CSTP_FATAL_ERR_CMD(ws, x, exit(EXIT_FAILURE))
@@ -152,8 +152,8 @@ inline static void packet_deinit(void *p)
 {
 #ifdef ZERO_COPY
 	gnutls_packet_t packet = p;
- 	if (packet)
-	 	gnutls_packet_deinit(packet);
+	if (packet)
+		gnutls_packet_deinit(packet);
 #endif
 }
 

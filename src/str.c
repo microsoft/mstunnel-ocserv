@@ -192,10 +192,10 @@ int str_replace_str(str_st *str, const str_rep_tab *tab)
 		do {
 			if (length >= ptab->pattern_length &&
 			    memcmp(ptab->pattern, p, ptab->pattern_length) == 0) {
-			    /* replace */
-			    	final_len = length - ptab->pattern_length;
-			    	final = talloc_memdup(str->allocd, p+ptab->pattern_length, final_len);
-			    	if (final == NULL)
+				/* replace */
+				final_len = length - ptab->pattern_length;
+				final = talloc_memdup(str->allocd, p+ptab->pattern_length, final_len);
+				if (final == NULL)
 					return -1;
 
 				str->length -= final_len + ptab->pattern_length;

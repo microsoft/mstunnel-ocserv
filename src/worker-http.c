@@ -556,14 +556,14 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 #ifdef ENABLE_COMPRESSION
 	case HEADER_DTLS_ENCODING:
 	case HEADER_CSTP_ENCODING:
-	        if (WSCONFIG(ws)->enable_compression == 0)
-	        	break;
+		if (WSCONFIG(ws)->enable_compression == 0)
+			break;
 
 		if (req->next_header == HEADER_DTLS_ENCODING)
 			selected_comp = &ws->dtls_selected_comp;
 		else
 			selected_comp = &ws->cstp_selected_comp;
-	        *selected_comp = NULL;
+		*selected_comp = NULL;
 
 		str = (char *)value;
 		while ((token = strtok(str, ",")) != NULL) {

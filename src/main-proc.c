@@ -127,10 +127,10 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned flags)
 			/* we were called during the connect script being run.
 			 * wait for it to finish and if it returns zero run the
 			 * disconnect script */
-			 if (waitpid(pid, &wstatus, 0) > 0) {
-			 	if (WEXITSTATUS(wstatus) == 0)
+			if (waitpid(pid, &wstatus, 0) > 0) {
+				if (WEXITSTATUS(wstatus) == 0)
 					user_disconnected(s, proc);
-			 }
+			}
 		} else { /* pid > 0 or status == PS_AUTH_COMPLETED are mutually exclusive
 		          * since PS_AUTH_COMPLETED is set only after a successful script run.
 		          */

@@ -321,7 +321,7 @@ unsigned check_cmd(const char *cmd, const char *input,
 
 		if (need_preconn != 0) {
 			if (conn_prehandle(conn) < 0) {
-			 	*status = 1;
+				*status = 1;
 			} else {
 				*status = func(conn, p, params);
 			}
@@ -613,9 +613,9 @@ int main(int argc, char **argv)
 				usage();
 				exit(EXIT_SUCCESS);
 			}
-  		}
+		}
 
-  		/* handle all arguments as a command */
+		/* handle all arguments as a command */
 		ret = single_cmd(argc, argv, gl_pool, file, &params);
 		talloc_free(gl_pool);
 		exit(ret);

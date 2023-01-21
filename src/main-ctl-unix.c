@@ -914,12 +914,12 @@ static void ctl_cmd_wacher_cb(EV_P_ ev_io *w, int revents)
 		return;
 	}
  fail:
- 	if (s->top_fd == wst->fd)
- 		s->top_fd = -1;
- 	close(wst->fd);
- 	ev_io_stop(EV_A_ w);
- 	talloc_free(wst);
- 	return;
+	if (s->top_fd == wst->fd)
+		s->top_fd = -1;
+	close(wst->fd);
+	ev_io_stop(EV_A_ w);
+	talloc_free(wst);
+	return;
 }
 
 static void ctl_handle_commands(main_server_st * s)
@@ -1024,5 +1024,5 @@ void ctl_handler_notify (main_server_st* s, struct proc_st *proc, unsigned conne
 	return;
  fail:
 	talloc_free(pool);
- 	s->top_fd = -1;
+	s->top_fd = -1;
 }

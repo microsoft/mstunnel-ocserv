@@ -164,7 +164,7 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 }
 
 int handle_auth_cookie_req(sec_mod_instance_st * sec_mod_instance, struct proc_st* proc,
- 			   const AuthCookieRequestMsg * req)
+			   const AuthCookieRequestMsg * req)
 {
 	main_server_st * s = sec_mod_instance->server;
 	int ret;
@@ -197,8 +197,8 @@ int handle_auth_cookie_req(sec_mod_instance_st * sec_mod_instance, struct proc_s
 	}
 
 	/* Put into right cgroup */
-        if (proc->config->cgroup != NULL) {
-        	put_into_cgroup(s, proc->config->cgroup, proc->pid);
+	if (proc->config->cgroup != NULL) {
+		put_into_cgroup(s, proc->config->cgroup, proc->pid);
 	}
 
 	/* disconnect and re-use previous session's IPs*/

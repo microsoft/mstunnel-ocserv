@@ -466,7 +466,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 	ret = 0;
 
  cleanup:
- 	str_clear(&str);
+	str_clear(&str);
 	return ret;
 }
 
@@ -1750,6 +1750,6 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	talloc_free(msg);
 	exit_worker(ws);
  cleanup:
- 	talloc_free(msg);
- 	return ret;
+	talloc_free(msg);
+	return ret;
 }

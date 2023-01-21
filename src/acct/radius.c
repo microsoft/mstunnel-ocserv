@@ -286,7 +286,7 @@ static void radius_acct_close_session(void *_vctx, unsigned auth_method, const c
 	}
 
  cleanup:
- 	rc_avpair_free(send);
+	rc_avpair_free(send);
 	return;
 }
 

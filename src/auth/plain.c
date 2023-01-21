@@ -480,7 +480,7 @@ static void plain_group_list(void *pool, void *additional, char ***groupname, un
 
 	/* always succeed */
  exit:
- 	htable_clear(&hash);
+	htable_clear(&hash);
 	safe_memset(line, 0, sizeof(line));
 	fclose(fp);
 	return;

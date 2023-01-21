@@ -72,10 +72,10 @@ int send_msg(void *pool, int fd, uint8_t cmd,
 
 
 int recv_socket_msg(void *pool, int fd, uint8_t cmd,
-  	    	    int *socketfd, void** msg, unpack_func, unsigned timeout);
+		    int *socketfd, void** msg, unpack_func, unsigned timeout);
 
 inline static int recv_msg(void *pool, int fd, uint8_t cmd,
-	     void **msg, unpack_func unpack, unsigned timeout)
+		           void **msg, unpack_func unpack, unsigned timeout)
 {
 	return recv_socket_msg(pool, fd, cmd, NULL, msg, unpack, timeout);
 }
@@ -111,20 +111,20 @@ void safe_memset(void *data, int c, size_t size)
 inline static
 void ms_sleep(unsigned ms)
 {
-  struct timespec tv;
-  int ret;
+	struct timespec tv;
+	int ret;
 
-  tv.tv_sec = 0;
-  tv.tv_nsec = ms * 1000 * 1000;
+	tv.tv_sec = 0;
+	tv.tv_nsec = ms * 1000 * 1000;
 
-  while(tv.tv_nsec >= 1000000000) {
-  	tv.tv_nsec -= 1000000000;
-  	tv.tv_sec++;
-  }
+	while(tv.tv_nsec >= 1000000000) {
+		tv.tv_nsec -= 1000000000;
+		tv.tv_sec++;
+	}
 
-  do {
-	ret = nanosleep(&tv, NULL);
-  } while(ret == -1 && errno == EINTR);
+	do {
+		ret = nanosleep(&tv, NULL);
+	} while(ret == -1 && errno == EINTR);
 }
 
 const char *ps_status_to_str(int status, unsigned cookie);

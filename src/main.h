@@ -348,8 +348,8 @@ __attribute__ ((format(printf, 4, 5)))
 #endif
 
 
-void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
-    	int priority, const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64);
+void mslog_hex(const main_server_st * s, const struct proc_st* proc,
+	       int priority, const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64);
 
 int open_tun(main_server_st* s, struct proc_st* proc);
 void close_tun(main_server_st* s, struct proc_st* proc);
@@ -360,7 +360,7 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 			AUTHREP r);
 
 int handle_auth_cookie_req(sec_mod_instance_st * sec_mod_instance, struct proc_st* proc,
- 			   const AuthCookieRequestMsg * req);
+			   const AuthCookieRequestMsg * req);
 
 int check_multiple_users(main_server_st *s, struct proc_st* proc);
 int handle_script_exit(main_server_st *s, struct proc_st* proc, int code);
