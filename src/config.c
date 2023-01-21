@@ -227,7 +227,7 @@ static void figure_auth_funcs(void *pool, const char *vhostname,
 		/* Set the primary authentication methods */
 		for (j=0;j<auth_size;j++) {
 			found = 0;
-			for (i=0;i<sizeof(avail_auth_types)/sizeof(avail_auth_types[0]);i++) {
+			for (i=0;i<ARRAY_SIZE(avail_auth_types);i++) {
 				if (c_strncasecmp(auth[j], avail_auth_types[i].name, avail_auth_types[i].name_size) == 0) {
 					if (avail_auth_types[i].get_brackets_string)
 						config->auth[0].additional = avail_auth_types[i].get_brackets_string(pool, config, auth[j]+avail_auth_types[i].name_size);
@@ -267,7 +267,7 @@ static void figure_auth_funcs(void *pool, const char *vhostname,
 		/* Append authentication methods (alternative options) */
 		for (j=0;j<auth_size;j++) {
 			found = 0;
-			for (i=0;i<sizeof(avail_auth_types)/sizeof(avail_auth_types[0]);i++) {
+			for (i=0;i<ARRAY_SIZE(avail_auth_types);i++) {
 				if (c_strncasecmp(auth[j], avail_auth_types[i].name, avail_auth_types[i].name_size) == 0) {
 					if (avail_auth_types[i].get_brackets_string)
 						config->auth[x].additional = avail_auth_types[i].get_brackets_string(pool, config, auth[j]+avail_auth_types[i].name_size);
@@ -326,7 +326,7 @@ static void figure_acct_funcs(void *pool, const char *vhostname, struct perm_cfg
 		return;
 
 	/* Set the accounting method */
-	for (i=0;i<sizeof(avail_acct_types)/sizeof(avail_acct_types[0]);i++) {
+	for (i=0;i<ARRAY_SIZE(avail_acct_types);i++) {
 		if (c_strncasecmp(acct, avail_acct_types[i].name, avail_acct_types[i].name_size) == 0) {
 			if (avail_acct_types[i].mod == NULL)
 				continue;

@@ -241,9 +241,7 @@ unsigned switch_comp_priority(void *pool, const char *modstring)
 		ret = 0;
 		goto finish;
 	}
-	for (i = 0;
-	     i < sizeof(comp_methods) / sizeof(comp_methods[0]);
-	     i++) {
+	for (i = 0; i < ARRAY_SIZE(comp_methods); i++) {
 		if (c_strcasecmp(algo, comp_methods[i].name) == 0) {
 			comp_methods[i].server_prio = priority;
 			ret = 1;
@@ -456,9 +454,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		}
 
 		while ((token = strtok(str, ":")) != NULL) {
-			for (i = 0;
-			     i < sizeof(ciphersuites) / sizeof(ciphersuites[0]);
-			     i++) {
+			for (i = 0; i < ARRAY_SIZE(ciphersuites); i++) {
 				if (strcmp(token, ciphersuites[i].oc_name) == 0) {
 					if (cand == NULL ||
 					    cand->server_prio < ciphersuites[i].server_prio ||
@@ -523,9 +519,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		}
 
 		while ((token = strtok(str, ":")) != NULL) {
-			for (i = 0;
-			     i < sizeof(ciphersuites12) / sizeof(ciphersuites12[0]);
-			     i++) {
+			for (i = 0; i < ARRAY_SIZE(ciphersuites12); i++) {
 				if (strcmp(token, ciphersuites12[i].oc_name) == 0) {
 					if (cand == NULL ||
 					    cand->server_prio < ciphersuites12[i].server_prio ||
@@ -567,9 +561,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 
 		str = (char *)value;
 		while ((token = strtok(str, ",")) != NULL) {
-			for (i = 0;
-			     i < sizeof(comp_methods) / sizeof(comp_methods[0]);
-			     i++) {
+			for (i = 0; i < ARRAY_SIZE(comp_methods); i++) {
 				if (c_strcasecmp(token, comp_methods[i].name) == 0) {
 					if (comp_cand == NULL ||
 					    comp_cand->server_prio <

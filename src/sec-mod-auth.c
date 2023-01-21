@@ -796,7 +796,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 	hmac_components[2].data = (void*)&session_start_time;
 	hmac_components[2].length = sizeof(session_start_time);
 
-	generate_hmac(sizeof(sec->hmac_key), sec->hmac_key, sizeof(hmac_components) / sizeof(hmac_components[0]), hmac_components, computed_hmac);
+	generate_hmac(sizeof(sec->hmac_key), sec->hmac_key, ARRAY_SIZE(hmac_components), hmac_components, computed_hmac);
 
 	if (memcmp(computed_hmac, req->hmac.data, req->hmac.len) != 0) {
 		seclog(sec, LOG_NOTICE, "hmac presented by client doesn't match parameters provided - possible replay");
