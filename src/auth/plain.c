@@ -158,7 +158,7 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 
 	fp = fopen(pctx->config->passwd, "r");
 	if (fp == NULL) {
-		syslog(LOG_NOTICE,
+		syslog(LOG_ERR,
 		       "error in plain authentication; cannot open: %s",
 		       pctx->config->passwd);
 		return -1;
@@ -232,7 +232,7 @@ static int plain_auth_init(void **ctx, void *pool, void *vctx, const common_auth
 	int ret;
 
 	if (info->username == NULL || info->username[0] == 0) {
-		syslog(LOG_NOTICE,
+		syslog(LOG_ERR,
 		       "plain-auth: no username present");
 		return ERR_AUTH_FAIL;
 	}
