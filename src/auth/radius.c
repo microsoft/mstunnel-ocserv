@@ -230,7 +230,6 @@ static void parse_groupnames(struct radius_ctx_st *pctx, const char *full)
 			pctx->groupnames[i++] = p2;
 			pctx->groupnames_size = i;
 
-			trim_trailing_whitespace(p2);
 			syslog(LOG_DEBUG, "radius-auth: found group %s", p2);
 
 			p2 = strsep(&p, ";");
