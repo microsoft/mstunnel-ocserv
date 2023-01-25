@@ -10,7 +10,7 @@
 - Emit a LOG_ERR error message with plain authentication fails
 - The bundled inih was updated to r56.
 - The bundled protobuf-c was updated to 1.4.1.
-- Enhanced the seccomp filters for ARMv7 compatibility and musl libc
+- Enhanced the seccomp filters for ARMv7 compatibility, musl libc, GnuTLS 3.7
 - HTTP headers always capitalised as in RFC 9110
 
 

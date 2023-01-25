@@ -184,13 +184,16 @@ int disable_system_calls(struct worker_st *ws)
 	ADD_SYSCALL(socket, 0);
 	ADD_SYSCALL(connect, 0);
 
+	ADD_SYSCALL(open, 0);
 	ADD_SYSCALL(openat, 0);
 	ADD_SYSCALL(fstat, 0);
-	ADD_SYSCALL(stat, 0);
 #if defined(SYS_fstat64) || defined(__NR_fstat64)
 	ADD_SYSCALL(fstat64, 0);
 #endif
+	ADD_SYSCALL(stat, 0);
+#if defined(SYS_stat64) || defined(__NR_stat64)
 	ADD_SYSCALL(stat64, 0);
+#endif
 	ADD_SYSCALL(newfstatat, 0);
 	ADD_SYSCALL(lseek, 0);
 
