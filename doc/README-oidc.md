@@ -1,4 +1,4 @@
-# Using ocserv with OpenIDConnect authentication
+# Using ocserv with OpenID Connect authentication
 
 OpenID Connect (OIDC) is an identity layer build on top of the OAuth 2.0 protocols. Authentication using OIDC utilizes the following flow:
 
