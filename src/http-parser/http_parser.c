@@ -1298,7 +1298,7 @@ reexecute:
               }
               break;
 
-            /* Connection */
+            /* connection */
 
             case h_matching_connection:
               parser->index++;
@@ -1310,7 +1310,7 @@ reexecute:
               }
               break;
 
-            /* Proxy-Connection */
+            /* proxy-connection */
 
             case h_matching_proxy_connection:
               parser->index++;
@@ -1322,7 +1322,7 @@ reexecute:
               }
               break;
 
-            /* Content-Length */
+            /* content-length */
 
             case h_matching_content_length:
               parser->index++;
@@ -1334,7 +1334,7 @@ reexecute:
               }
               break;
 
-            /* Transfer-Encoding */
+            /* transfer-encoding */
 
             case h_matching_transfer_encoding:
               parser->index++;
@@ -1347,7 +1347,7 @@ reexecute:
               }
               break;
 
-            /* Upgrade */
+            /* upgrade */
 
             case h_matching_upgrade:
               parser->index++;
@@ -1803,7 +1803,7 @@ reexecute:
           REEXECUTE();
         }
 
-        /* Cannot use Transfer-Encoding and Content-Length headers together
+        /* Cannot use transfer-encoding and a content-length header together
            per the HTTP specification. (RFC 7230 Section 3.3.3) */
         if ((parser->uses_transfer_encoding == 1) &&
             (parser->flags & F_CONTENTLENGTH)) {
@@ -1839,7 +1839,7 @@ reexecute:
         /* Here we call the headers_complete callback. This is somewhat
          * different than other callbacks because if the user returns 1, we
          * will interpret that as saying that this message has no body. This
-         * is needed for the annoying case of receiving a response to a HEAD
+         * is needed for the annoying case of recieving a response to a HEAD
          * request.
          *
          * We'd like to use CALLBACK_NOTIFY_NOADVANCE() here but we cannot, so
@@ -1928,7 +1928,7 @@ reexecute:
             UPDATE_STATE(s_body_identity);
           } else {
             if (!http_message_needs_eof(parser)) {
-              /* Assume Content-Length 0 - read the next */
+              /* Assume content-length 0 - read the next */
               UPDATE_STATE(NEW_MESSAGE());
               CALLBACK_NOTIFY(message_complete);
             } else {
@@ -1950,7 +1950,7 @@ reexecute:
             && parser->content_length != ULLONG_MAX);
 
         /* The difference between advancing content_length and p is because
-         * the latter will automatically advance on the next loop iteration.
+         * the latter will automaticaly advance on the next loop iteration.
          * Further, if content_length ends up at 0, we want to see the last
          * byte again for our message complete callback.
          */
@@ -2444,7 +2444,7 @@ http_parser_parse_url(const char *buf, size_t buflen, int is_connect,
       case s_dead:
         return 1;
 
-      /* Skip delimiters */
+      /* Skip delimeters */
       case s_req_schema_slash:
       case s_req_schema_slash_slash:
       case s_req_server_start:
