@@ -1,4 +1,5 @@
 * Version 1.1.7 (unreleased)
+- Move vendored CCAN hex code snippet from src/occtl to src/ccan.
 - Update vendored CCAN code snippets.
 - Emit a LOG_ERR error message with plain authentication fails
 - The bundled inih was updated to r56.
