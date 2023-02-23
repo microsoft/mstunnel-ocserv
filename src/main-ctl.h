@@ -1,5 +1,5 @@
-#ifndef MAIN_CTL_HANDLER_H
-# define MAIN_CTL_HANDLER_H
+#ifndef OC_MAIN_CTL_H
+# define OC_MAIN_CTL_H
 
 #include <occtl/ctl.h>
 #include <ev.h>

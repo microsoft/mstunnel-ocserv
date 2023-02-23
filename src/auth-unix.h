@@ -1,5 +1,5 @@
-#ifndef HAVE_AUTH_UNIX_H
-# define HAVE_AUTH_UNIX_H
+#ifndef OC_AUTH_UNIX_H
+# define OC_AUTH_UNIX_H
 
 # include <config.h>
 

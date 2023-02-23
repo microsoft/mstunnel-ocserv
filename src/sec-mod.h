@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef SEC_MOD_H
-# define SEC_MOD_H
+#ifndef OC_SEC_MOD_H
+# define OC_SEC_MOD_H
 
 #include <gnutls/abstract.h>
 #include <ccan/htable/htable.h>

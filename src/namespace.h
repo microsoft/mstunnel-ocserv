@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NAMESPACE_H
-# define NAMESPACE_H
+#ifndef OC_NAMESPACE_H
+# define OC_NAMESPACE_H
 
 #include <config.h>
 

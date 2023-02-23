@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef AUTH_H
-# define AUTH_H
+#ifndef OC_SEC_MOD_AUTH_H
+# define OC_SEC_MOD_AUTH_H
 
 #include <main.h>
 #include <sec-mod.h>

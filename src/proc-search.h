@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef PROC_SEARCH_H
-# define PROC_SEARCH_H
+#ifndef OC_PROC_SEARCH_H
+# define OC_PROC_SEARCH_H
 
 #include <vpn.h>
 #include <string.h>

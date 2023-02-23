@@ -19,8 +19,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef TLSLIB_H
-#define TLSLIB_H
+#ifndef OC_TLSLIB_H
+#define OC_TLSLIB_H
 
 #include <gnutls/gnutls.h>
 #include <gnutls/pkcs11.h>

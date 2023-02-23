@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef SUP_CONFIG_H
-# define SUP_CONFIG_H
+#ifndef OC_SEC_MOD_SUP_CONFIG_H
+# define OC_SEC_MOD_SUP_CONFIG_H
 
 #include <sec-mod.h>
 

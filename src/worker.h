@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef WORKER_H
-#define WORKER_H
+#ifndef OC_WORKER_H
+#define OC_WORKER_H
 
 #include <config.h>
 #include <syslog.h>

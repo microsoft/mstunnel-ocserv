@@ -19,8 +19,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef MAIN_H
-# define MAIN_H
+#ifndef OC_MAIN_H
+# define OC_MAIN_H
 
 #include <sys/types.h>
 #include <sys/socket.h>

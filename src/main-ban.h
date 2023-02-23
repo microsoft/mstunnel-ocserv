@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef MAIN_BAN_H
-# define MAIN_BAN_H
+#ifndef OC_MAIN_BAN_H
+# define OC_MAIN_BAN_H
 
 # include "main.h"
 

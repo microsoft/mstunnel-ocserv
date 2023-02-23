@@ -16,8 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef ISOLATE_H
-# define ISOLATE_H
+#ifndef OC_ISOLATE_H
+# define OC_ISOLATE_H
 
 
 void init_fd_limits_default(struct main_server_st * s);
