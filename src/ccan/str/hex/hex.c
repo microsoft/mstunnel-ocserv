@@ -1,6 +1,5 @@
 /* CC0 license (public domain) - see LICENSE file for details */
-#include <config.h>
-#include <hex.h>
+#include <ccan/str/hex/hex.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,21 +50,17 @@ static char hexchar(unsigned int val)
 
 bool hex_encode(const void *buf, size_t bufsize, char *dest, size_t destsize)
 {
-	size_t used = 0;
+	size_t i;
 
-	if (destsize < 1)
+	if (destsize < hex_str_size(bufsize))
 		return false;
 
-	while (used < bufsize) {
-		unsigned int c = ((const unsigned char *)buf)[used];
-		if (destsize < 3)
-			return false;
+	for (i = 0; i < bufsize; i++) {
+		unsigned int c = ((const unsigned char *)buf)[i];
 		*(dest++) = hexchar(c >> 4);
 		*(dest++) = hexchar(c & 0xF);
-		used++;
-		destsize -= 2;
 	}
 	*dest = '\0';
 
-	return used + 1;
+	return true;
 }

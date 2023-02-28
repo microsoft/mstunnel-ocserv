@@ -45,7 +45,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <assert.h>
-#include "hex.h"
+#include <ccan/str/hex/hex.h>
 #include "geoip.h"
 #include <vpn.h>
 #include <base64-helper.h>
