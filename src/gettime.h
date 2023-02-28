@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef GETTIME_H
-#define GETTIME_H
+#ifndef OC_GETTIME_H
+#define OC_GETTIME_H
 
 #include <config.h>
 #include <time.h>

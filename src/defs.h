@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef DEFS_H
-#define DEFS_H
+#ifndef OC_DEFS_H
+#define OC_DEFS_H
 
 #include <syslog.h>
 

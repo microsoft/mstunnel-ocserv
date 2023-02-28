@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef VHOST_H
-#define VHOST_H
+#ifndef OC_VHOST_H
+#define OC_VHOST_H
 
 /* Virtual host entries; common between main and sec-mod */
 #include <config.h>

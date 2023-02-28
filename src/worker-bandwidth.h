@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef WORKER_BANDWIDTH_H
-# define WORKER_BANDWIDTH_H
+#ifndef OC_WORKER_BANDWIDTH_H
+# define OC_WORKER_BANDWIDTH_H
 
 #include <gettime.h>
 #include <time.h>
@@ -57,6 +57,5 @@ int bandwidth_update(bandwidth_st* b, size_t bytes, struct timespec* now)
 
 	return _bandwidth_update(b, bytes, now);
 }
-
 
 #endif

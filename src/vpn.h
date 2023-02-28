@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef VPN_H
-#define VPN_H
+#ifndef OC_VPN_H
+#define OC_VPN_H
 
 #include <config.h>
 #include <gnutls/gnutls.h>

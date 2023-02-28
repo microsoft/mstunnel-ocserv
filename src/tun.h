@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef TUN_H
-# define TUN_H
+#ifndef OC_TUN_H
+# define OC_TUN_H
 
 #include <vpn.h>
 #include <string.h>

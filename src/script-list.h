@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef SCRIPT_LIST_H
-# define SCRIPT_LIST_H
+#ifndef OC_SCRIPT_LIST_H
+# define OC_SCRIPT_LIST_H
 
 #include <main.h>
 #include <sys/types.h>

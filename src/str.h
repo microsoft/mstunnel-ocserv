@@ -3,7 +3,7 @@
  *
  * Author: Nikos Mavrogiannopoulos
  *
- * This file is part of GnuTLS.
+ * This file is part of ocserv.
  *
  * ocserv is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -20,8 +20,8 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GNUTLS_STR_H
-#define GNUTLS_STR_H
+#ifndef OC_STR_H
+#define OC_STR_H
 
 #include <config.h>
 #include <stdint.h>

@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef ICMP_PING_H
-# define ICMP_PING_H
+#ifndef OC_ICMP_PING_H
+# define OC_ICMP_PING_H
 
 #include <main.h>
 
