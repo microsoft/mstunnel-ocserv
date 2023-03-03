@@ -108,27 +108,27 @@ device and the client. The tasks handled are:
 * Authentication
 
 ```
-  main                 sec-mod                 worker
-   |                       |                      |
-   |                       |  <--SEC_AUTH_INIT--- |
-   |                       |  ---SEC_AUTH_REPLY-> |
-   |                       |  <--SEC_AUTH_CONT--- |
-   |                       |         .            |
-   |                       |         .            |
-   |                       |         .            |
-   |                       |  ---SEC_AUTH_REPLY-> |
-   |                       |                      |
-   | <----------AUTH_COOKIE_REQ------------------ |
-   |                       |                      |
-   | --SECM_SESSION_OPEN-> |                      |
-   | <-SECM_SESSION_REPLY- |                      |   #contains additional config for client
-   |                       |                      |
-   | ---------------AUTH_COOKIE_REP-------------> |   #forwards the additional config for client
-   |                       |                      |
-   | <------------SESSION_INFO------------------- |
-   |                       |                      |
-   |                       | <-- SEC_CLI_STATS -- |
-   |                       |            (disconnect)
+  main                 sec-mod                  worker
+   |                       |                       |
+   |                       | <--SEC_AUTH_INIT----- |
+   |                       | ---SEC_AUTH_REP-----> |
+   |                       | <--SEC_AUTH_CONT----- |
+   |                       |         .             |
+   |                       |         .             |
+   |                       |         .             |
+   |                       | ---SEC_AUTH_REP-----> |
+   |                       |                       |
+   | <----------AUTH_COOKIE_REQ------------------- |
+   |                       |                       |
+   | --SECM_SESSION_OPEN-> |                       |
+   | <-SECM_SESSION_REPLY- |                       |   #contains additional config for client
+   |                       |                       |
+   | ---------------AUTH_COOKIE_REP--------------> |   #forwards the additional config for client
+   |                       |                       |
+   | <------------SESSION_INFO-------------------- |
+   |                       |                       |
+   |                       | <--SEC_CLI_STATS----- |
+   |                       |             (disconnect)
    | -SECM_SESSION_CLOSE-> |
    | <---SECM_CLI_STATS--- |
 
@@ -152,34 +152,34 @@ This is the same diagram as above but shows how the session ID (SID)
 is assigned and used throughout the server.
 
 ```
-  main                  sec-mod                       worker
-   |                       |                            |
-   |                       |  <--SEC_AUTH_INIT---       |
-   |                       |  -SEC_AUTH_REP (NEW SID)-> |
-   |                       |  <--SEC_AUTH_CONT (SID)--- |
-   |                       |         .                  |
-   |                       |         .                  |
-   |                       |         .                  |
-   |                       |  ----SEC_AUTH_REP -------> |
+  main                        sec-mod                        worker
+   |                             |                             |
+   |                             | <--SEC_AUTH_INIT----------- |
+   |                             | --SEC_AUTH_REP (NEW SID)--> |
+   |                             | <--SEC_AUTH_CONT (SID)----- |
+   |                             |         .                   |
+   |                             |         .                   |
+   |                             |         .                   |
+   |                             | -----SEC_AUTH_REP --------> |
 
 (note that by that time the client/worker may be disconnected,
 and reconnect later and use the cookie -SID- to resume the
 already authenticated session).
 
-   |                       |                            |
-   | <----------AUTH_COOKIE_REQ (SID)-----------------  |
-   |                       |                            |
-   | -SESSION_OPEN (SID)-> |                            |
-   | <--SESSION_REPLY----  |                            |   #contains additional config for client
-   |                       |                            |
-   | -----------------AUTH_REP----------------------->  |   #forwards the additional config for client
-   |                       |                            |
-   | <------------SESSION_INFO------------------------  |
-   |                       |                            |
-   |                       | <-- CLI_STATS (SID)------- |
-   |                       |            (disconnect)
-   | -SESSION_CLOSE(SID)-> |
-   | <-- CLI_STATS (SID)-- |
+   |                             |                             |
+   | <----------------AUTH_COOKIE_REQ (SID)------------------- |
+   |                             |                             |
+   | --SECM_SESSION_OPEN (SID)-> |                             |
+   | <--SECM_SESSION_REPLY------ |                             |   #contains additional config for client
+   |                             |                             |
+   | -----------------AUTH_COOKIE_REP------------------------> |   #forwards the additional config for client
+   |                             |                             |
+   | <------------------SESSION_INFO-------------------------- |
+   |                             |                             |
+   |                             | <--SEC_CLI_STATS (SID)----- |
+   |                             |            (disconnect)
+   | -SECM_SESSION_CLOSE (SID)-> |
+   | <--SECM_CLI_STATS (SID)---- |
 
 ```
 
