@@ -2065,6 +2065,7 @@ static int connect_handler(worker_st * ws)
 			case AGENT_OPENCONNECT:
 			case AGENT_ANYCONNECT:
 			case AGENT_OPENCONNECT_CLAVISTER:
+			case AGENT_ANYLINK:
 				break;
 			case AGENT_OPENCONNECT_V3:
 			case AGENT_UNKNOWN:

@@ -420,6 +420,9 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		} else if (strncasecmp(req->user_agent, "Clavister OneConnect VPN", 24) == 0) {
 			oclog(ws, LOG_DEBUG, "Detected Clavister OneConnect");
 			req->user_agent_type = AGENT_OPENCONNECT_CLAVISTER;
+		} else if (strncasecmp(req->user_agent, "AnyLink Secure Client", 21) == 0) {
+			oclog(ws, LOG_DEBUG, "Detected AnyLink");
+			req->user_agent_type = AGENT_ANYLINK;
 		} else {
 			oclog(ws, LOG_DEBUG, "Unknown client (%s)", req->user_agent);
 		}
