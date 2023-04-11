@@ -92,7 +92,8 @@ enum {
 	AGENT_OPENCONNECT_V3,
 	AGENT_OPENCONNECT,
 	AGENT_ANYCONNECT,
-	AGENT_OPENCONNECT_CLAVISTER
+	AGENT_OPENCONNECT_CLAVISTER,
+	AGENT_ANYLINK
 };
 
 typedef int (*decompress_fn)(void* dst, int maxDstSize, const void* src, int src_size);
