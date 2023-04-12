@@ -224,14 +224,14 @@ message latency_stats_delta
 /*
  * == Auth with username/password ==
  *
- *   sec-mod                        worker
- *                    <------     AUTH_INIT (username)
- * AUTH_REP(MSG,SID)  ------>
- *                    <------     AUTH_CONT (SID,password)
- *                       .
- *                       .
- *                       .
- * AUTH_REP(OK,COOKIE)------>
+ *   sec-mod                           worker
+ *                         <------   SEC_AUTH_INIT (username)
+ * SEC_AUTH_REP(MSG,SID)   ------>
+ *                         <------   SEC_AUTH_CONT (SID,password)
+ *                            .
+ *                            .
+ *                            .
+ * SEC_AUTH_REP(OK,COOKIE) ------>
  *
  *
  * The authentication is now identical for openconnect and
