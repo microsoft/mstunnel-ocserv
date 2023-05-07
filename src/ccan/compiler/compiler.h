@@ -17,7 +17,7 @@
  *	fprintf(stderr, "Error: %s (%s)\n", reason, strerror(errno));
  * }
  */
-#define COLD __attribute__((__cold__))
+#define COLD __attribute__((cold))
 #else
 #define COLD
 #endif
@@ -37,7 +37,7 @@
  *	exit(1);
  * }
  */
-#define NORETURN __attribute__((__noreturn__))
+#define NORETURN __attribute__((noreturn))
 #else
 #define NORETURN
 #endif
@@ -71,23 +71,9 @@
  * same value for the exact same arguments.  This implies that the function
  * must not use global variables, or dereference pointer arguments.
  */
-#define CONST_FUNCTION __attribute__((__const__))
+#define CONST_FUNCTION __attribute__((const))
 #else
 #define CONST_FUNCTION
-#endif
-
-#ifndef PURE_FUNCTION
-#if HAVE_ATTRIBUTE_PURE
-/**
- * PURE_FUNCTION - a function is pure
- *
- * A pure function is one that has no side effects other than it's return value
- * and uses no inputs other than it's arguments and global variables.
- */
-#define PURE_FUNCTION __attribute__((__pure__))
-#else
-#define PURE_FUNCTION
-#endif
 #endif
 #endif
 
@@ -109,7 +95,7 @@
  *	counter += add;
  * }
  */
-#define UNNEEDED __attribute__((__unused__))
+#define UNNEEDED __attribute__((unused))
 #endif
 
 #ifndef NEEDED
@@ -128,10 +114,10 @@
  *		printf("Counter is %i\n", counter);
  *	}
  */
-#define NEEDED __attribute__((__used__))
+#define NEEDED __attribute__((used))
 #else
 /* Before used, unused functions and vars were always emitted. */
-#define NEEDED __attribute__((__unused__))
+#define NEEDED __attribute__((unused))
 #endif
 #endif
 
@@ -150,7 +136,7 @@
  *		return 0;
  *	}
  */
-#define UNUSED __attribute__((__unused__))
+#define UNUSED __attribute__((unused))
 #endif
 #else
 #ifndef UNNEEDED
@@ -223,95 +209,9 @@
  *	return realloc(buf, (*size) *= 2);
  * }
  */
-#define WARN_UNUSED_RESULT __attribute__((__warn_unused_result__))
+#define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
 #else
 #define WARN_UNUSED_RESULT
 #endif
 #endif
-
-
-#if HAVE_ATTRIBUTE_DEPRECATED
-/**
- * WARN_DEPRECATED - warn that a function/type/variable is deprecated when used.
- *
- * Used to mark a function, type or variable should not be used.
- *
- * Example:
- * WARN_DEPRECATED char *oldfunc(char *buf);
- */
-#define WARN_DEPRECATED __attribute__((__deprecated__))
-#else
-#define WARN_DEPRECATED
-#endif
-
-
-#if HAVE_ATTRIBUTE_NONNULL
-/**
- * NO_NULL_ARGS - specify that no arguments to this function can be NULL.
- *
- * The compiler will warn if any pointer args are NULL.
- *
- * Example:
- * NO_NULL_ARGS char *my_copy(char *buf);
- */
-#define NO_NULL_ARGS __attribute__((__nonnull__))
-
-/**
- * NON_NULL_ARGS - specify that some arguments to this function can't be NULL.
- * @...: 1-based argument numbers for which args can't be NULL.
- *
- * The compiler will warn if any of the specified pointer args are NULL.
- *
- * Example:
- * char *my_copy2(char *buf, char *maybenull) NON_NULL_ARGS(1);
- */
-#define NON_NULL_ARGS(...) __attribute__((__nonnull__(__VA_ARGS__)))
-#else
-#define NO_NULL_ARGS
-#define NON_NULL_ARGS(...)
-#endif
-
-#if HAVE_ATTRIBUTE_RETURNS_NONNULL
-/**
- * RETURNS_NONNULL - specify that this function cannot return NULL.
- *
- * Mainly an optimization opportunity, but can also suppress warnings.
- *
- * Example:
- * RETURNS_NONNULL char *my_copy(char *buf);
- */
-#define RETURNS_NONNULL __attribute__((__returns_nonnull__))
-#else
-#define RETURNS_NONNULL
-#endif
-
-#if HAVE_ATTRIBUTE_SENTINEL
-/**
- * LAST_ARG_NULL - specify the last argument of a variadic function must be NULL.
- *
- * The compiler will warn if the last argument isn't NULL.
- *
- * Example:
- * char *join_string(char *buf, ...) LAST_ARG_NULL;
- */
-#define LAST_ARG_NULL __attribute__((__sentinel__))
-#else
-#define LAST_ARG_NULL
-#endif
-
-#if HAVE_BUILTIN_CPU_SUPPORTS
-/**
- * cpu_supports - test if current CPU supports the named feature.
- *
- * This takes a literal string, and currently only works on glibc platforms.
- *
- * Example:
- * if (cpu_supports("mmx"))
- *	printf("MMX support engaged!\n");
- */
-#define cpu_supports(x) __builtin_cpu_supports(x)
-#else
-#define cpu_supports(x) 0
-#endif /* HAVE_BUILTIN_CPU_SUPPORTS */
-
 #endif /* CCAN_COMPILER_H */

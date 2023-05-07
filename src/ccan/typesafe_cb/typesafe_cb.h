@@ -27,7 +27,7 @@
  *	// We can take either an unsigned long or a void *.
  *	void _set_some_value(void *val);
  *	#define set_some_value(e)			\
- *		_set_some_value(typesafe_cb_cast(void *, unsigned long, (e)))
+ *		_set_some_value(typesafe_cb_cast(void *, (e), unsigned long))
  */
 #define typesafe_cb_cast(desttype, oktype, expr)			\
 	__builtin_choose_expr(						\

@@ -621,7 +621,7 @@ static inline int talloc_unreference(const void *context, const void *ptr)
 
 /*
   remove a specific parent context from a pointer. This is a more
-  controlled variant of talloc_free()
+  controlled varient of talloc_free()
 */
 int talloc_unlink(const void *context, void *ptr)
 {
@@ -810,7 +810,7 @@ void *_talloc(const void *context, size_t size)
 
 static int talloc_destroy_pointer(void ***pptr)
 {
-	if ((uintptr_t)**pptr < (uintptr_t)sysconf(_SC_PAGESIZE))
+	if ((uintptr_t)**pptr < getpagesize())
 		TALLOC_ABORT("Double free or invalid talloc_set?");
 	/* Invalidate pointer so it can't be used again. */
 	**pptr = (void *)1;
