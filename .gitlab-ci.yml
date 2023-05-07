@@ -214,7 +214,6 @@ Fedora:
   - CFLAGS="-g -O0" ./configure --enable-code-coverage --with-kerberos-tests --enable-oidc-auth
   - make -j$JOBS
   - make check -j$JOBS COVERAGE=1 VERBOSE=1
-  - make distcheck
   - make local-code-coverage-output
   coverage: '/coverage lines: \d+\.\d+/'
   tags:
@@ -227,7 +226,7 @@ Fedora:
     untracked: true
     when: always
 
-noprocfs/Fedora:
+noprocfs/distcheck/Fedora:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:
@@ -236,6 +235,7 @@ noprocfs/Fedora:
   - autoreconf -fvi
   - ac_cv_file_FILE__proc_self_exe=no ./configure --disable-namespaces
   - make -j$JOBS
+  - make distcheck
   tags:
   - shared
   - linux
