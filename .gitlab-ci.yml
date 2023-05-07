@@ -214,7 +214,7 @@ Fedora:
   - CFLAGS="-g -O0" ./configure --enable-code-coverage --with-kerberos-tests --enable-oidc-auth
   - make -j$JOBS
   - make check -j$JOBS COVERAGE=1 VERBOSE=1
-  - make dist
+  - make distcheck
   - make local-code-coverage-output
   coverage: '/coverage lines: \d+\.\d+/'
   tags:
