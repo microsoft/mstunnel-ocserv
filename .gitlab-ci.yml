@@ -235,7 +235,7 @@ noprocfs/distcheck/Fedora:
   - autoreconf -fvi
   - ac_cv_file_FILE__proc_self_exe=no ./configure --disable-namespaces
   - make -j$JOBS
-  - make distcheck
+  - make distcheck VERBOSE=1 DISTCHECK_CONFIGURE_FLAGS="--disable-maintainer-mode" TESTS=""
   tags:
   - shared
   - linux

@@ -41,7 +41,7 @@ ChangeLog:
 
 dist-hook: ChangeLog
 	mv ChangeLog $(distdir)
-	test -f doc/ocserv.8 && test -f doc/ocpasswd.8 && test -f doc/occtl.8
+	test -f $(distdir)/doc/ocserv.8 && test -f $(distdir)/doc/ocpasswd.8 && test -f $(distdir)/doc/occtl.8
 
 codespell:
 	@codespell || (echo "ERROR: if that step fails due to a non-typo, edit file .codespellrc" && false)
