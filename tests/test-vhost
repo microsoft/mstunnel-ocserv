@@ -62,7 +62,7 @@ PID=$!
 wait_server $PID
 
 echo -n "Connecting to default host to obtain cookie (user without certificate)... "
-connect "default.example.com" "-u test" "test" "d66b507ae074d03b02eafca40d35f87dd81049d3"
+connect "default.example.com" "-u test" "test" "pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8="
 if test $? != 0;then
 	fail $PID "Failed to connect with user without certificate!"
 fi
@@ -111,7 +111,7 @@ fi
 echo ok
 
 echo -n "Connecting to default host to obtain cookie (with certificate)... "
-connect "default.example.com" "-u test --sslkey ./certs/user-key.pem -c ./certs/user-cert.pem" "" "d66b507ae074d03b02eafca40d35f87dd81049d3"
+connect "default.example.com" "-u test --sslkey ./certs/user-key.pem -c ./certs/user-cert.pem" "" "pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8="
 if test $? = 0;then
 	fail $PID "Connected to wrong host with certificate!"
 fi
@@ -136,7 +136,7 @@ kill -HUP $PID
 sleep 5
 
 echo -n "Sanity check to default host..."
-connect "default.example.com" "-u test" "test" "d66b507ae074d03b02eafca40d35f87dd81049d3"
+connect "default.example.com" "-u test" "test" "pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8="
 if test $? != 0;then
 	fail $PID "Failed to connect with user without certificate!"
 fi

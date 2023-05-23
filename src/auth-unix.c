@@ -102,7 +102,6 @@ void unix_group_list(void *pool, unsigned gid_min, char ***groupname, unsigned *
 
  exit:
 	endgrent();
-	return;
 }
 
 #endif

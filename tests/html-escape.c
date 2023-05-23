@@ -25,6 +25,7 @@
 #include <netdb.h>
 #include "../src/html.h"
 #include "../src/html.c"
+#include "../src/common/common.h"
 
 static char *strings[] =
 {
@@ -54,13 +55,13 @@ static char *encoded_strings[] =
 	"Ahoy matey&#33"
 };
 
-int main()
+int main(void)
 {
 	char *dec;
 	unsigned i;
 	unsigned len;
 
-	for (i=0;i<sizeof(encoded_strings)/sizeof(encoded_strings[0]);i++) {
+	for (i=0;i<ARRAY_SIZE(encoded_strings);i++) {
 		dec = unescape_html(NULL, encoded_strings[i], strlen(encoded_strings[i]), &len);
 		if (dec == NULL) {
 			fprintf(stderr, "failed to unescape %s\n", encoded_strings[i]);

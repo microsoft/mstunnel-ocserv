@@ -75,7 +75,7 @@ sleep 3
 
 # Run clients
 echo " * Getting cookie from ${ADDRESS}:${PORT}..."
-( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --authenticate >${TMPFILE} )
+( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --authenticate >${TMPFILE} )
 if test $? != 0;then
 	echo "Could not get cookie from server"
 	exit 1
@@ -83,7 +83,7 @@ fi
 
 eval $(cat ${TMPFILE})
 echo " * Connecting to ${ADDRESS}:${PORT}..."
-( ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script -C "${COOKIE}" --pid-file=${CLIPID} -b )
+( ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script -C "${COOKIE}" --pid-file=${CLIPID} -b )
 if test $? != 0;then
 	echo "Could not connect to server"
 	exit 1
@@ -103,7 +103,7 @@ if test $? != 0;then
 fi
 
 echo " * Re-connecting to obtain cookie after disconnect... "
-( ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script -C "${COOKIE}" --pid-file=${CLIPID} -b )
+( ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script -C "${COOKIE}" --pid-file=${CLIPID} -b )
 if test $? = 0;then
 	echo "Succeeded using the cookie to connect"
 	exit 1

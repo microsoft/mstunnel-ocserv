@@ -92,13 +92,15 @@ int disable_system_calls(struct worker_st *ws)
 	}
 
 #define ADD_SYSCALL(name, ...) \
-	ret = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(name), __VA_ARGS__); \
-	/* libseccomp returns EDOM for pseudo-syscalls due to a bug */ \
-	if (ret < 0 && ret != -EDOM) { \
-		oclog(ws, LOG_DEBUG, "could not add " #name " to seccomp filter: %s", strerror(-ret)); \
-		ret = -1; \
-		goto fail; \
-	}
+	do { \
+		ret = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(name), __VA_ARGS__); \
+		/* libseccomp returns EDOM for pseudo-syscalls due to a bug */ \
+		if (ret < 0 && ret != -EDOM) { \
+			oclog(ws, LOG_DEBUG, "could not add " #name " to seccomp filter: %s", strerror(-ret)); \
+			ret = -1; \
+			goto fail; \
+		} \
+	} while (0)
 
 	/* These seem to be called by libc or some other dependent library;
 	 * they are not necessary for functioning, but we must allow them in order

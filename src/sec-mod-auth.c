@@ -113,8 +113,6 @@ void sec_mod_add_score_to_ip(sec_mod_st *sec, client_entry_st *e, const char *ip
 
  fail:
 	talloc_free(lpool);
-
-	return;
 }
 
 static void update_auth_time_stats(sec_mod_st * sec, time_t secs)
@@ -629,8 +627,6 @@ void handle_sec_auth_ban_ip_reply(sec_mod_st *sec, const BanIpReplyMsg *msg)
 	if (msg->reply != AUTH__REP__OK) {
 		e->status = PS_AUTH_FAILED;
 	}
-
-	return;
 }
 
 int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req, pid_t pid)

@@ -358,6 +358,10 @@ struct cfg_st {
 
 	/* holds a usage count of holders of pointers in this struct */
 	int *usage_count;
+
+	bool camouflage;
+	char *camouflage_secret;
+	char *camouflage_realm;
 };
 
 struct perm_cfg_st {

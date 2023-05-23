@@ -52,7 +52,7 @@ unsigned check_if_banned_str(main_server_st *s, const char *ip)
 	return check_if_banned(s, &addr, addr.ss_family==AF_INET?sizeof(struct sockaddr_in):sizeof(struct sockaddr_in6));
 }
 
-int main()
+int main(void)
 {
 	main_server_st *s = talloc(NULL, struct main_server_st);
 	vhost_cfg_st *vhost;

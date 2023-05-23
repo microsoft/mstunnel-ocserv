@@ -104,7 +104,8 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	 .gnutls_mac = GNUTLS_MAC_AEAD,
 	 .gnutls_kx = GNUTLS_KX_RSA,
 	 .gnutls_cipher = GNUTLS_CIPHER_AES_128_GCM,
-	 .server_prio = 80},
+	 .server_prio = 80,
+	},
 	{
 	 .oc_name = CS_AES256_GCM,
 	 .gnutls_name =
@@ -114,7 +115,7 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	 .gnutls_kx = GNUTLS_KX_RSA,
 	 .gnutls_cipher = GNUTLS_CIPHER_AES_256_GCM,
 	 .server_prio = 90,
-	 },
+	},
 	{
 	 .oc_name = "AES256-SHA",
 	 .gnutls_name =
@@ -124,7 +125,7 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	 .gnutls_kx = GNUTLS_KX_RSA,
 	 .gnutls_cipher = GNUTLS_CIPHER_AES_256_CBC,
 	 .server_prio = 60,
-	 },
+	},
 	{
 	 .oc_name = "AES128-SHA",
 	 .gnutls_name =
@@ -134,7 +135,7 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	 .gnutls_kx = GNUTLS_KX_RSA,
 	 .gnutls_cipher = GNUTLS_CIPHER_AES_128_CBC,
 	 .server_prio = 50,
-	 },
+	},
 	{
 	 .oc_name = "DES-CBC3-SHA",
 	 .gnutls_name =
@@ -144,7 +145,7 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	 .gnutls_kx = GNUTLS_KX_RSA,
 	 .gnutls_cipher = GNUTLS_CIPHER_3DES_CBC,
 	 .server_prio = 1,
-	 }
+	},
 };
 
 static const dtls_ciphersuite_st ciphersuites12[] = {
@@ -471,7 +472,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 						if (want_cipher != -1) {
 							if (want_cipher == cand->gnutls_cipher &&
 							    want_mac == cand->gnutls_mac)
-							    goto ciphersuite_finish;
+								goto ciphersuite_finish;
 						}
 					}
 				}
@@ -536,7 +537,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 						if (want_cipher != -1) {
 							if (want_cipher == cand->gnutls_cipher &&
 							    want_mac == cand->gnutls_mac)
-							    goto ciphersuite12_finish;
+								goto ciphersuite12_finish;
 						}
 					}
 				}
@@ -698,12 +699,17 @@ url_handler_fn http_get_url_handler(const char *url)
 url_handler_fn http_post_url_handler(struct worker_st *ws, const char *url)
 {
 	const struct known_urls_st *p;
+	unsigned len = strlen(url);
 	unsigned i;
 
 	p = known_urls;
 	do {
-		if (p->url != NULL && strcmp(p->url, url) == 0)
-			return p->post_handler;
+		if (p->url != NULL) {
+			if ((len == p->url_size && strcmp(p->url, url) == 0) ||
+			    (len > p->url_size && strncmp(p->url, url, p->url_size) == 0
+			     && p->partial_match == 0 && url[p->url_size] == '?'))
+				return p->post_handler;
+		}
 		p++;
 	} while (p->url != NULL);
 

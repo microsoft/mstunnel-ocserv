@@ -75,31 +75,35 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 #define WARNSTR "warning: "
 #define NOTESTR "note: "
 
-#define READ_MULTI_LINE(varname, num) { \
-	if (_add_multi_line_val(pool, &varname, &num, value) < 0) { \
-		fprintf(stderr, ERRSTR"memory\n"); \
-		exit(EXIT_FAILURE); \
-	}}
-
-#define READ_MULTI_BRACKET_LINE(varname, varname2, num) { \
-	if (varname == NULL || varname2 == NULL) { \
-		num = 0; \
-		varname = talloc_size(pool, sizeof(char*)*DEFAULT_CONFIG_ENTRIES); \
-		varname2 = talloc_size(pool, sizeof(char*)*DEFAULT_CONFIG_ENTRIES); \
-		if (varname == NULL || varname2 == NULL) { \
+#define READ_MULTI_LINE(varname, num) \
+	do { \
+		if (_add_multi_line_val(pool, &varname, &num, value) < 0) { \
 			fprintf(stderr, ERRSTR"memory\n"); \
 			exit(EXIT_FAILURE); \
 		} \
-	} \
-	if (num < DEFAULT_CONFIG_ENTRIES) { \
-		char *xp; \
-		varname[num] = talloc_strdup(pool, value); \
-		xp = strchr(varname[num], '['); if (xp != NULL) *xp = 0; \
-		varname2[num] = get_brackets_string1(pool, value); \
-		num++; \
-		varname[num] = NULL; \
-		varname2[num] = NULL; \
-	}}
+	} while (0)
+
+#define READ_MULTI_BRACKET_LINE(varname, varname2, num) \
+	do { \
+		if (varname == NULL || varname2 == NULL) { \
+			num = 0; \
+			varname = talloc_size(pool, sizeof(char*)*DEFAULT_CONFIG_ENTRIES); \
+			varname2 = talloc_size(pool, sizeof(char*)*DEFAULT_CONFIG_ENTRIES); \
+			if (varname == NULL || varname2 == NULL) { \
+				fprintf(stderr, ERRSTR"memory\n"); \
+				exit(EXIT_FAILURE); \
+			} \
+		} \
+		if (num < DEFAULT_CONFIG_ENTRIES) { \
+			char *xp; \
+			varname[num] = talloc_strdup(pool, value); \
+			xp = strchr(varname[num], '['); if (xp != NULL) *xp = 0; \
+			varname2[num] = get_brackets_string1(pool, value); \
+			num++; \
+			varname[num] = NULL; \
+			varname2[num] = NULL; \
+		} \
+	} while (0)
 
 #define PREAD_STRING(pool, varname) { \
 	unsigned len = strlen(value); \
@@ -115,25 +119,28 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 	strlcpy(varname, value, sizeof(varname)); \
 	}
 
-#define READ_TF(varname) {\
-	if (c_strcasecmp(value, "true") == 0 || c_strcasecmp(value, "yes") == 0) \
-		varname = 1; \
-	else \
-		varname = 0; \
-	}
+#define READ_TF(varname) \
+	do { \
+		if (c_strcasecmp(value, "true") == 0 || c_strcasecmp(value, "yes") == 0) \
+			varname = 1; \
+		else \
+			varname = 0; \
+	} while (0)
 
 #define READ_NUMERIC(varname) { \
 	varname = strtol(value, NULL, 10); \
 	}
 
 #define READ_PRIO_TOS(varname) \
-	if (strncmp(value, "0x", 2) == 0) { \
-		varname = strtol(value, NULL, 16); \
-		varname = TOS_PACK(varname); \
-	} else { \
-		varname = strtol(value, NULL, 10); \
-		varname++; \
-	}
+	do { \
+		if (strncmp(value, "0x", 2) == 0) { \
+			varname = strtol(value, NULL, 16); \
+			varname = TOS_PACK(varname); \
+		} else { \
+			varname = strtol(value, NULL, 10); \
+			varname++; \
+		} \
+	} while (0)
 
 struct snapshot_t * config_snapshot = NULL;
 
@@ -440,7 +447,7 @@ char *sanitize_config_value(void *pool, const char *value)
 	if (len < 0)
 		return NULL;
 
-	return talloc_strndup(pool, &value[i], len); \
+	return talloc_strndup(pool, &value[i], len);
 
 }
 
@@ -489,8 +496,6 @@ static void append_iroutes_from_file(struct cfg_st *config, const char *file)
 		if (ip_route_sanity_check(config->known_iroutes, &config->known_iroutes[j]) != 0)
 			exit(EXIT_FAILURE);
 	}
-
-	return;
 }
 
 static void load_iroutes(struct cfg_st *config)
@@ -1124,6 +1129,12 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 		READ_STRING(config->default_user_conf);
 	} else if (strcmp(name, "default-group-config") == 0) {
 		READ_STRING(config->default_group_conf);
+	} else if (strcmp(name, "camouflage") == 0) {
+		READ_TF(config->camouflage);
+	} else if (strcmp(name, "camouflage_secret") == 0) {
+		READ_STRING(config->camouflage_secret);
+	} else if (strcmp(name, "camouflage_realm") == 0) {
+		READ_STRING(config->camouflage_realm);
 	} else {
 		if (reload == 0)
 			fprintf(stderr, WARNSTR"skipping unknown option '%s'\n", name);
@@ -1610,33 +1621,33 @@ int cmd_parser (void *pool, int argc, char **argv, struct list_head *head, bool 
 			break;
 
 		switch(c) {
-			case 'f':
-				vhost->perm_config.foreground = 1;
-				break;
-			case 'p':
-				strlcpy(pid_file, optarg, sizeof(pid_file));
-				break;
-			case 'c':
-				strlcpy(cfg_file, optarg, sizeof(cfg_file));
-				break;
-			case 'd':
-				vhost->perm_config.debug = atoi(optarg);
-				break;
-			case 't':
-				test_only = 1;
-				break;
-			case OPT_NO_CHDIR:
-				vhost->perm_config.no_chdir = 1;
-				break;
-			case 'h':
-				usage();
-				exit(EXIT_SUCCESS);
-			case 'v':
-				print_version();
-				exit(EXIT_SUCCESS);
-			case 'x':
-				vhost->perm_config.pr_dumpable = 1;
-				break;
+		case 'f':
+			vhost->perm_config.foreground = 1;
+			break;
+		case 'p':
+			strlcpy(pid_file, optarg, sizeof(pid_file));
+			break;
+		case 'c':
+			strlcpy(cfg_file, optarg, sizeof(cfg_file));
+			break;
+		case 'd':
+			vhost->perm_config.debug = atoi(optarg);
+			break;
+		case 't':
+			test_only = 1;
+			break;
+		case OPT_NO_CHDIR:
+			vhost->perm_config.no_chdir = 1;
+			break;
+		case 'h':
+			usage();
+			exit(EXIT_SUCCESS);
+		case 'v':
+			print_version();
+			exit(EXIT_SUCCESS);
+		case 'x':
+			vhost->perm_config.pr_dumpable = 1;
+			break;
 		}
 	}
 
@@ -1688,8 +1699,6 @@ static void archive_cfg(struct list_head *head)
 			list_add(&vhost->perm_config.attic, &e->list);
 		}
 	}
-
-	return;
 }
 
 static void clear_cfg(struct list_head *head)
@@ -1701,8 +1710,6 @@ static void clear_cfg(struct list_head *head)
 		talloc_free(cpos->perm_config.config);
 		cpos->perm_config.config = NULL;
 	}
-
-	return;
 }
 
 void clear_vhosts(struct list_head *head)
@@ -1715,8 +1722,6 @@ void clear_vhosts(struct list_head *head)
 		talloc_free(vhost->perm_config.config);
 		vhost->perm_config.config = NULL;
 	}
-
-	return;
 }
 
 static void append(const char *option)
@@ -1795,8 +1800,6 @@ void reload_cfg_file(void *pool, struct list_head *configs, unsigned sec_mod)
 
 	/* parse the config again */
 	parse_cfg_file(pool, cfg_file, configs, flags);
-
-	return;
 }
 
 void write_pid_file(void)

@@ -71,6 +71,8 @@ Ubuntu16.04:
   - autoreconf -fvi
   - ./configure --without-nuttcp-tests
   - make -j$JOBS
+# ubuntu16.04 openconnect doesn't support pin-sha256
+  - find ./tests/ -maxdepth 1 -type f -exec sed -i 's@pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=@2c46d7319df419c92ad59e38f0bb9681c088f1dc@g' '{}' ';'
 # this version of openconnect doesn't work with IPv6 only
   - make check -j$JOBS XFAIL_TESTS="ipv6-iface ipv6-small-net"
   tags:

@@ -618,7 +618,7 @@ unsigned check_if_default_route(char **routes, unsigned routes_size)
 	for (i=0;i<routes_size;i++) {
 		if (strcmp(routes[i], "default") == 0 ||
 		    strcmp(routes[i], "0.0.0.0/0") == 0)
-		    return 1;
+			return 1;
 	}
 
 	return 0;
@@ -919,6 +919,12 @@ void cookie_authenticate_or_exit(worker_st *ws)
 	ret = auth_cookie(ws, ws->cookie, sizeof(ws->cookie));
 	if (ret < 0) {
 		oclog(ws, LOG_WARNING, "failed cookie authentication attempt");
+		if (WSCONFIG(ws)->camouflage && ws->camouflage_check_passed == 0)
+		{
+			cstp_puts(ws,
+				 "HTTP/1.1 405 Method Not Allowed\r\n\r\n");
+		}
+		else
 		if (ret == ERR_AUTH_FAIL) {
 			cstp_puts(ws,
 				 "HTTP/1.1 401 Cookie is not acceptable\r\n\r\n");

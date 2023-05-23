@@ -77,7 +77,7 @@ if test $? != 0; then
 fi
 
 echo " connecting to server"
-(echo "test" | ${CMDNS3} $OPENCONNECT $ADDRESS:$PORT -u "test" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --pid-file=${CLIPID} -b) ||
+(echo "test" | ${CMDNS3} $OPENCONNECT $ADDRESS:$PORT -u "test" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --pid-file=${CLIPID} -b) ||
 	fail $PID "could not connect to server"
 sleep 5
 

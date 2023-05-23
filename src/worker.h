@@ -325,6 +325,7 @@ typedef struct worker_st {
 		uint32_t samples[LATENCY_SAMPLE_SIZE];
 	} latency;
 #endif
+    bool camouflage_check_passed;
 } worker_st;
 
 void vpn_server(struct worker_st* ws);
@@ -341,6 +342,7 @@ int get_ca_handler(worker_st * ws, unsigned http_ver);
 int get_ca_der_handler(worker_st * ws, unsigned http_ver);
 
 int response_404(worker_st *ws, unsigned http_ver);
+int response_401(worker_st *ws, unsigned http_ver, char* realm);
 int get_empty_handler(worker_st *server, unsigned http_ver);
 #ifdef ANYCONNECT_CLIENT_COMPAT
 int get_config_handler(worker_st *ws, unsigned http_ver);

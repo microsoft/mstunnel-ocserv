@@ -25,7 +25,7 @@
 #include "../src/str.c"
 
 #define STR1 "  hi there people. How are you?"
-int main()
+int main(void)
 {
 	char str[64];
 

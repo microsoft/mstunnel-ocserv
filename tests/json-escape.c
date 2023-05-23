@@ -25,6 +25,7 @@
 #include <netdb.h>
 #include "../src/occtl/json.h"
 #include "../src/occtl/json.c"
+#include "../src/common/common.h"
 
 static char *strings[] =
 {
@@ -46,13 +47,13 @@ static char *encoded_strings[] =
 	"\\u0009big pile  \\u0008\\u0008 of stuff\\u000d\\u000a"
 };
 
-int main()
+int main(void)
 {
 	char tmp[512];
 	char *p;
 	unsigned i;
 
-	for (i=0;i<sizeof(strings)/sizeof(strings[0]);i++) {
+	for (i=0;i<ARRAY_SIZE(strings);i++) {
 		tmp[0] = 0;
 		p = json_escape_val(tmp, sizeof(tmp), strings[i]);
 		if (strcmp(p, encoded_strings[i]) != 0) {

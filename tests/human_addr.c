@@ -76,7 +76,6 @@ static void check(const char *ip)
 		exit(1);
 
 	}
-	return;
 }
 
 static void check_port(const char *ip, unsigned port)
@@ -105,10 +104,9 @@ static void check_port(const char *ip, unsigned port)
 		exit(1);
 
 	}
-	return;
 }
 
-int main()
+int main(void)
 {
 	check("172.18.52.43");
 	check("192.168.1.1");

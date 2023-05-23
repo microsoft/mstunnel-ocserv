@@ -47,16 +47,16 @@ launch_sr_server -d 1 -f -c ${CONFIG} & PID=$!
 wait_server $PID
 
 echo "Connecting to force script block... "
-echo "!@#$%^&*()<>" | timeout 60 $OPENCONNECT -q localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true &
+echo "!@#$%^&*()<>" | timeout 60 $OPENCONNECT -q localhost:$PORT -u "sp@c/al" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s /bin/true &
 
 sleep 3
 
 echo "Connecting to obtain cookie... "
-( echo "${USERNAME}" | $OPENCONNECT -q localhost:$PORT -u "${USERNAME}" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "${USERNAME}" | $OPENCONNECT -q localhost:$PORT -u "${USERNAME}" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
 echo "Connecting in background... "
-( echo "${USERNAME}" | timeout 15 $OPENCONNECT -q localhost:$PORT -u "${USERNAME}" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --background >/dev/null 2>&1 ) ||
+( echo "${USERNAME}" | timeout 15 $OPENCONNECT -q localhost:$PORT -u "${USERNAME}" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --background >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect to server; probably blocked"
 
 sleep 3

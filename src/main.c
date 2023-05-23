@@ -72,7 +72,7 @@
 #ifdef HAVE_GSSAPI
 # include <libtasn1.h>
 
-extern const ASN1_ARRAY_TYPE kkdcp_asn1_tab[];
+extern const asn1_static_node kkdcp_asn1_tab[];
 asn1_node _kkdcp_pkix1_asn = NULL;
 #endif
 
@@ -431,8 +431,6 @@ int y;
 		set_mtu_disc(fd, family, 1);
 	}
 	set_cloexec_flag (fd, 1);
-
-	return;
 }
 
 /* clears the server listen_list and proc_list. To be used after fork().

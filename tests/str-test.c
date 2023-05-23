@@ -30,7 +30,7 @@ static char *myfunc(void *pool, const char *str)
 }
 
 #define STR1 "hi there people. How are you?"
-int main()
+int main(void)
 {
 	str_st str;
 	str_rep_tab tab[16];

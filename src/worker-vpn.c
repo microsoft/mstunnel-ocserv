@@ -490,8 +490,6 @@ void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final, unsigned
 	}
 
 	ban_ip_reply_msg__free_unpacked(reply, &pa);
-
-	return;
 }
 
 void send_stats_to_secmod(worker_st * ws, time_t now, unsigned discon_reason)
@@ -575,38 +573,46 @@ void exit_worker_reason(worker_st * ws, unsigned reason)
 
 #define HANDSHAKE_SESSION_ID_POS (34)
 #define SKIP_V16(pos, total) \
-	{ uint16_t _s; \
-	  if (pos+2 > total) goto finish; \
-	  _s = (msg->data[pos] << 8) | msg->data[pos+1]; \
-	  if (pos+2+_s > total) goto finish; \
-	  pos += 2+_s; \
+	{ \
+		uint16_t _s; \
+		if (pos+2 > total) goto finish; \
+		_s = (msg->data[pos] << 8) | msg->data[pos+1]; \
+		if (pos+2+_s > total) goto finish; \
+		pos += 2+_s; \
 	}
 
 #define SKIP16(pos, total) \
-	  if (pos+2 > total) goto finish; \
-	  pos += 2
+	do { \
+		if (pos+2 > total) goto finish; \
+		pos += 2; \
+	} while (0)
 
 #define SKIP8(pos, total) \
-	  if (pos+1 > total) goto finish; \
-	  pos++
+	do { \
+		if (pos+1 > total) goto finish; \
+		pos++; \
+	} while (0)
 
 #define SKIP_V8(pos, total) \
-	{ uint8_t _s; \
-	  if (pos+1 > total) goto finish; \
-	  _s = msg->data[pos]; \
-	  if (pos+1+_s > total) goto finish; \
-	  pos += 1+_s; \
+	{ \
+		uint8_t _s; \
+		if (pos+1 > total) goto finish; \
+		_s = msg->data[pos]; \
+		if (pos+1+_s > total) goto finish; \
+		pos += 1+_s; \
 	}
 
 #define SET_VHOST_CREDS \
-	ret = \
-	    gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE, \
-				   WSCREDS(ws)->xcred); \
-	GNUTLS_FATAL_ERR(ret); \
-	gnutls_certificate_server_set_request(session, WSCONFIG(ws)->cert_req); \
-	ret = gnutls_priority_set(session, WSCREDS(ws)->cprio); \
-	GNUTLS_FATAL_ERR(ret); \
-	gnutls_db_set_cache_expiration(session, TLS_SESSION_EXPIRATION_TIME(WSCONFIG(ws)))
+	do { \
+		ret = \
+		gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE, \
+					WSCREDS(ws)->xcred); \
+		GNUTLS_FATAL_ERR(ret); \
+		gnutls_certificate_server_set_request(session, WSCONFIG(ws)->cert_req); \
+		ret = gnutls_priority_set(session, WSCREDS(ws)->cprio); \
+		GNUTLS_FATAL_ERR(ret); \
+		gnutls_db_set_cache_expiration(session, TLS_SESSION_EXPIRATION_TIME(WSCONFIG(ws))); \
+	} while (0)
 
 /* Parse the TLS client hello to figure vhost */
 static int hello_hook_func(gnutls_session_t session, unsigned int htype,
@@ -749,6 +755,20 @@ static void peek_client_hello(struct worker_st *ws, gnutls_session_t session, in
 	SET_VHOST_CREDS;
 }
 #endif
+
+void check_camouflage_url(struct worker_st *ws)
+{
+	if (WSCONFIG(ws)->camouflage_secret == NULL)
+		return;
+
+	char* url_camouflage_part = strchr(ws->req.url, '?');
+	if (url_camouflage_part
+		&& !strcmp(url_camouflage_part + 1, WSCONFIG(ws)->camouflage_secret))
+	{
+		*url_camouflage_part = '\0';
+		ws->camouflage_check_passed = 1;
+	}
+}
 
 /* vpn_server:
  * @ws: an initialized worker structure
@@ -920,6 +940,21 @@ void vpn_server(struct worker_st *ws)
 			exit_worker(ws);
 		}
 	} while (ws->req.headers_complete == 0);
+
+	if ((parser.method == HTTP_GET || parser.method == HTTP_POST) &&
+		(WSCONFIG(ws)->camouflage && ws->camouflage_check_passed == 0))
+	{
+		check_camouflage_url(ws);
+		if (ws->camouflage_check_passed == 0)
+		{
+			oclog(ws, LOG_INFO, "Secret not found in URL, declining...");
+			if (WSCONFIG(ws)->camouflage_realm)
+				response_401(ws, parser.http_minor, WSCONFIG(ws)->camouflage_realm);
+			else
+				response_404(ws, parser.http_minor);
+			goto finish;
+		}
+	}
 
 	if (parser.method == HTTP_GET) {
 		oclog(ws, LOG_HTTP_DEBUG, "HTTP GET %s", ws->req.url);
@@ -1182,14 +1217,15 @@ void mtu_ok(worker_st * ws, struct dtls_st * dtls)
 	c = (ws->link_mtu + ws->last_bad_mtu) / 2;
 
 	link_mtu_set(ws, dtls, c);
-	return;
 }
 
 #define FUZZ(x, diff, rnd) \
+	do { \
 		if (x > diff) { \
 			int16_t r = rnd; \
 			x += r % diff; \
-		}
+		} \
+	} while (0)
 
 int get_pmtu_approx(worker_st *ws)
 {
@@ -1349,11 +1385,9 @@ static void set_no_delay(worker_st * ws, int fd)
 	int ret;
 
 	ret = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
-	if (ret == -1) {
+	if (ret == -1)
 		oclog(ws, LOG_DEBUG,
 		      "setsockopt(TCP_NODELAY) to %x, failed.", (unsigned)flag);
-		return;
-	}
 }
 
 #define TOSCLASS(x) (IPTOS_CLASS_CS##x)
@@ -1374,7 +1408,7 @@ static void set_net_priority(worker_st * ws, int fd, int priority)
 	}
 #endif
 
-#ifdef SO_PRIORITY
+#if defined(SO_PRIORITY)
 	if (priority != 0 && priority <= 7) {
 		t = ws->user_config->net_priority - 1;
 		ret = setsockopt(fd, SOL_SOCKET, SO_PRIORITY, &t, sizeof(t));
@@ -1385,10 +1419,9 @@ static void set_net_priority(worker_st * ws, int fd, int priority)
 		return;
 	}
 #endif
-	return;
 }
 
-#define SEND_ERR(x) if (x<0) goto send_error
+#define SEND_ERR(x) do { if (x<0) goto send_error; } while (0)
 
 static int dtls_mainloop(worker_st * ws, struct dtls_st * dtls, struct timespec *tnow)
 {
@@ -2062,16 +2095,16 @@ static int connect_handler(worker_st * ws)
 		oclog(ws, LOG_INFO, "IPv6 routes/DNS disabled because IPv6 support was not requested.");
 	} else {
 		switch (req->user_agent_type) {
-			case AGENT_OPENCONNECT:
-			case AGENT_ANYCONNECT:
-			case AGENT_OPENCONNECT_CLAVISTER:
-			case AGENT_ANYLINK:
-				break;
-			case AGENT_OPENCONNECT_V3:
-			case AGENT_UNKNOWN:
-			default:
-				req->no_ipv6 = 1;
-				oclog(ws, LOG_INFO, "IPv6 routes/DNS disabled because the agent is not known.");
+		case AGENT_OPENCONNECT:
+		case AGENT_ANYCONNECT:
+		case AGENT_OPENCONNECT_CLAVISTER:
+		case AGENT_ANYLINK:
+			break;
+		case AGENT_OPENCONNECT_V3:
+		case AGENT_UNKNOWN:
+		default:
+			req->no_ipv6 = 1;
+			oclog(ws, LOG_INFO, "IPv6 routes/DNS disabled because the agent is not known.");
 		}
 	}
 

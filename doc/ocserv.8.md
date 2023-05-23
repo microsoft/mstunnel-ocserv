@@ -10,7 +10,8 @@ is used by several CISCO routers.
 
 ## DESCRIPTION
 This a standalone server that reads a configuration file (see below for more details),
-and waits for client connections. Log messages are redirected to daemon facility.
+and waits for client connections. Log messages are directed to the syslog daemon
+facility.
 
 The server maintains two connections/channels with the client. The main VPN
 channel is established over TCP, HTTP and TLS. This is the control channel as well

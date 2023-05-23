@@ -76,20 +76,20 @@ char *calc_safe_id(const uint8_t *data, unsigned size, char *output, unsigned ou
 const char *ps_status_to_str(int status, unsigned cookie)
 {
 	switch (status) {
-		case PS_AUTH_COMPLETED:
-			if (cookie)
-				return "authenticated";
-			else
-				return "connected";
-		case PS_AUTH_INIT:
-		case PS_AUTH_CONT:
-			return "authenticating";
-		case PS_AUTH_INACTIVE:
-			return "pre-auth";
-		case PS_AUTH_FAILED:
-			return "auth failed";
-		default:
-			return "unknown";
+	case PS_AUTH_COMPLETED:
+		if (cookie)
+			return "authenticated";
+		else
+			return "connected";
+	case PS_AUTH_INIT:
+	case PS_AUTH_CONT:
+		return "authenticating";
+	case PS_AUTH_INACTIVE:
+		return "pre-auth";
+	case PS_AUTH_FAILED:
+		return "auth failed";
+	default:
+		return "unknown";
 	}
 }
 

@@ -103,7 +103,7 @@ int check_upeer_id(const char *mod, int debug, int cfd, uid_t uid, uid_t gid, ui
 		syslog(LOG_ERR,
 		       "%s: received unauthorized request from pid %u and uid %u",
 		       mod, (unsigned)cr.pid, (unsigned)cr.uid);
-		       return -1;
+			return -1;
 	}
 #elif defined(HAVE_GETPEEREID)
 	uid_t euid;

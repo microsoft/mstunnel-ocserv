@@ -38,7 +38,7 @@
 #ifdef HAVE_GSSAPI
 #include <libtasn1.h>
 
-extern const ASN1_ARRAY_TYPE kkdcp_asn1_tab[];
+extern const asn1_static_node kkdcp_asn1_tab[];
 asn1_node _kkdcp_pkix1_asn = NULL;
 #endif
 

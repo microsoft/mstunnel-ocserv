@@ -32,7 +32,6 @@ void oc_base64_encode (const char *restrict in, size_t inlen,
 	}
 	base64_encode_raw((void*)out, inlen, (uint8_t*)in);
 	out[raw] = 0;
-	return;
 }
 
 int

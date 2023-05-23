@@ -53,7 +53,7 @@
 
 #ifndef UNDER_TEST
 static void tls_reload_ocsp(main_server_st* s, struct vhost_cfg_st *vhost);
-#endif
+#endif /* UNDER_TEST */
 
 void cstp_cork(worker_st *ws)
 {
@@ -433,14 +433,14 @@ void tls_cache_deinit(tls_sess_db_st* db)
         htable_clear(db->ht);
 	db->entries = 0;
 	talloc_free(db->ht);
-
-        return;
 }
 
+#ifndef UNDER_TEST
 static void tls_log_func(int level, const char *str)
 {
 	syslog(LOG_DEBUG, "TLS[<%d>]: %s", level, str);
 }
+#endif /* UNDER_TEST */
 
 static void tls_audit_log_func(gnutls_session_t session, const char *str)
 {
@@ -457,6 +457,7 @@ static void tls_audit_log_func(gnutls_session_t session, const char *str)
 	}
 }
 
+#ifndef UNDER_TEST
 static int verify_certificate_cb(gnutls_session_t session)
 {
 	unsigned int status;
@@ -540,6 +541,7 @@ no_cert:
 fail:
 	return GNUTLS_E_CERTIFICATE_ERROR;
 }
+#endif /* UNDER_TEST */
 
 void tls_global_init(void)
 {
@@ -571,10 +573,9 @@ void tls_vhost_deinit(struct vhost_cfg_st *vhost)
 	vhost->creds.xcred = NULL;
 	vhost->creds.pskcred = NULL;
 	vhost->creds.cprio = NULL;
-
-	return;
 }
 
+#ifndef UNDER_TEST
 /* Checks, if there is a single certificate specified, whether it
  * is compatible with all ciphersuites */
 static void certificate_check(main_server_st *s, const char *vhostname, gnutls_pcert_st *pcert)
@@ -640,7 +641,6 @@ cleanup:
 		gnutls_x509_crt_deinit(crt);
 	gnutls_free(data.data);
 	gnutls_free(dn.data);
-	return;
 }
 
 static void set_dh_params(main_server_st* s, struct vhost_cfg_st *vhost)
@@ -669,7 +669,6 @@ static void set_dh_params(main_server_st* s, struct vhost_cfg_st *vhost)
 	}
 }
 
-#ifndef UNDER_TEST
 struct key_cb_data {
 	unsigned pk;
 	unsigned bits;
@@ -1016,8 +1015,6 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
 	}
 
 	tls_reload_ocsp(s, vhost);
-
-	return;
 }
 
 static int ocsp_get_func(gnutls_session_t session, void *ptr, gnutls_datum_t *response)
@@ -1071,8 +1068,6 @@ void tls_load_prio(main_server_st *s, struct vhost_cfg_st *vhost)
 	if (ret == GNUTLS_E_PARSING_ERROR)
 		mslog(s, NULL, LOG_ERR, "error in TLS priority string: %s", perr);
 	GNUTLS_FATAL_ERR(ret);
-
-	return;
 }
 
 /*
@@ -1117,7 +1112,7 @@ void tls_reload_crl(main_server_st* s, struct vhost_cfg_st *vhost, unsigned forc
 		mslog(s, NULL, LOG_INFO, "loaded CRL: %s", vhost->perm_config.config->crl);
 	}
 }
-#endif
+#endif /* UNDER_TEST */
 
 void tls_cork(gnutls_session_t session)
 {

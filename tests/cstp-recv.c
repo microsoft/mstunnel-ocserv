@@ -68,7 +68,6 @@ void writer(int fd)
 			assert(write(fd, buf+j, 1) == 1);
 		}
 	}
-	return;
 }
 
 void receiver(int fd)
@@ -87,8 +86,6 @@ void receiver(int fd)
 			fprintf(stderr, "received %d\n", ret);
 		assert(ret > 0);
 	}
-
-	return;
 }
 
 int main(int argc, char **argv)

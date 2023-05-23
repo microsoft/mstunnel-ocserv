@@ -1,0 +1,59 @@
+#!/bin/sh
+#
+# Copyright (C) 2013 Nikos Mavrogiannopoulos
+# Copyright (C) 2023 Kirill Ovchinnikov
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+CLIENTPIDFILE=openconnect-pid.$$.tmp
+SECRETURL="/?mysecretkey"
+SERVERCERT="pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8="
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+
+echo "Testing connection to the server with camouflage enabled"
+
+update_config test-camouflage-norealm.config
+
+launch_server -d 1 -f -c ${CONFIG} & PID=$!
+wait_server ${PID}
+
+# Most of the logic is tested in 'test-camouflage' test,
+# so here we will only pay attention to the no-realm-specifics
+
+echo "Checking with CURL that server returns us HTTP 404 for request with no secret in URL"
+http_result=$(curl --insecure https://localhost:${PORT} --output /dev/null --silent --write-out "%{http_code}")
+if [ "${http_result}" != "404" ]; then
+    fail ${PID} "Server returned ${http_result} instead of 404 for GET"
+fi
+echo "OK"
+
+
+echo "Checking with CURL that server returns us HTTP 200 when there's a secret in URL"
+http_result=$(curl --insecure https://localhost:${PORT}${SECRETURL} --output /dev/null --silent --write-out "%{http_code}")
+if [ "${http_result}" != "200" ]; then
+    fail ${PID} "Server returned ${http_result} instead of 200"
+fi
+echo "OK"
+
+cleanup
+
+exit 0

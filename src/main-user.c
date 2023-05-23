@@ -50,11 +50,13 @@
 #define OCSERV_FW_SCRIPT "/usr/bin/ocserv-fw"
 
 #define APPEND_TO_STR(str, val) \
-			ret = str_append_str(str, val); \
-			if (ret < 0) { \
-				mslog(s, proc, LOG_ERR, "could not append value to environment\n"); \
-				exit(EXIT_FAILURE); \
-			}
+	do { \
+		ret = str_append_str(str, val); \
+		if (ret < 0) { \
+			mslog(s, proc, LOG_ERR, "could not append value to environment\n"); \
+			exit(EXIT_FAILURE); \
+		} \
+	} while (0)
 
 typedef enum script_type_t {
 	SCRIPT_CONNECT,
@@ -199,26 +201,26 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 				negate = 1;
 
 			switch(proc->config->fw_ports[i]->proto) {
-				case PROTO_UDP:
-					ret = str_append_printf(&str_common, "udp %u ", proc->config->fw_ports[i]->port);
-					break;
-				case PROTO_TCP:
-					ret = str_append_printf(&str_common, "tcp %u ", proc->config->fw_ports[i]->port);
-					break;
-				case PROTO_SCTP:
-					ret = str_append_printf(&str_common, "sctp %u ", proc->config->fw_ports[i]->port);
-					break;
-				case PROTO_ICMP:
-					ret = str_append_printf(&str_common, "icmp all ");
-					break;
-				case PROTO_ESP:
-					ret = str_append_printf(&str_common, "esp all ");
-					break;
-				case PROTO_ICMPv6:
-					ret = str_append_printf(&str_common, "icmpv6 all ");
-					break;
-				default:
-					ret = -1;
+			case PROTO_UDP:
+				ret = str_append_printf(&str_common, "udp %u ", proc->config->fw_ports[i]->port);
+				break;
+			case PROTO_TCP:
+				ret = str_append_printf(&str_common, "tcp %u ", proc->config->fw_ports[i]->port);
+				break;
+			case PROTO_SCTP:
+				ret = str_append_printf(&str_common, "sctp %u ", proc->config->fw_ports[i]->port);
+				break;
+			case PROTO_ICMP:
+				ret = str_append_printf(&str_common, "icmp all ");
+				break;
+			case PROTO_ESP:
+				ret = str_append_printf(&str_common, "esp all ");
+				break;
+			case PROTO_ICMPv6:
+				ret = str_append_printf(&str_common, "icmpv6 all ");
+				break;
+			default:
+				ret = -1;
 			}
 
 			if (ret < 0) {

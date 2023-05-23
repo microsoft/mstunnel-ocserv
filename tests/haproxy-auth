@@ -51,7 +51,7 @@ LD_PRELOAD=libsocket_wrapper.so:libuid_wrapper.so UID_WRAPPER=1 UID_WRAPPER_ROOT
 wait_server ${HAPID}
 
 echo "Connecting to obtain cookie... "
-( echo "test" | LD_PRELOAD=libsocket_wrapper.so ${OPENCONNECT} -q ${ADDRESS}:${HAPORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly )
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so ${OPENCONNECT} -q ${ADDRESS}:${HAPORT} -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly )
 if test $? != 0;then
 	kill ${HAPID}
 	fail ${PID} "Could not receive cookie from server"
@@ -66,7 +66,7 @@ LD_PRELOAD=libsocket_wrapper.so:libuid_wrapper.so UID_WRAPPER=1 UID_WRAPPER_ROOT
 wait_server ${HAPID}
 
 echo "Re-connecting to obtain cookie after haproxy restart... "
-( echo "test" | LD_PRELOAD=libsocket_wrapper.so ${OPENCONNECT} -q ${ADDRESS}:${HAPORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly )
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so ${OPENCONNECT} -q ${ADDRESS}:${HAPORT} -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly )
 if test $? != 0;then
 	kill ${HAPID}
 	fail ${PID} "Could not receive cookie from server"

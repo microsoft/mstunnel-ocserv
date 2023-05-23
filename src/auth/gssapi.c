@@ -137,7 +137,6 @@ static void gssapi_vhost_init(void **_vctx, void *pool, void *additional)
 	}
 
 	*_vctx = vctx;
-	return;
 }
 
 static void gssapi_vhost_deinit(void *_vctx)
