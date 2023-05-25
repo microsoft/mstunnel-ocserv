@@ -433,8 +433,6 @@ void tls_cache_deinit(tls_sess_db_st* db)
         htable_clear(db->ht);
 	db->entries = 0;
 	talloc_free(db->ht);
-
-        return;
 }
 
 #ifndef UNDER_TEST
@@ -575,8 +573,6 @@ void tls_vhost_deinit(struct vhost_cfg_st *vhost)
 	vhost->creds.xcred = NULL;
 	vhost->creds.pskcred = NULL;
 	vhost->creds.cprio = NULL;
-
-	return;
 }
 
 #ifndef UNDER_TEST
@@ -645,7 +641,6 @@ cleanup:
 		gnutls_x509_crt_deinit(crt);
 	gnutls_free(data.data);
 	gnutls_free(dn.data);
-	return;
 }
 
 static void set_dh_params(main_server_st* s, struct vhost_cfg_st *vhost)
@@ -1020,8 +1015,6 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
 	}
 
 	tls_reload_ocsp(s, vhost);
-
-	return;
 }
 
 static int ocsp_get_func(gnutls_session_t session, void *ptr, gnutls_datum_t *response)
@@ -1075,8 +1068,6 @@ void tls_load_prio(main_server_st *s, struct vhost_cfg_st *vhost)
 	if (ret == GNUTLS_E_PARSING_ERROR)
 		mslog(s, NULL, LOG_ERR, "error in TLS priority string: %s", perr);
 	GNUTLS_FATAL_ERR(ret);
-
-	return;
 }
 
 /*

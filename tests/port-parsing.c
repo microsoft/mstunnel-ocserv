@@ -35,7 +35,6 @@
 
 void fw_port_st__init(FwPortSt *message)
 {
-	return;
 }
 
 void check_vals(FwPortSt **fw_ports, size_t n_fw_ports) {

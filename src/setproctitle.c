@@ -60,7 +60,6 @@ void setproctitle (const char *fmt, ...)
 
 void setproctitle (const char *fmt, ...)
 {
-	return;
 }
 
 # endif /* __linux__ */

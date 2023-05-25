@@ -76,7 +76,6 @@ static void plain_vhost_init(void **vctx, void *pool, void *additional)
 #ifdef HAVE_LIBOATH
 	oath_init();
 #endif
-	return;
 }
 
 /* Breaks a list of "xxx", "yyy", to a character array, of
@@ -483,7 +482,6 @@ static void plain_group_list(void *pool, void *additional, char ***groupname, un
 	htable_clear(&hash);
 	safe_memset(line, 0, sizeof(line));
 	fclose(fp);
-	return;
 }
 
 const struct auth_mod_st plain_auth_funcs = {

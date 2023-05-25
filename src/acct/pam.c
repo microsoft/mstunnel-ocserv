@@ -81,7 +81,6 @@ fail1:
 
 static void pam_acct_close_session(void *vctx, unsigned auth_method, const struct common_acct_info_st *ai, stats_st *stats, unsigned status)
 {
-	return;
 }
 
 const struct acct_mod_st pam_acct_funcs = {

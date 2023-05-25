@@ -105,8 +105,6 @@ static void append_stats(rc_handle *rh, VALUE_PAIR **send, stats_st *stats)
 
 	uout = stats->bytes_out / 4294967296;
 	rc_avpair_add(rh, send, PW_ACCT_OUTPUT_GIGAWORDS, &uout, -1, 0);
-
-	return;
 }
 
 static void append_acct_standard(struct radius_vhost_ctx *vctx, rc_handle *rh, const common_acct_info_st *ai, VALUE_PAIR **send)
@@ -163,8 +161,6 @@ static void append_acct_standard(struct radius_vhost_ctx *vctx, rc_handle *rh, c
 
 	i = PW_RADIUS;
 	rc_avpair_add(rh, send, PW_ACCT_AUTHENTIC, &i, -1, 0);
-
-	return;
 }
 
 static void radius_acct_session_stats(void *_vctx, unsigned auth_method, const common_acct_info_st *ai, stats_st *stats)
@@ -197,7 +193,6 @@ static void radius_acct_session_stats(void *_vctx, unsigned auth_method, const c
 
  cleanup:
 	rc_avpair_free(send);
-	return;
 }
 
 static int radius_acct_open_session(void *_vctx, unsigned auth_method, const common_acct_info_st *ai, const void *sid, unsigned sid_size)
@@ -287,7 +282,6 @@ static void radius_acct_close_session(void *_vctx, unsigned auth_method, const c
 
  cleanup:
 	rc_avpair_free(send);
-	return;
 }
 
 const struct acct_mod_st radius_acct_funcs = {

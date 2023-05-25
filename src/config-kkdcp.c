@@ -102,8 +102,6 @@ void parse_kkdcp_string(char *str, int *socktype, char **_port, char **_server, 
 	*_realm = realm;
 	*_path = path;
 	*_server = server;
-
-	return;
 }
 
 #endif

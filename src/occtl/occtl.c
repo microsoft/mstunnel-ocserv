@@ -225,18 +225,14 @@ double data;
 	if (bytes > 1000 && bytes < 1000 * 1000) {
 		data = ((double) bytes) / 1000;
 		snprintf(output, output_size, "%.1f KB%s", data, suffix);
-		return;
 	} else if (bytes >= 1000 * 1000 && bytes < 1000 * 1000 * 1000) {
 		data = ((double) bytes) / (1000 * 1000);
 		snprintf(output, output_size, "%.1f MB%s", data, suffix);
-		return;
 	} else if (bytes >= 1000 * 1000 * 1000) {
 		data = ((double) bytes) / (1000 * 1000 * 1000);
 		snprintf(output, output_size, "%.1f GB%s", data, suffix);
-		return;
 	} else {
 		snprintf(output, output_size, "%lu bytes%s", bytes, suffix);
-		return;
 	}
 }
 
@@ -245,13 +241,10 @@ time2human(uint64_t microseconds, char* output, unsigned output_size)
 {
 	if (microseconds < 1000) {
 		snprintf(output, output_size, "<1ms");
-		return;
 	} else if (microseconds < 1000000) {
 		snprintf(output, output_size, "%ldms", microseconds / 1000);
-		return;
 	} else {
 		snprintf(output, output_size, "%lds", microseconds / 1000000);
-		return;
 	}
 }
 
@@ -520,7 +513,6 @@ void handle_sigint(int signo)
 	rl_crlf();
 #endif
 	rl_redisplay();
-	return;
 }
 
 void initialize_readline(void)

@@ -490,8 +490,6 @@ void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final, unsigned
 	}
 
 	ban_ip_reply_msg__free_unpacked(reply, &pa);
-
-	return;
 }
 
 void send_stats_to_secmod(worker_st * ws, time_t now, unsigned discon_reason)
@@ -1182,7 +1180,6 @@ void mtu_ok(worker_st * ws, struct dtls_st * dtls)
 	c = (ws->link_mtu + ws->last_bad_mtu) / 2;
 
 	link_mtu_set(ws, dtls, c);
-	return;
 }
 
 #define FUZZ(x, diff, rnd) \
@@ -1349,11 +1346,9 @@ static void set_no_delay(worker_st * ws, int fd)
 	int ret;
 
 	ret = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
-	if (ret == -1) {
+	if (ret == -1)
 		oclog(ws, LOG_DEBUG,
 		      "setsockopt(TCP_NODELAY) to %x, failed.", (unsigned)flag);
-		return;
-	}
 }
 
 #define TOSCLASS(x) (IPTOS_CLASS_CS##x)
@@ -1374,7 +1369,7 @@ static void set_net_priority(worker_st * ws, int fd, int priority)
 	}
 #endif
 
-#ifdef SO_PRIORITY
+#if defined(SO_PRIORITY)
 	if (priority != 0 && priority <= 7) {
 		t = ws->user_config->net_priority - 1;
 		ret = setsockopt(fd, SOL_SOCKET, SO_PRIORITY, &t, sizeof(t));
@@ -1385,7 +1380,6 @@ static void set_net_priority(worker_st * ws, int fd, int priority)
 		return;
 	}
 #endif
-	return;
 }
 
 #define SEND_ERR(x) if (x<0) goto send_error

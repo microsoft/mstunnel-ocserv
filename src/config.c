@@ -489,8 +489,6 @@ static void append_iroutes_from_file(struct cfg_st *config, const char *file)
 		if (ip_route_sanity_check(config->known_iroutes, &config->known_iroutes[j]) != 0)
 			exit(EXIT_FAILURE);
 	}
-
-	return;
 }
 
 static void load_iroutes(struct cfg_st *config)
@@ -1688,8 +1686,6 @@ static void archive_cfg(struct list_head *head)
 			list_add(&vhost->perm_config.attic, &e->list);
 		}
 	}
-
-	return;
 }
 
 static void clear_cfg(struct list_head *head)
@@ -1701,8 +1697,6 @@ static void clear_cfg(struct list_head *head)
 		talloc_free(cpos->perm_config.config);
 		cpos->perm_config.config = NULL;
 	}
-
-	return;
 }
 
 void clear_vhosts(struct list_head *head)
@@ -1715,8 +1709,6 @@ void clear_vhosts(struct list_head *head)
 		talloc_free(vhost->perm_config.config);
 		vhost->perm_config.config = NULL;
 	}
-
-	return;
 }
 
 static void append(const char *option)
@@ -1795,8 +1787,6 @@ void reload_cfg_file(void *pool, struct list_head *configs, unsigned sec_mod)
 
 	/* parse the config again */
 	parse_cfg_file(pool, cfg_file, configs, flags);
-
-	return;
 }
 
 void write_pid_file(void)

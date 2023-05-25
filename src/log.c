@@ -105,8 +105,6 @@ void __attribute__ ((format(printf, 3, 4)))
 		name[0] = 0;
 
 	syslog(priority, "worker%s: %s %s", name, ip?ip:"[unknown]", buf);
-
-	return;
 }
 
 /* proc is optional */
@@ -151,8 +149,6 @@ void __attribute__ ((format(printf, 4, 5)))
 		name[0] = 0;
 
 	syslog(priority, "main%s:%s %s", name, ip?ip:"[unknown]", buf);
-
-	return;
 }
 
 void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
@@ -182,8 +178,6 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
 	}
 
 	_mslog(s, proc, priority, "%s %s", prefix, buf);
-
-	return;
 }
 
 void  oclog_hex(const worker_st* ws, int priority,
@@ -213,8 +207,6 @@ void  oclog_hex(const worker_st* ws, int priority,
 	}
 
 	_oclog(ws, priority, "%s %s", prefix, buf);
-
-	return;
 }
 
 void  seclog_hex(const struct sec_mod_st* sec, int priority,
@@ -238,6 +230,4 @@ void  seclog_hex(const struct sec_mod_st* sec, int priority,
 	}
 
 	seclog(sec, priority, "%s %s", prefix, buf);
-
-	return;
 }

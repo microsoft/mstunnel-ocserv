@@ -112,8 +112,6 @@ static void oidc_vhost_init(void **vctx, void *pool, void *additional)
 	}
 
 	*vctx = (void *)vc;
-
-	return;
 }
 
 static void oidc_vhost_deinit(void *ctx)

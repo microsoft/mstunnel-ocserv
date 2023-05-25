@@ -320,7 +320,6 @@ static int os_set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 
 static void os_reset_ipv6_addr(struct proc_st *proc)
 {
-	return;
 }
 
 #endif
@@ -785,8 +784,6 @@ void close_tun(main_server_st * s, struct proc_st *proc)
 	if (fd != -1)
 		close(fd);
 #endif
-
-	return;
 }
 
 static void reset_ipv4_addr(struct proc_st *proc)

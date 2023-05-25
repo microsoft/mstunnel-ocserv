@@ -1426,7 +1426,6 @@ int handle_show_user_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *p
 
 static void dummy_sighandler(int signo)
 {
-	return;
 }
 
 

@@ -117,13 +117,10 @@ void print_iface_stats(const char *iface, time_t since, FILE * out, cmd_params_s
 		fprintf(out, "    \"Average RX\":  \"%s\",\n    \"Average TX\":  \"%s\"%s\n", buf1, buf2, have_more?",":"");
 	else
 		fprintf(out, "\tAverage bandwidth RX: %s  TX: %s\n", buf1, buf2);
-
-	return;
 }
 
 #else
 void print_iface_stats(const char *iface, time_t since, FILE * out, cmd_params_st *params, unsigned have_more)
 {
-	return;
 }
 #endif

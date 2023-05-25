@@ -62,8 +62,6 @@ struct htable_iter iter;
 		cache = htable_next(&db->ht, &iter);
 	}
 	htable_clear(&db->ht);
-
-	return;
 }
 
 static size_t rehash(const void* _e, void* unused)

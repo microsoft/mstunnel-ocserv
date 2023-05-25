@@ -113,8 +113,6 @@ void geo_ipv4_lookup(struct in_addr ip, char **country, char **city, char **coor
 			pGeoIP_delete(gi);
 		}
 	}
-
-	return;
 }
 
 void geo_ipv6_lookup(struct in6_addr *ip, char **country, char **city, char **coord)
@@ -171,8 +169,6 @@ void geo_ipv6_lookup(struct in6_addr *ip, char **country, char **city, char **co
 			pGeoIP_delete(gi);
 		}
 	}
-
-	return;
 }
 
 char *geo_lookup(const char *ip, char *buf, unsigned buf_size)

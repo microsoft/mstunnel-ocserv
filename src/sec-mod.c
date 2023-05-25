@@ -609,8 +609,6 @@ static void send_stats_to_main(sec_mod_st *sec)
 		seclog(sec, LOG_ERR, "error in sending statistics to main");
 		return;
 	}
-
-	return;
 }
 
 static void reload_server(sec_mod_st *sec)
