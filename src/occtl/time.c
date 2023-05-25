@@ -36,7 +36,7 @@ void print_time_ival7(char output[MAX_TMPSTR_SIZE], time_t t1, time_t t2)
 {
 	time_t t = t1 - t2;
 
-	if ((long)t < (long)0) {
+	if ((long)t < 0) {
 		/* system clock changed? */
 		snprintf(output, MAX_TMPSTR_SIZE, "   ?   ");
 		return;
