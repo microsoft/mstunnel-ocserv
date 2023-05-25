@@ -603,14 +603,16 @@ void exit_worker_reason(worker_st * ws, unsigned reason)
 	}
 
 #define SET_VHOST_CREDS \
-	ret = \
-	    gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE, \
-				   WSCREDS(ws)->xcred); \
-	GNUTLS_FATAL_ERR(ret); \
-	gnutls_certificate_server_set_request(session, WSCONFIG(ws)->cert_req); \
-	ret = gnutls_priority_set(session, WSCREDS(ws)->cprio); \
-	GNUTLS_FATAL_ERR(ret); \
-	gnutls_db_set_cache_expiration(session, TLS_SESSION_EXPIRATION_TIME(WSCONFIG(ws)))
+	do { \
+		ret = \
+		gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE, \
+					WSCREDS(ws)->xcred); \
+		GNUTLS_FATAL_ERR(ret); \
+		gnutls_certificate_server_set_request(session, WSCONFIG(ws)->cert_req); \
+		ret = gnutls_priority_set(session, WSCREDS(ws)->cprio); \
+		GNUTLS_FATAL_ERR(ret); \
+		gnutls_db_set_cache_expiration(session, TLS_SESSION_EXPIRATION_TIME(WSCONFIG(ws))); \
+	} while (0)
 
 /* Parse the TLS client hello to figure vhost */
 static int hello_hook_func(gnutls_session_t session, unsigned int htype,

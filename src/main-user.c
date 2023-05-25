@@ -50,11 +50,13 @@
 #define OCSERV_FW_SCRIPT "/usr/bin/ocserv-fw"
 
 #define APPEND_TO_STR(str, val) \
-			ret = str_append_str(str, val); \
-			if (ret < 0) { \
-				mslog(s, proc, LOG_ERR, "could not append value to environment\n"); \
-				exit(EXIT_FAILURE); \
-			}
+	do { \
+		ret = str_append_str(str, val); \
+		if (ret < 0) { \
+			mslog(s, proc, LOG_ERR, "could not append value to environment\n"); \
+			exit(EXIT_FAILURE); \
+		} \
+	} while (0)
 
 typedef enum script_type_t {
 	SCRIPT_CONNECT,
