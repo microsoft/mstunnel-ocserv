@@ -54,7 +54,7 @@ static char *encoded_strings[] =
 	"Ahoy matey&#33"
 };
 
-int main()
+int main(void)
 {
 	char *dec;
 	unsigned i;

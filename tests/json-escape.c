@@ -46,7 +46,7 @@ static char *encoded_strings[] =
 	"\\u0009big pile  \\u0008\\u0008 of stuff\\u000d\\u000a"
 };
 
-int main()
+int main(void)
 {
 	char tmp[512];
 	char *p;

@@ -106,7 +106,7 @@ static void check_port(const char *ip, unsigned port)
 	}
 }
 
-int main()
+int main(void)
 {
 	check("172.18.52.43");
 	check("192.168.1.1");

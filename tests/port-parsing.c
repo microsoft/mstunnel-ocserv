@@ -60,7 +60,7 @@ void check_vals(FwPortSt **fw_ports, size_t n_fw_ports) {
 	}
 }
 
-int main()
+int main(void)
 {
 	char p[256];
 	int ret;

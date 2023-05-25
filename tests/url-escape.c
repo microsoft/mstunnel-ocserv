@@ -40,7 +40,7 @@ static char *decoded_strings[] =
 	"Laguna%+@Beach"
 };
 
-int main()
+int main(void)
 {
 	char *dec, *url;
 	unsigned i;
