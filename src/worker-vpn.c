@@ -581,12 +581,16 @@ void exit_worker_reason(worker_st * ws, unsigned reason)
 	}
 
 #define SKIP16(pos, total) \
-	  if (pos+2 > total) goto finish; \
-	  pos += 2
+	do { \
+		if (pos+2 > total) goto finish; \
+		pos += 2; \
+	} while (0)
 
 #define SKIP8(pos, total) \
-	  if (pos+1 > total) goto finish; \
-	  pos++
+	do { \
+		if (pos+1 > total) goto finish; \
+		pos++; \
+	} while (0)
 
 #define SKIP_V8(pos, total) \
 	{ uint8_t _s; \
@@ -1183,10 +1187,12 @@ void mtu_ok(worker_st * ws, struct dtls_st * dtls)
 }
 
 #define FUZZ(x, diff, rnd) \
+	do { \
 		if (x > diff) { \
 			int16_t r = rnd; \
 			x += r % diff; \
-		}
+		} \
+	} while (0)
 
 int get_pmtu_approx(worker_st *ws)
 {
@@ -1382,7 +1388,7 @@ static void set_net_priority(worker_st * ws, int fd, int priority)
 #endif
 }
 
-#define SEND_ERR(x) if (x<0) goto send_error
+#define SEND_ERR(x) do { if (x<0) goto send_error; } while (0)
 
 static int dtls_mainloop(worker_st * ws, struct dtls_st * dtls, struct timespec *tnow)
 {

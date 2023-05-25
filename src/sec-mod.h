@@ -143,14 +143,18 @@ void cleanup_client_entries(sec_mod_st *sec);
 
 #ifdef __GNUC__
 # define seclog(sec, prio, fmt, ...) \
-	if (prio != LOG_DEBUG || GETPCONFIG(sec)->debug >= 3) { \
-		syslog(prio, "sec-mod: "fmt, ##__VA_ARGS__); \
-	}
+	do { \
+		if (prio != LOG_DEBUG || GETPCONFIG(sec)->debug >= 3) { \
+			syslog(prio, "sec-mod: "fmt, ##__VA_ARGS__); \
+		} \
+	} while (0)
 #else
 # define seclog(sec,prio,...) \
-	if (prio != LOG_DEBUG || GETPCONFIG(sec)->debug >= 3) { \
-		 syslog(prio, __VA_ARGS__); \
-	}
+	do { \
+		if (prio != LOG_DEBUG || GETPCONFIG(sec)->debug >= 3) { \
+			syslog(prio, __VA_ARGS__); \
+		} \
+	} while (0)
 #endif
 
 void  seclog_hex(const struct sec_mod_st* sec, int priority,
