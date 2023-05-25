@@ -76,56 +76,56 @@ static int ocserv_conv(int msg_size, const struct pam_message **msg,
 
 	for (i=0;i<msg_size;i++) {
 		switch (msg[i]->msg_style) {
-			case PAM_ERROR_MSG:
-			case PAM_TEXT_INFO:
-				syslog(LOG_DEBUG, "PAM-auth conv info: %s", msg[i]->msg);
+		case PAM_ERROR_MSG:
+		case PAM_TEXT_INFO:
+			syslog(LOG_DEBUG, "PAM-auth conv info: %s", msg[i]->msg);
 
-				// That should never happen, but also not a big deal if we fail to add message here.
-				// coverity[check_return : FALSE]
+			// That should never happen, but also not a big deal if we fail to add message here.
+			// coverity[check_return : FALSE]
+			ret = str_append_str(&pctx->msg, msg[i]->msg);
+			if (ret >= 0)
+				ret = str_append_data(&pctx->msg, " ", 1);
+
+			if (ret < 0) {
+				syslog(LOG_ERR, "Error in memory allocation in PAM");
+				return PAM_BUF_ERR;
+			}
+
+			pctx->sent_msg = 1;
+			break;
+		case PAM_PROMPT_ECHO_OFF:
+		case PAM_PROMPT_ECHO_ON:
+			if (pctx->sent_msg == 0) {
+				/* no message, just asking for password */
+				str_reset(&pctx->msg);
+				pctx->sent_msg = 1;
+
+			}
+
+			if (msg[i]->msg) {
 				ret = str_append_str(&pctx->msg, msg[i]->msg);
-				if (ret >= 0)
-					ret = str_append_data(&pctx->msg, " ", 1);
-
 				if (ret < 0) {
 					syslog(LOG_ERR, "Error in memory allocation in PAM");
 					return PAM_BUF_ERR;
 				}
+			}
 
-				pctx->sent_msg = 1;
-				break;
-			case PAM_PROMPT_ECHO_OFF:
-			case PAM_PROMPT_ECHO_ON:
-				if (pctx->sent_msg == 0) {
-					/* no message, just asking for password */
-					str_reset(&pctx->msg);
-					pctx->sent_msg = 1;
+			syslog(LOG_DEBUG, "PAM-auth conv: echo-%s, msg: '%s'", (msg[i]->msg_style==PAM_PROMPT_ECHO_ON)?"on":"off", msg[i]->msg!=NULL?msg[i]->msg:"");
 
+			pctx->state = PAM_S_WAIT_FOR_PASS;
+			pctx->cr_ret = PAM_SUCCESS;
+			co_resume();
+			pctx->state = PAM_S_INIT;
+
+			if (pctx->password[0] != 0) {
+				pctx->replies[i].resp = strdup(pctx->password);
+				if (pctx->replies[i].resp == NULL) {
+					syslog(LOG_ERR, "Error in memory allocation in PAM");
+					return PAM_BUF_ERR;
 				}
-
-				if (msg[i]->msg) {
-					ret = str_append_str(&pctx->msg, msg[i]->msg);
-					if (ret < 0) {
-						syslog(LOG_ERR, "Error in memory allocation in PAM");
-						return PAM_BUF_ERR;
-					}
-				}
-
-				syslog(LOG_DEBUG, "PAM-auth conv: echo-%s, msg: '%s'", (msg[i]->msg_style==PAM_PROMPT_ECHO_ON)?"on":"off", msg[i]->msg!=NULL?msg[i]->msg:"");
-
-				pctx->state = PAM_S_WAIT_FOR_PASS;
-				pctx->cr_ret = PAM_SUCCESS;
-				co_resume();
-				pctx->state = PAM_S_INIT;
-
-				if (pctx->password[0] != 0) {
-					pctx->replies[i].resp = strdup(pctx->password);
-					if (pctx->replies[i].resp == NULL) {
-						syslog(LOG_ERR, "Error in memory allocation in PAM");
-						return PAM_BUF_ERR;
-					}
-				}
-				pctx->sent_msg = 0;
-				break;
+			}
+			pctx->sent_msg = 0;
+			break;
                 }
 	}
 

@@ -429,47 +429,47 @@ int main(int argc, char **argv)
 			break;
 
 		switch(c) {
-			case 'c':
-				if (fpasswd) {
-					fprintf(stderr, "-c option cannot be specified multiple time\n");
-					exit(EXIT_FAILURE);
-				}
-				fpasswd = strdup(optarg);
-				break;
-			case 'g':
-				if (groupname) {
-					fprintf(stderr, "-g option cannot be specified multiple time\n");
-					exit(EXIT_FAILURE);
-				}
-				groupname = strdup(optarg);
-				break;
-			case 'd':
-				if (flags) {
-					usage();
-					exit(EXIT_FAILURE);
-				}
-				flags |= FLAG_DELETE;
-				break;
-			case 'u':
-				if (flags) {
-					usage();
-					exit(EXIT_FAILURE);
-				}
-				flags |= FLAG_UNLOCK;
-				break;
-			case 'l':
-				if (flags) {
-					usage();
-					exit(EXIT_FAILURE);
-				}
-				flags |= FLAG_LOCK;
-				break;
-			case 'h':
+		case 'c':
+			if (fpasswd) {
+				fprintf(stderr, "-c option cannot be specified multiple time\n");
+				exit(EXIT_FAILURE);
+			}
+			fpasswd = strdup(optarg);
+			break;
+		case 'g':
+			if (groupname) {
+				fprintf(stderr, "-g option cannot be specified multiple time\n");
+				exit(EXIT_FAILURE);
+			}
+			groupname = strdup(optarg);
+			break;
+		case 'd':
+			if (flags) {
 				usage();
-				exit(EXIT_SUCCESS);
-			case 'v':
-				version();
-				exit(EXIT_SUCCESS);
+				exit(EXIT_FAILURE);
+			}
+			flags |= FLAG_DELETE;
+			break;
+		case 'u':
+			if (flags) {
+				usage();
+				exit(EXIT_FAILURE);
+			}
+			flags |= FLAG_UNLOCK;
+			break;
+		case 'l':
+			if (flags) {
+				usage();
+				exit(EXIT_FAILURE);
+			}
+			flags |= FLAG_LOCK;
+			break;
+		case 'h':
+			usage();
+			exit(EXIT_SUCCESS);
+		case 'v':
+			version();
+			exit(EXIT_SUCCESS);
 		}
 	}
 

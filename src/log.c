@@ -35,35 +35,35 @@
 static unsigned check_priority(int *priority, int debug_prio)
 {
 	switch(*priority) {
-		case LOG_ERR:
-		case LOG_WARNING:
-		case LOG_NOTICE:
-			break;
-		case LOG_DEBUG:
-			if (debug_prio < DEBUG_DEBUG)
-				return 0;
-			break;
-		case LOG_INFO:
-			if (debug_prio < DEBUG_INFO)
-				return 0;
-			break;
-		case LOG_HTTP_DEBUG:
-			if (debug_prio < DEBUG_HTTP)
-				return 0;
-	                *priority = LOG_INFO;
-			break;
-		case LOG_TRANSFER_DEBUG:
-			if (debug_prio < DEBUG_TRANSFERRED)
-				return 0;
-	                *priority = LOG_DEBUG;
-			break;
-		case LOG_SENSITIVE:
-			if (debug_prio < DEBUG_SENSITIVE)
-				return 0;
-	                *priority = LOG_DEBUG;
-			break;
-		default:
-			syslog(LOG_DEBUG, "unknown log level %d", *priority);
+	case LOG_ERR:
+	case LOG_WARNING:
+	case LOG_NOTICE:
+		break;
+	case LOG_DEBUG:
+		if (debug_prio < DEBUG_DEBUG)
+			return 0;
+		break;
+	case LOG_INFO:
+		if (debug_prio < DEBUG_INFO)
+			return 0;
+		break;
+	case LOG_HTTP_DEBUG:
+		if (debug_prio < DEBUG_HTTP)
+			return 0;
+	        *priority = LOG_INFO;
+		break;
+	case LOG_TRANSFER_DEBUG:
+		if (debug_prio < DEBUG_TRANSFERRED)
+			return 0;
+	        *priority = LOG_DEBUG;
+		break;
+	case LOG_SENSITIVE:
+		if (debug_prio < DEBUG_SENSITIVE)
+			return 0;
+	        *priority = LOG_DEBUG;
+		break;
+	default:
+		syslog(LOG_DEBUG, "unknown log level %d", *priority);
         }
 
         return 1;

@@ -1608,33 +1608,33 @@ int cmd_parser (void *pool, int argc, char **argv, struct list_head *head, bool 
 			break;
 
 		switch(c) {
-			case 'f':
-				vhost->perm_config.foreground = 1;
-				break;
-			case 'p':
-				strlcpy(pid_file, optarg, sizeof(pid_file));
-				break;
-			case 'c':
-				strlcpy(cfg_file, optarg, sizeof(cfg_file));
-				break;
-			case 'd':
-				vhost->perm_config.debug = atoi(optarg);
-				break;
-			case 't':
-				test_only = 1;
-				break;
-			case OPT_NO_CHDIR:
-				vhost->perm_config.no_chdir = 1;
-				break;
-			case 'h':
-				usage();
-				exit(EXIT_SUCCESS);
-			case 'v':
-				print_version();
-				exit(EXIT_SUCCESS);
-			case 'x':
-				vhost->perm_config.pr_dumpable = 1;
-				break;
+		case 'f':
+			vhost->perm_config.foreground = 1;
+			break;
+		case 'p':
+			strlcpy(pid_file, optarg, sizeof(pid_file));
+			break;
+		case 'c':
+			strlcpy(cfg_file, optarg, sizeof(cfg_file));
+			break;
+		case 'd':
+			vhost->perm_config.debug = atoi(optarg);
+			break;
+		case 't':
+			test_only = 1;
+			break;
+		case OPT_NO_CHDIR:
+			vhost->perm_config.no_chdir = 1;
+			break;
+		case 'h':
+			usage();
+			exit(EXIT_SUCCESS);
+		case 'v':
+			print_version();
+			exit(EXIT_SUCCESS);
+		case 'x':
+			vhost->perm_config.pr_dumpable = 1;
+			break;
 		}
 	}
 
