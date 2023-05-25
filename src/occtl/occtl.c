@@ -211,7 +211,7 @@ static char *rl_gets(char *line_read)
 	if (line_read && *line_read)
 		add_history(line_read);
 
-	return (line_read);
+	return line_read;
 }
 
 void
@@ -492,7 +492,7 @@ static char *command_generator(const char *text, int state)
 
 		name += cmd_start;
 		if (c_strncasecmp(name, text, len) == 0) {
-			return (strdup(name));
+			return strdup(name);
 		}
 	}
 

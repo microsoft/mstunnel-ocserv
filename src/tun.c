@@ -903,8 +903,7 @@ ssize_t tun_read(int sockfd, void *buf, size_t len)
 #ifndef __FreeBSD__
 int tun_claim(int sockfd)
 {
-
-	return (0);
+	return 0;
 }
 #else
 /*
@@ -914,7 +913,6 @@ int tun_claim(int sockfd)
  */
 int tun_claim(int sockfd)
 {
-
-	return (ioctl(sockfd, TUNSIFPID, 0));
+	return ioctl(sockfd, TUNSIFPID, 0);
 }
 #endif	/* !__FreeBSD__ */
