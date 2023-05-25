@@ -573,11 +573,12 @@ void exit_worker_reason(worker_st * ws, unsigned reason)
 
 #define HANDSHAKE_SESSION_ID_POS (34)
 #define SKIP_V16(pos, total) \
-	{ uint16_t _s; \
-	  if (pos+2 > total) goto finish; \
-	  _s = (msg->data[pos] << 8) | msg->data[pos+1]; \
-	  if (pos+2+_s > total) goto finish; \
-	  pos += 2+_s; \
+	{ \
+		uint16_t _s; \
+		if (pos+2 > total) goto finish; \
+		_s = (msg->data[pos] << 8) | msg->data[pos+1]; \
+		if (pos+2+_s > total) goto finish; \
+		pos += 2+_s; \
 	}
 
 #define SKIP16(pos, total) \
@@ -593,11 +594,12 @@ void exit_worker_reason(worker_st * ws, unsigned reason)
 	} while (0)
 
 #define SKIP_V8(pos, total) \
-	{ uint8_t _s; \
-	  if (pos+1 > total) goto finish; \
-	  _s = msg->data[pos]; \
-	  if (pos+1+_s > total) goto finish; \
-	  pos += 1+_s; \
+	{ \
+		uint8_t _s; \
+		if (pos+1 > total) goto finish; \
+		_s = msg->data[pos]; \
+		if (pos+1+_s > total) goto finish; \
+		pos += 1+_s; \
 	}
 
 #define SET_VHOST_CREDS \

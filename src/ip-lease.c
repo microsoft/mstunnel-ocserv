@@ -166,9 +166,9 @@ static int is_ipv4_ok(main_server_st *s, struct sockaddr_storage *ip, struct soc
 	}
 
 	if (ip_lease_exists(s, ip, sizeof(struct sockaddr_in)) != 0 ||
-	    ip_cmp(ip, net) == 0 ||
-	    ip_cmp(ip, &broadcast) == 0) {
-	    return 0;
+		ip_cmp(ip, net) == 0 ||
+		ip_cmp(ip, &broadcast) == 0) {
+		return 0;
 	}
 	return 1;
 }
