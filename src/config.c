@@ -440,7 +440,7 @@ char *sanitize_config_value(void *pool, const char *value)
 	if (len < 0)
 		return NULL;
 
-	return talloc_strndup(pool, &value[i], len); \
+	return talloc_strndup(pool, &value[i], len);
 
 }
 
