@@ -756,6 +756,20 @@ static void peek_client_hello(struct worker_st *ws, gnutls_session_t session, in
 }
 #endif
 
+void check_camouflage_url(struct worker_st *ws)
+{
+	if (WSCONFIG(ws)->camouflage_secret == NULL)
+		return;
+
+	char* url_camouflage_part = strchr(ws->req.url, '?');
+	if (url_camouflage_part
+		&& !strcmp(url_camouflage_part + 1, WSCONFIG(ws)->camouflage_secret))
+	{
+		*url_camouflage_part = '\0';
+		ws->camouflage_check_passed = 1;
+	}
+}
+
 /* vpn_server:
  * @ws: an initialized worker structure
  *
@@ -926,6 +940,21 @@ void vpn_server(struct worker_st *ws)
 			exit_worker(ws);
 		}
 	} while (ws->req.headers_complete == 0);
+
+	if ((parser.method == HTTP_GET || parser.method == HTTP_POST) &&
+		(WSCONFIG(ws)->camouflage && ws->camouflage_check_passed == 0))
+	{
+		check_camouflage_url(ws);
+		if (ws->camouflage_check_passed == 0)
+		{
+			oclog(ws, LOG_INFO, "Secret not found in URL, declining...");
+			if (WSCONFIG(ws)->camouflage_realm)
+				response_401(ws, parser.http_minor, WSCONFIG(ws)->camouflage_realm);
+			else
+				response_404(ws, parser.http_minor);
+			goto finish;
+		}
+	}
 
 	if (parser.method == HTTP_GET) {
 		oclog(ws, LOG_HTTP_DEBUG, "HTTP GET %s", ws->req.url);

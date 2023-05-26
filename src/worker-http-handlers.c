@@ -39,6 +39,7 @@
 #include <tlslib.h>
 
 #define HTML_404 "<html><body><h1>404 Not Found</h1></body></html>\r\n"
+#define HTML_401 "<html><body><h1>401 Unauthorized</h1></body></html>\r\n"
 
 int response_404(worker_st *ws, unsigned http_ver)
 {
@@ -47,6 +48,17 @@ int response_404(worker_st *ws, unsigned http_ver)
 	    cstp_puts  (ws, "Connection: close\r\n\r\n") < 0 ||
 	    cstp_puts  (ws, HTML_404) < 0)
 		return -1;
+	return 0;
+}
+
+int response_401(worker_st *ws, unsigned http_ver, char* realm)
+{
+	if (cstp_printf(ws, "HTTP/1.%u 401 Unauthorized\r\n", http_ver) < 0 ||
+	    cstp_printf(ws, "WWW-Authenticate: Basic realm=\"%s\"\r\n", realm) < 0 ||
+	    cstp_printf(ws, "Content-Length: %u\r\n", (unsigned)(sizeof(HTML_401) - 1)) < 0 ||
+	    cstp_puts  (ws, "Connection: close\r\n\r\n") < 0 ||
+	    cstp_puts  (ws, HTML_401) < 0)
+	    return -1;
 	return 0;
 }
 

@@ -1129,6 +1129,12 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 		READ_STRING(config->default_user_conf);
 	} else if (strcmp(name, "default-group-config") == 0) {
 		READ_STRING(config->default_group_conf);
+	} else if (strcmp(name, "camouflage") == 0) {
+		READ_TF(config->camouflage);
+	} else if (strcmp(name, "camouflage_secret") == 0) {
+		READ_STRING(config->camouflage_secret);
+	} else if (strcmp(name, "camouflage_realm") == 0) {
+		READ_STRING(config->camouflage_realm);
 	} else {
 		if (reload == 0)
 			fprintf(stderr, WARNSTR"skipping unknown option '%s'\n", name);

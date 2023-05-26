@@ -1,0 +1,84 @@
+#!/bin/sh
+#
+# Copyright (C) 2013 Nikos Mavrogiannopoulos
+# Copyright (C) 2023 Kirill Ovchinnikov
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+CLIENTPIDFILE=openconnect-pid.$$.tmp
+SECRETURL="/?mysecretkey"
+SERVERCERT="pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8="
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+
+echo "Testing connection to the server with camouflage enabled"
+
+update_config test-camouflage.config
+
+launch_server -d 1 -f -c ${CONFIG} & PID=$!
+wait_server ${PID}
+
+echo "Checking with CURL that server returns us HTTP 401 for GET"
+http_result=$(curl --insecure https://localhost:${PORT} --output /dev/null --silent --write-out "%{http_code}")
+if [ "${http_result}" != "401" ]; then
+    fail ${PID} "Server returned ${http_result} instead of 401 for GET"
+fi
+echo "OK"
+
+
+echo "Checking with CURL that server returns us HTTP 403 for POST"
+http_result=$(curl -X POST -F 'test=test' --insecure https://localhost:${PORT} --output /dev/null --silent --write-out "%{http_code}")
+if [ "${http_result}" != "401" ]; then
+    fail ${PID} "Server returned ${http_result} instead of 401 for POST"
+fi
+echo "OK"
+
+echo "Connecting to obtain cookie without secret URL"
+eval `echo "test" | ${OPENCONNECT} -q localhost:${PORT} -u test --servercert ${SERVERCERT} --authenticate`
+if [ ! -z "${COOKIE}" ];then
+	fail ${PID} "Got a cookie, this shouldn't happen"
+fi
+echo "OK"
+
+echo "Connecting to obtain cookie using secret URL.."
+eval `echo "test" | ${OPENCONNECT} -q localhost:${PORT}${SECRETURL} -u test --servercert ${SERVERCERT} --authenticate`
+if [ -z "${COOKIE}" ];then
+	fail ${PID} "Could not obtain cookie"
+fi
+echo "OK"
+
+
+echo "Connecting with cookie..."
+$OPENCONNECT -q localhost:${PORT} -u test -C "${COOKIE}" --servercert ${SERVERCERT} --script=/bin/true --verbose --pid-file "${CLIENTPIDFILE}" --background
+sleep 4
+if [ ! -f "${CLIENTPIDFILE}" ];then
+	fail ${PID} "Failed to establish the session"
+fi
+echo "Seems like the connection is established, stopping the client to finish the test...."
+kill -USR1 `cat "${CLIENTPIDFILE}"`
+if test $? != 0;then
+    fail ${PID} "Client process could not be killed"
+fi
+echo "OK"
+
+cleanup
+
+exit 0

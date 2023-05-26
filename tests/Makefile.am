@@ -45,7 +45,7 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem ns.sh common.sh certs/server-cert.pem
 	data/haproxy-proxyproto.cfg scripts/proxy-connectscript data/haproxy-proxyproto-v1.config \
 	data/haproxy-proxyproto-v1.cfg scripts/proxy-connectscript-v1 data/test-multiple-client-ip.config \
 	data/test-client-bypass-protocol.config asan.supp certs/ca.tmpl certs/server-cert.tmpl \
-	certs/user-cert.tmpl
+	certs/user-cert.tmpl data/test-camouflage.config data/test-camouflage-norealm.config
 
 xfail_scripts =
 dist_check_SCRIPTS =  ocpasswd-test
@@ -62,7 +62,8 @@ dist_check_SCRIPTS += haproxy-connect test-iroute test-multi-cookie test-pass-sc
 	test-cookie-invalidation test-user-config test-append-routes test-ban \
 	multiple-routes json test-udp-listen-host test-max-same-1 test-script-multi-user \
 	apple-ios ipv6-iface test-namespace-listen disconnect-user disconnect-user2 \
-	ping-leases test-ban-local test-client-bypass-protocol ipv6-small-net
+	ping-leases test-ban-local test-client-bypass-protocol ipv6-small-net test-camouflage \
+	test-camouflage-norealm
 
 if RADIUS_ENABLED
 dist_check_SCRIPTS += radius-group radius-otp
