@@ -100,7 +100,7 @@ sleep 4
 
 echo " * Tests the radius group functionality"
 USERNAME=test-class
-( echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} --authgroup group2 -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+( echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} --authgroup group2 -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
 if test $? != 0;then
 	echo "Could not connect to server"
 	exit 1
@@ -137,7 +137,7 @@ sleep 4
 
 echo " * Tests the alt radius group functionality"
 USERNAME=test-class
-( echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} --authgroup group1 -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+( echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} --authgroup group1 -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
 if test $? != 0;then
 	echo "Could not connect to server"
 	exit 1

@@ -67,7 +67,7 @@ launch_server -d 1 -f -c "${CONFIG}" & PID=$!
 wait_server $PID
 
 echo " * Connecting to obtain cookie with wrong username... "
-( echo "tost" | $OPENCONNECT -q localhost:$PORT -u tost --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+( echo "tost" | $OPENCONNECT -q localhost:$PORT -u tost --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie when we shouldn't"
 
 rm -f ${builddir}/connect.ok
@@ -76,11 +76,11 @@ rm -f ${builddir}/host-update.ok
 #test special characters
 
 echo " * Connecting to obtain cookie... "
-( echo "!@#$%^&*()<>" | $OPENCONNECT -q localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "!@#$%^&*()<>" | $OPENCONNECT -q localhost:$PORT -u "sp@c/al" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
 echo " * Re-connecting to force script run... "
-echo "!@#$%^&*()<>" | timeout 7 $OPENCONNECT -q --local-hostname='mylocalname' localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true
+echo "!@#$%^&*()<>" | timeout 7 $OPENCONNECT -q --local-hostname='mylocalname' localhost:$PORT -u "sp@c/al" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s /bin/true
 
 TIMEOUT=5
 while ! test -f ${builddir}/disconnect.ok; do
@@ -112,7 +112,7 @@ rm -f ${builddir}/disconnect.ok
 rm -f ${builddir}/host-update.ok
 
 echo " * Re-connecting to get cookie... "
-echo "test2" | $OPENCONNECT -q localhost:$PORT -u "test2" --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true >${PARAMSFILE}
+echo "test2" | $OPENCONNECT -q localhost:$PORT -u "test2" --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s /bin/true >${PARAMSFILE}
 if test $? != 0;then
 	echo "Could not connect"
 	cat ${PARAMSFILE}
@@ -127,7 +127,7 @@ fi
 
 echo " * Re-connecting to force session stealing... "
 eval "$(grep COOKIE ${PARAMSFILE})"
-echo ${COOKIE}| $OPENCONNECT --local-hostname='mylocalname' localhost:$PORT -u "test2" --reconnect-timeout 0 --cookie-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true --pid-file=${OPIDFILE} -b
+echo ${COOKIE}| $OPENCONNECT --local-hostname='mylocalname' localhost:$PORT -u "test2" --reconnect-timeout 0 --cookie-on-stdin --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s /bin/true --pid-file=${OPIDFILE} -b
 
 echo " - Pausing client"
 TIMEOUT=4
@@ -156,7 +156,7 @@ rm -f ${builddir}/connect.ok
 rm -f ${builddir}/disconnect.ok
 
 echo " * Re-connecting to steal previous IP address... "
-echo ${COOKIE} | $OPENCONNECT -q --local-hostname='mylocalname' localhost:$PORT -u "test2" --reconnect-timeout 0 --cookie-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true --pid-file=${OPIDFILE2} -b
+echo ${COOKIE} | $OPENCONNECT -q --local-hostname='mylocalname' localhost:$PORT -u "test2" --reconnect-timeout 0 --cookie-on-stdin --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s /bin/true --pid-file=${OPIDFILE2} -b
 
 echo " - Resuming (disconnected) client"
 kill -s CONT $(cat ${OPIDFILE})
@@ -205,7 +205,7 @@ done
 sleep 5
 echo " - Check server status"
 
-( echo "!@#$%^&*()<>" | $OPENCONNECT --local-hostname='mylocalname' -q localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "!@#$%^&*()<>" | $OPENCONNECT --local-hostname='mylocalname' -q localhost:$PORT -u "sp@c/al" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
 echo " - Killing server"

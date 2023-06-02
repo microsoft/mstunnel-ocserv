@@ -81,7 +81,7 @@ ${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} &
 sleep 4
 
 echo " * Connecting with user NOT in group..."
-( echo "${PASSWORD}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+( echo "${PASSWORD}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
 if test $? != 0;then
 	echo "Could not connect to server"
 	exit 1
@@ -129,7 +129,7 @@ sleep 2
 USERNAME=test
 PASSWORD=test
 echo " * Connecting with user in group to ${ADDRESS}:${PORT}..."
-( echo "${PASSWORD}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+( echo "${PASSWORD}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
 if test $? != 0;then
 	echo "Could not connect to server"
 	exit 1

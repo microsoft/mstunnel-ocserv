@@ -35,19 +35,19 @@ launch_sr_pam_server -d 1 -f -c ${CONFIG} & PID=$!
 wait_server $PID
 
 echo "Connecting with correct password but no PAM user... "
-( echo -e "test\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u xtest --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+( echo -e "test\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u xtest --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie with non existing user"
 
 echo "Connecting with incorrect password (correct in PAM) and existing user... "
-( echo -e "testuser123\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u testuser --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+( echo -e "testuser123\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u testuser --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie with non existing user"
 
 echo "Connecting with empty password (correct in PAM) and existing user... "
-( echo -e "\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u testuser --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+( echo -e "\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u testuser --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie with non existing user"
 
 echo "Connecting with correct password and existing user... "
-( echo -e "test\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u testuser --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly ) ||#>/dev/null 2>&1 ) ||
+( echo -e "test\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u testuser --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly ) ||#>/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
 cleanup

@@ -54,11 +54,11 @@ wait_server $PID
 sleep 2
 
 echo " * Connecting to obtain cookie... "
-( echo "!@#$%^&*()<>" | $OPENCONNECT localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null ) ||
+( echo "!@#$%^&*()<>" | $OPENCONNECT localhost:$PORT -u "sp@c/al" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null ) ||
 	fail $PID "Could not receive cookie from server"
 
 echo " * Re-connect to force script run with platform... "
-echo "!@#$%^&*()<>" | timeout 7 $OPENCONNECT --verbose localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true >${TMPFILE} 2>&1
+echo "!@#$%^&*()<>" | timeout 7 $OPENCONNECT --verbose localhost:$PORT -u "sp@c/al" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s /bin/true >${TMPFILE} 2>&1
 
 sleep 5
 
@@ -87,7 +87,7 @@ fi
 rm -f ${TMPFILE}
 
 echo " * Re-connecting to force script run with user agent... "
-echo "!@#$%^&*()<>" | timeout 7 $OPENCONNECT --verbose --useragent="Cisco AnyConnect VPN Agent for Apple" localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true >${TMPFILE} 2>&1
+echo "!@#$%^&*()<>" | timeout 7 $OPENCONNECT --verbose --useragent="Cisco AnyConnect VPN Agent for Apple" localhost:$PORT -u "sp@c/al" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s /bin/true >${TMPFILE} 2>&1
 
 sleep 5
 
@@ -114,7 +114,7 @@ fi
 sleep 5
 echo " - Check server status"
 
-( echo "!@#$%^&*()<>" | $OPENCONNECT localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "!@#$%^&*()<>" | $OPENCONNECT localhost:$PORT -u "sp@c/al" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
 echo " - Killing server"
