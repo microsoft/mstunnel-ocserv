@@ -39,13 +39,13 @@ PID=$!
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (with certificate)... "
-( $OPENCONNECT -q localhost:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null ) ||
+( $OPENCONNECT -q localhost:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert.pem --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly </dev/null >/dev/null ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
 
 echo -n "Re-connecting to get routes... "
-timeout 15s $OPENCONNECT -v localhost:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert-testuser.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >${TMPFILE1} 2>&1
+timeout 15s $OPENCONNECT -v localhost:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert-testuser.pem --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s /bin/true </dev/null >${TMPFILE1} 2>&1
 
 echo ok
 

@@ -49,19 +49,19 @@ PID=$!
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (without certificate)... "
-( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) &&
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly </dev/null >/dev/null 2>&1 ) &&
 	fail $PID "Connected without certificate!"
 
 echo "ok (failed as expected)"
 
 echo -n "Connecting to obtain cookie (with invalid certificate)... "
-( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey "${srcdir}/certs/user-key.pem" -c "${srcdir}/certs/user-cert-invalid.pem" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) &&
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey "${srcdir}/certs/user-key.pem" -c "${srcdir}/certs/user-cert-invalid.pem" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly </dev/null >/dev/null 2>&1 ) &&
 	fail $PID "Connected with invalid certificate!"
 
 echo "ok (failed as expected)"
 
 echo -n "Connecting to obtain cookie (with certificate)... "
-( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey "${srcdir}/certs/user-key.pem" -c "${srcdir}/certs/user-cert.pem" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey "${srcdir}/certs/user-key.pem" -c "${srcdir}/certs/user-cert.pem" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly </dev/null >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
@@ -80,7 +80,7 @@ kill -HUP $PID
 sleep 5
 
 echo -n "Connecting to obtain cookie (with DER CRL)... "
-( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey "${srcdir}/certs/user-key.pem" -c "${srcdir}/certs/user-cert.pem" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey "${srcdir}/certs/user-key.pem" -c "${srcdir}/certs/user-cert.pem" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly </dev/null >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
@@ -99,13 +99,13 @@ kill -HUP $PID
 sleep 5
 
 echo -n "Connecting to obtain cookie (with revoked certificate)... "
-( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey "${srcdir}/certs/user-key.pem" -c "${srcdir}/certs/user-cert.pem" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) &&
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey "${srcdir}/certs/user-key.pem" -c "${srcdir}/certs/user-cert.pem" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly </dev/null >/dev/null 2>&1 ) &&
 	fail $PID "Connected with revoked certificate!"
 
 echo "ok (failed as expected)"
 
 #echo "Normal connection... "
-#( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true ) ||
+#( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --script=/bin/true ) ||
 #	fail $PID "Could not connect to server"
 
 rm -f "${CRLNAME}" "${CRLTMPLNAME}"

@@ -44,7 +44,8 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem ns.sh common.sh certs/server-cert.pem
 	data/disconnect-user2.config data/ping-leases.config data/haproxy-proxyproto.config \
 	data/haproxy-proxyproto.cfg scripts/proxy-connectscript data/haproxy-proxyproto-v1.config \
 	data/haproxy-proxyproto-v1.cfg scripts/proxy-connectscript-v1 data/test-multiple-client-ip.config \
-	data/test-client-bypass-protocol.config asan.supp
+	data/test-client-bypass-protocol.config asan.supp certs/ca.tmpl certs/server-cert.tmpl \
+	certs/user-cert.tmpl
 
 xfail_scripts =
 dist_check_SCRIPTS =  ocpasswd-test
@@ -175,6 +176,25 @@ check_PROGRAMS = str-test str-test2 ipv4-prefix ipv6-prefix kkdcp-parsing json-e
 gen_oidc_test_data_CPPFLAGS = $(AM_CPPFLAGS)
 gen_oidc_test_data_SOURCES = generate_oidc_test_data.c
 gen_oidc_test_data_LDADD = $(LDADD) $(CJOSE_LIBS) $(JANSSON_LIBS)
+
+certs/ca.pem: certs/ca-key.pem certs/ca.tmpl
+	certtool --generate-self-signed --template certs/ca.tmpl --load-privkey certs/ca-key.pem --outfile certs/ca.pem
+
+certs/server-cert-ca.pem: certs/ca.pem certs/server-cert.pem
+	cat certs/server-cert.pem certs/ca.pem > certs/server-cert-ca.pem
+
+certs/server-cert.pem: certs/server-cert.tmpl certs/ca.pem certs/server-key.pem certs/ca-key.pem
+	certtool --generate-certificate --template certs/server-cert.tmpl --load-privkey certs/server-key.pem --load-ca-certificate certs/ca.pem --load-ca-privkey certs/ca-key.pem --outfile certs/server-cert.pem
+
+certs/user-cert.pem: certs/user-cert.tmpl certs/ca.pem certs/user-key.pem certs/ca-key.pem
+	certtool --generate-certificate --template certs/user-cert.tmpl --load-privkey certs/user-key.pem --load-ca-certificate certs/ca.pem --load-ca-privkey certs/ca-key.pem --outfile certs/user-cert.pem
+
+# make the user certificate invalid by signing it with another CA
+certs/user-cert-invalid.pem: certs/user-cert.tmpl
+	certtool --generate-privkey --outfile ca-key.tmp
+	certtool --generate-self-signed --template certs/ca.tmpl --load-privkey ca-key.tmp --outfile ca.tmp
+	certtool --generate-certificate --template certs/user-cert.tmpl --load-privkey certs/user-key.pem --load-ca-certificate ca.tmp --load-ca-privkey ca-key.tmp --outfile certs/user-cert-invalid.pem
+	rm -f ca-key.tmp ca.tmp
 
 if ENABLE_OIDC_AUTH_TESTS
 check_PROGRAMS += gen_oidc_test_data

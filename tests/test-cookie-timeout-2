@@ -33,7 +33,7 @@ launch_server -d 1 -f -c ${CONFIG} & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "
-eval `echo "test" | $OPENCONNECT -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
+eval `echo "test" | $OPENCONNECT -q localhost:$PORT -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=`
 
 if [ -z "$COOKIE" ];then
 	fail $PID "Could not obtain cookie"
@@ -43,7 +43,7 @@ fi
 sleep 10
 echo ""
 echo "Connecting with cookie... "
-echo "test" | $OPENCONNECT -q -b localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid.$$ --background
+echo "test" | $OPENCONNECT -q -b localhost:$PORT -u test -C "$COOKIE" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --script=/bin/true --verbose --pid-file ${srcdir}/pid.$$ --background
 
 sleep 4
 
@@ -58,7 +58,7 @@ rm -f "${srcdir}/pid2.$$"
 sleep 30
 echo ""
 echo "Connecting again with cookie (overriding first session)... "
-echo "test" | $OPENCONNECT -b -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid2.$$ --background
+echo "test" | $OPENCONNECT -b -q localhost:$PORT -u test -C "$COOKIE" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --script=/bin/true --verbose --pid-file ${srcdir}/pid2.$$ --background
 
 sleep 6
 

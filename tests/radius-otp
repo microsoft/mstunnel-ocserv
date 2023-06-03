@@ -111,7 +111,7 @@ for (( COUNT=1; COUNT <= 3; COUNT++ )); do
     sleep 0.5
     echo "$USERNAME-stage$COUNT"
 done
-} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b >/dev/null 2>&1)
+} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b >/dev/null 2>&1)
 if test $? != 0; then
 	echo "Could not connect to server"
 	exit 1
@@ -151,7 +151,7 @@ for (( COUNT=1; COUNT <= 3; COUNT++ )); do
     sleep 0.5
     echo "$USERNAME-stage"
 done
-} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b --cookieonly >/dev/null 2>&1)
+} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b --cookieonly >/dev/null 2>&1)
 if test $? == 0; then
 	echo "Connected with wrong username"
 	exit 1
@@ -173,7 +173,7 @@ for (( COUNT=1; COUNT <= 3; COUNT++ )); do
         echo "$USERNAME-stage$COUNT"
     fi
 done
-} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b --cookieonly >/dev/null 2>&1)
+} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b --cookieonly >/dev/null 2>&1)
 if test $? == 0; then
 	echo "Connected with wrong OTP"
 	exit 1
@@ -197,7 +197,7 @@ for (( COUNT=1; COUNT <= 3; COUNT++ )); do
         echo "$USERNAME-stage$COUNT"
     fi
 done
-} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b --cookieonly >/dev/null 2>&1)
+} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b --cookieonly >/dev/null 2>&1)
 if test $? == 0; then
 	echo "Connected with wrong OTP"
 	exit 1
@@ -218,7 +218,7 @@ for (( COUNT=1; COUNT <= 3; COUNT++ )); do
         echo "$USERNAME-stage$COUNT"
     fi
 done
-} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b --cookieonly >/dev/null 2>&1)
+} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b --cookieonly >/dev/null 2>&1)
 if test $? == 0; then
 	echo "Connected with blank OTP"
 	exit 1
@@ -247,7 +247,7 @@ for (( COUNT=1; COUNT <= 3; COUNT++ )); do
         echo "$USERNAME-stage$COUNT"
     fi
 done
-} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b --cookieonly >/dev/null 2>&1)
+} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b --cookieonly >/dev/null 2>&1)
 if test $? == 0; then
 	echo "Successful connection with the number of OTP retries greater than allowed by the ban system (default 30)."
 	${OCCTL} -s ${OCCTL_SOCKET} show ip ban points
@@ -265,7 +265,7 @@ for (( COUNT=1; COUNT <= 17; COUNT++ )); do
     sleep 0.5
     echo "$USERNAME-stage$COUNT"
 done
-} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b --cookieonly >/dev/null 2>&1)
+} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b --cookieonly >/dev/null 2>&1)
 if test $? == 0; then
 	echo "Connected to server - MAX_CHALLENGES test failed"
 	exit 1

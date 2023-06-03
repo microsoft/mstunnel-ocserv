@@ -111,7 +111,7 @@ ${CMDNS2} ${HAPROXY} -f ${HACONFIG} -d & HAPID=$!
 sleep 3
 
 echo " * Connecting to haproxy and using dtls ... "
-echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${HAPORT} --user test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file "${CLIPID}" --background
+echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${HAPORT} --user test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --script=/bin/true --verbose --pid-file "${CLIPID}" --background
 
 wait_file "${CLIPID}" 11
 
@@ -134,7 +134,7 @@ echo "restart ocsev with udp-listen-host set to 127.0.0.1"
 ${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG_UDP_LISTEN_LOCAL} ${DEBUG} & PID=$!
 
 echo " * Connecting to haproxy and using dtls again ... "
-echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${HAPORT} --user test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file "${CLIPID2}" --background
+echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${HAPORT} --user test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --script=/bin/true --verbose --pid-file "${CLIPID2}" --background
 
 wait_file "${CLIPID2}" 11
 

@@ -59,15 +59,15 @@ ${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
 sleep 4
 
 echo "Connecting with wrong password 5 times... "
-echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
-echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
-echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
-echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
-echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=
 
 echo ""
 echo "Connecting with correct password... "
-eval `echo "test" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
+eval `echo "test" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=`
 
 if [ -n "$COOKIE" ];then
 	fail $PID "Obtained cookie although should have been banned"
@@ -90,7 +90,7 @@ sleep 25
 echo ""
 
 echo "Connecting with correct password after ban time... "
-eval `echo "test" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
+eval `echo "test" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=`
 
 if [ -z "$COOKIE" ];then
 	fail $PID "Could not obtain cookie even though ban should be lifted"
@@ -99,16 +99,16 @@ fi
 echo ""
 echo "Checking ban reset time... "
 
-echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
-echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
-echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
-echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=
 sleep 11
-echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=
 
 echo ""
 echo "Connecting with correct password after ban reset time... "
-eval `echo "test" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
+eval `echo "test" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=`
 
 if [ -z "$COOKIE" ];then
 	fail $PID "Could not obtain cookie even though ban should be lifted"

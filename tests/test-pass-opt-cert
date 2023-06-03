@@ -38,7 +38,7 @@ connect()
 {
 opts=$1
 pass=$2
-echo ${pass} | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT $opts --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --passwd-on-stdin --authenticate >${TMPFILE}
+echo ${pass} | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT $opts --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --passwd-on-stdin --authenticate >${TMPFILE}
 if test $? != 0;then
 	cat ${TMPFILE}
 	return 1
