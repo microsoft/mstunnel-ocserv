@@ -93,7 +93,7 @@ static void co_switch_context(co_ctx_t *octx, co_ctx_t *nctx)
 	if (swapcontext(&octx->cc, &nctx->cc) < 0) {
 		fprintf(stderr, "[PCL] Context switch failed: curr=%p\n",
 			tctx->co_curr);
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 }
 
@@ -150,7 +150,7 @@ static void co_ctx_bootstrap(void)
 
 	fprintf(stderr, "[PCL] Hmm, you really shouldn't reach this point: curr=%p\n",
 		tctx->co_curr);
-	exit(EXIT_FAILURE);
+	exit(1);
 }
 
 static void co_ctx_trampoline(int sig)
@@ -418,7 +418,7 @@ void co_delete(coroutine_t coro)
 	if (co == tctx->co_curr) {
 		fprintf(stderr, "[PCL] Cannot delete itself: curr=%p\n",
 			tctx->co_curr);
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 	if (co->alloc)
 		free(co);
@@ -455,7 +455,7 @@ static void co_del_helper(void *data)
 		co_delete(tctx->co_curr->caller);
 		co_call((coroutine_t) cdh);
 		if (tctx->co_dhelper == NULL) {
-			exit(EXIT_FAILURE);
+			exit(1);
 		}
 	}
 }
@@ -470,7 +470,7 @@ void co_exit_to(coroutine_t coro)
 					tctx->stk, sizeof(tctx->stk))) == NULL) {
 		fprintf(stderr, "[PCL] Unable to create delete helper coroutine: curr=%p\n",
 			tctx->co_curr);
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 	tctx->co_dhelper = co;
 
@@ -478,7 +478,7 @@ void co_exit_to(coroutine_t coro)
 
 	fprintf(stderr, "[PCL] Stale coroutine called: curr=%p  exitto=%p  caller=%p\n",
 		tctx->co_curr, co, tctx->co_curr->caller);
-	exit(EXIT_FAILURE);
+	exit(1);
 }
 
 void co_exit(void)
