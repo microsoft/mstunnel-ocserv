@@ -431,8 +431,6 @@ int y;
 		set_mtu_disc(fd, family, 1);
 	}
 	set_cloexec_flag (fd, 1);
-
-	return;
 }
 
 /* clears the server listen_list and proc_list. To be used after fork().

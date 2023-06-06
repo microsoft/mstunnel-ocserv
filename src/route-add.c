@@ -196,6 +196,4 @@ unsigned i;
 		route_del(s, proc, proc->config->iroutes[i], proc->tun_lease.name);
 	}
 	proc->applied_iroutes = 0;
-
-	return;
 }

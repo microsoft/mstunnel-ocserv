@@ -618,7 +618,7 @@ unsigned check_if_default_route(char **routes, unsigned routes_size)
 	for (i=0;i<routes_size;i++) {
 		if (strcmp(routes[i], "default") == 0 ||
 		    strcmp(routes[i], "0.0.0.0/0") == 0)
-		    return 1;
+			return 1;
 	}
 
 	return 0;

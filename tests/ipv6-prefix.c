@@ -36,7 +36,7 @@ static char* my_ipv6_prefix_to_mask(char str[MAX_IP_STR], unsigned prefix)
 	return str;
 }
 
-int main()
+int main(void)
 {
 	char *p;
 	char str[MAX_IP_STR];

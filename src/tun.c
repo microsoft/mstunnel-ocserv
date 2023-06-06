@@ -320,7 +320,6 @@ static int os_set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 
 static void os_reset_ipv6_addr(struct proc_st *proc)
 {
-	return;
 }
 
 #endif
@@ -785,8 +784,6 @@ void close_tun(main_server_st * s, struct proc_st *proc)
 	if (fd != -1)
 		close(fd);
 #endif
-
-	return;
 }
 
 static void reset_ipv4_addr(struct proc_st *proc)
@@ -906,8 +903,7 @@ ssize_t tun_read(int sockfd, void *buf, size_t len)
 #ifndef __FreeBSD__
 int tun_claim(int sockfd)
 {
-
-	return (0);
+	return 0;
 }
 #else
 /*
@@ -917,7 +913,6 @@ int tun_claim(int sockfd)
  */
 int tun_claim(int sockfd)
 {
-
-	return (ioctl(sockfd, TUNSIFPID, 0));
+	return ioctl(sockfd, TUNSIFPID, 0);
 }
 #endif	/* !__FreeBSD__ */

@@ -62,8 +62,6 @@ void entries_add(void *pool, const char* user, unsigned user_size, unsigned id)
 		snprintf(entries[entries_size].id, sizeof(entries[entries_size].id), "%u", id);
 
 	entries_size++;
-
-	return;
 }
 
 char* search_for_user(unsigned idx, const char* match, int match_size)

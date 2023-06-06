@@ -208,6 +208,4 @@ void expire_tls_sessions(sec_mod_st *sec)
 		}
 		cache = htable_next(sec->tls_db.ht, &iter);
 	}
-
-	return;
 }

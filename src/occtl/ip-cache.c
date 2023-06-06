@@ -57,8 +57,6 @@ void ip_entries_add(void *pool, const char* ip, unsigned ip_size)
 	strlcpy(ip_entries[ip_entries_size].ip, ip, sizeof(ip_entries[ip_entries_size].ip));
 	ip_entries[ip_entries_size].ip_size = ip_size;
 	ip_entries_size++;
-
-	return;
 }
 
 char* search_for_ip(unsigned idx, const char* match, int match_size)

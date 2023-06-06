@@ -35,35 +35,35 @@
 static unsigned check_priority(int *priority, int debug_prio)
 {
 	switch(*priority) {
-		case LOG_ERR:
-		case LOG_WARNING:
-		case LOG_NOTICE:
-			break;
-		case LOG_DEBUG:
-			if (debug_prio < DEBUG_DEBUG)
-				return 0;
-			break;
-		case LOG_INFO:
-			if (debug_prio < DEBUG_INFO)
-				return 0;
-			break;
-		case LOG_HTTP_DEBUG:
-			if (debug_prio < DEBUG_HTTP)
-				return 0;
-	                *priority = LOG_INFO;
-			break;
-		case LOG_TRANSFER_DEBUG:
-			if (debug_prio < DEBUG_TRANSFERRED)
-				return 0;
-	                *priority = LOG_DEBUG;
-			break;
-		case LOG_SENSITIVE:
-			if (debug_prio < DEBUG_SENSITIVE)
-				return 0;
-	                *priority = LOG_DEBUG;
-			break;
-		default:
-			syslog(LOG_DEBUG, "unknown log level %d", *priority);
+	case LOG_ERR:
+	case LOG_WARNING:
+	case LOG_NOTICE:
+		break;
+	case LOG_DEBUG:
+		if (debug_prio < DEBUG_DEBUG)
+			return 0;
+		break;
+	case LOG_INFO:
+		if (debug_prio < DEBUG_INFO)
+			return 0;
+		break;
+	case LOG_HTTP_DEBUG:
+		if (debug_prio < DEBUG_HTTP)
+			return 0;
+	        *priority = LOG_INFO;
+		break;
+	case LOG_TRANSFER_DEBUG:
+		if (debug_prio < DEBUG_TRANSFERRED)
+			return 0;
+	        *priority = LOG_DEBUG;
+		break;
+	case LOG_SENSITIVE:
+		if (debug_prio < DEBUG_SENSITIVE)
+			return 0;
+	        *priority = LOG_DEBUG;
+		break;
+	default:
+		syslog(LOG_DEBUG, "unknown log level %d", *priority);
         }
 
         return 1;
@@ -105,8 +105,6 @@ void __attribute__ ((format(printf, 3, 4)))
 		name[0] = 0;
 
 	syslog(priority, "worker%s: %s %s", name, ip?ip:"[unknown]", buf);
-
-	return;
 }
 
 /* proc is optional */
@@ -151,8 +149,6 @@ void __attribute__ ((format(printf, 4, 5)))
 		name[0] = 0;
 
 	syslog(priority, "main%s:%s %s", name, ip?ip:"[unknown]", buf);
-
-	return;
 }
 
 void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
@@ -182,8 +178,6 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
 	}
 
 	_mslog(s, proc, priority, "%s %s", prefix, buf);
-
-	return;
 }
 
 void  oclog_hex(const worker_st* ws, int priority,
@@ -213,8 +207,6 @@ void  oclog_hex(const worker_st* ws, int priority,
 	}
 
 	_oclog(ws, priority, "%s %s", prefix, buf);
-
-	return;
 }
 
 void  seclog_hex(const struct sec_mod_st* sec, int priority,
@@ -238,6 +230,4 @@ void  seclog_hex(const struct sec_mod_st* sec, int priority,
 	}
 
 	seclog(sec, priority, "%s %s", prefix, buf);
-
-	return;
 }

@@ -241,8 +241,6 @@ static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
-
-	return;
 }
 
 static void method_reload(method_ctx *ctx, int cfd, uint8_t * msg,
@@ -263,8 +261,6 @@ static void method_reload(method_ctx *ctx, int cfd, uint8_t * msg,
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
-
-	return;
 }
 
 static void method_stop(method_ctx *ctx, int cfd, uint8_t * msg,
@@ -285,8 +281,6 @@ static void method_stop(method_ctx *ctx, int cfd, uint8_t * msg,
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
-
-	return;
 }
 
 #define IPBUF_SIZE 64
@@ -479,7 +473,7 @@ static void method_list_users(method_ctx *ctx, int cfd, uint8_t * msg,
 		if (ret < 0) {
 			mslog(ctx->s, NULL, LOG_ERR,
 			      "error appending user info to reply");
-			goto error;
+			return;
 		}
 	}
 
@@ -489,9 +483,6 @@ static void method_list_users(method_ctx *ctx, int cfd, uint8_t * msg,
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
-
- error:
-	return;
 }
 
 static void method_top(method_ctx *ctx, int cfd, uint8_t * msg,
@@ -557,7 +548,7 @@ static void method_list_banned(method_ctx *ctx, int cfd, uint8_t * msg,
 		if (ret < 0) {
 			mslog(ctx->s, NULL, LOG_ERR,
 			      "error appending ban info to reply");
-			goto error;
+			return;
 		}
 		e = htable_next(db, &iter);
 	}
@@ -568,9 +559,6 @@ static void method_list_banned(method_ctx *ctx, int cfd, uint8_t * msg,
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending ban list reply");
 	}
-
- error:
-	return;
 }
 
 static void method_list_cookies(method_ctx *ctx, int cfd, uint8_t * msg,
@@ -655,7 +643,6 @@ reply_and_exit:
 	if (cookies) {
 		talloc_free(cookies);
 	}
-	return;
 }
 
 static void single_info_common(method_ctx *ctx, int cfd, uint8_t * msg,
@@ -686,7 +673,7 @@ static void single_info_common(method_ctx *ctx, int cfd, uint8_t * msg,
 		if (ret < 0) {
 			mslog(ctx->s, NULL, LOG_ERR,
 			      "error appending user info to reply");
-			goto error;
+			return;
 		}
 
 		found_user = 1;
@@ -709,9 +696,6 @@ static void single_info_common(method_ctx *ctx, int cfd, uint8_t * msg,
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
-
- error:
-	return;
 }
 
 static void method_user_info(method_ctx *ctx, int cfd, uint8_t * msg,
@@ -729,8 +713,6 @@ static void method_user_info(method_ctx *ctx, int cfd, uint8_t * msg,
 
 	single_info_common(ctx, cfd, msg, msg_size, req->username, 0);
 	username_req__free_unpacked(req, NULL);
-
-	return;
 }
 
 static void method_id_info(method_ctx *ctx, int cfd, uint8_t * msg,
@@ -748,8 +730,6 @@ static void method_id_info(method_ctx *ctx, int cfd, uint8_t * msg,
 
 	single_info_common(ctx, cfd, msg, msg_size, NULL, req->id);
 	id_req__free_unpacked(req, NULL);
-
-	return;
 }
 
 static void method_unban_ip(method_ctx *ctx,
@@ -781,8 +761,6 @@ static void method_unban_ip(method_ctx *ctx,
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending unban IP ctl reply");
 	}
-
-	return;
 }
 
 static void method_disconnect_user_name(method_ctx *ctx,
@@ -820,8 +798,6 @@ static void method_disconnect_user_name(method_ctx *ctx,
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
-
-	return;
 }
 
 static void method_disconnect_user_id(method_ctx *ctx, int cfd,
@@ -861,8 +837,6 @@ static void method_disconnect_user_id(method_ctx *ctx, int cfd,
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
-
-	return;
 }
 
 struct ctl_watcher_st {
@@ -919,7 +893,6 @@ static void ctl_cmd_wacher_cb(EV_P_ ev_io *w, int revents)
 	close(wst->fd);
 	ev_io_stop(EV_A_ w);
 	talloc_free(wst);
-	return;
 }
 
 static void ctl_handle_commands(main_server_st * s)

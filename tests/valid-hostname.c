@@ -27,7 +27,7 @@
  * as expected.
  */
 
-int main()
+int main(void)
 {
 	/* check invalid hostnames */
 	assert(valid_hostname("192.168.1.1") == 0);

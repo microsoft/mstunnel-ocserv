@@ -50,8 +50,6 @@ void session_entries_add(void *pool, const char* session)
 
 	strlcpy(session_entries[session_entries_size].session, session, sizeof(session_entries[session_entries_size].session));
 	session_entries_size++;
-
-	return;
 }
 
 char* search_for_session(unsigned idx, const char* match, int match_size)

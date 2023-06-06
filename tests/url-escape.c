@@ -40,13 +40,13 @@ static char *decoded_strings[] =
 	"Laguna%+@Beach"
 };
 
-int main()
+int main(void)
 {
 	char *dec, *url;
 	unsigned i;
 	unsigned len;
 
-	for (i=0;i<sizeof(strings)/sizeof(strings[0]);i++) {
+	for (i=0;i<ARRAY_SIZE(strings);i++) {
 		dec = unescape_url(NULL, strings[i], strlen(strings[i]), &len);
 		if (strcmp(dec, decoded_strings[i]) != 0) {
 			fprintf(stderr, "string %d, fails decoding:\n\tinput: '%s'\n\toutput: '%s'\n", i, decoded_strings[i], dec);

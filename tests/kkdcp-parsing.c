@@ -27,7 +27,7 @@
 #include "../src/common-config.h"
 #include "../src/config-kkdcp.c"
 
-int main()
+int main(void)
 {
 #ifndef HAVE_GSSAPI
 	exit(77);

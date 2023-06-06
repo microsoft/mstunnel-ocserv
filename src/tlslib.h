@@ -73,28 +73,32 @@ size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac
 #endif
 
 #define DTLS_FATAL_ERR_CMD(x, CMD) \
-	if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
-		if (syslog_open) \
-			syslog(LOG_WARNING, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
-		else \
-			fprintf(stderr, "GnuTLS error (at %s:%d): %s\n", __FILE__, __LINE__, gnutls_strerror(x)); \
-		CMD; \
-	}
+	do { \
+		if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
+			if (syslog_open) \
+				syslog(LOG_WARNING, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
+			else \
+				fprintf(stderr, "GnuTLS error (at %s:%d): %s\n", __FILE__, __LINE__, gnutls_strerror(x)); \
+			CMD; \
+		} \
+	} while (0)
 
 #define DTLS_FATAL_ERR(x) DTLS_FATAL_ERR_CMD(x, exit(EXIT_FAILURE))
 
 #define CSTP_FATAL_ERR_CMD(ws, x, CMD) \
-	if (ws->session != NULL) { \
-		if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
-			oclog(ws, LOG_WARNING, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
-			CMD; \
+	do { \
+		if (ws->session != NULL) { \
+			if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
+				oclog(ws, LOG_WARNING, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
+				CMD; \
+			} \
+		} else { \
+			if (x < 0 && errno != EINTR && errno != EAGAIN) { \
+				oclog(ws, LOG_WARNING, "socket error (at %s:%d): %s", __FILE__, __LINE__, strerror(errno)); \
+				CMD; \
+			} \
 		} \
-	} else { \
-		if (x < 0 && errno != EINTR && errno != EAGAIN) { \
-			oclog(ws, LOG_WARNING, "socket error (at %s:%d): %s", __FILE__, __LINE__, strerror(errno)); \
-			CMD; \
-		} \
-	}
+	} while (0)
 
 #define CSTP_FATAL_ERR(ws, x) CSTP_FATAL_ERR_CMD(ws, x, exit(EXIT_FAILURE))
 
