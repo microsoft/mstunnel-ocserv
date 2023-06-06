@@ -33,7 +33,7 @@ configuration while ocserv-main will use the previous configuration.
 # Required
 apt-get install -y libgnutls28-dev libev-dev
 # Optional functionality and testing
-apt get install -y libpam0g-dev liblz4-dev libseccomp-dev \
+apt-get install -y libpam0g-dev liblz4-dev libseccomp-dev \
 	libreadline-dev libnl-route-3-dev libkrb5-dev libradcli-dev \
 	libcurl4-gnutls-dev libcjose-dev libjansson-dev liboath-dev \
 	libprotobuf-c-dev libtalloc-dev libhttp-parser-dev protobuf-c-compiler \
