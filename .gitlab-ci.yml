@@ -10,7 +10,7 @@ variables:
   FEDORA_BUILD: buildenv-fedora38
   UBUNTU16_BUILD: buildenv-ubuntu
   UBUNTU20_BUILD: buildenv-ubuntu20
-  CENTOS8_BUILD: buildenv-centos8
+  ALMA8_BUILD: buildenv-almalinux8
   CENTOS7_BUILD: buildenv-centos7
   CENTOS6_BUILD: buildenv-centos6
   MINIMALCONFIG: "--without-protobuf --without-libtalloc-prefix --without-libnl --without-maxmind --without-geoip --without-libreadline-prefix --without-liboath --without-libc-prefix --without-pam --without-radius --without-libcrypt-prefix --without-utmp --without-libutil-prefix --without-libwrap --without-libwrap-prefix --without-libseccomp-prefix --without-libsystemd-prefix --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --disable-rpath --disable-seccomp --disable-anyconnect-compat --disable-compression"
@@ -111,17 +111,16 @@ Ubuntu20.04:
       - ./*.log
       - ./tests/*.log
 
-Centos8:
+AlmaLinux8:
   stage: testing
-  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS8_BUILD
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$ALMA8_BUILD
   script:
   - git submodule update --init
   - autoreconf -fvi
-  - ./configure --without-http-parser
+  - ./configure
   - chmod og-w tests/data/raddb
   - chmod og-w tests/data/raddb/*
   - make -j$JOBS
-  - export OCSERV_ALLOW_BROKEN_CLIENTS=1
   - make check VERBOSE=1 -j$JOBS
   tags:
   - shared
