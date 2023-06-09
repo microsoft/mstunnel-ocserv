@@ -87,7 +87,7 @@ int handle_resume_fetch_req(sec_mod_st *sec,
 		    memcmp(req->session_id.data, cache->session_id,
 			   req->session_id.len) == 0) {
 
-			if (req->vhost && cache->vhostname && c_strcasecmp(req->vhost, cache->vhostname) != 0)
+			if (req->vhost && cache->vhostname && strcasecmp(req->vhost, cache->vhostname) != 0)
 				return 0;
 			else if (req->vhost != cache->vhostname)
 				return 0;

@@ -8,12 +8,13 @@ AM_INIT_AUTOMAKE([1.11.1 subdir-objects no-dist-gzip dist-xz -Wall -Wno-override
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_HEADERS([config.h])
 
+AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC
-gl_EARLY
-
+AC_PROG_RANLIB
 AM_PROG_AR
 AM_PROG_CC_C_O
 AC_PROG_SED
+
 if test "$GCC" = "yes" && ! expr "$CC" : clang >/dev/null 2>&1;then
 	CFLAGS="$CFLAGS -Wall -Wno-strict-aliasing -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-missing-field-initializers -Wno-implicit-fallthrough -Wno-stringop-truncation"
 fi
@@ -346,8 +347,6 @@ fi
 
 AM_CONDITIONAL(RADIUS_ENABLED, test "$radius_enabled" != no)
 
-gl_INIT
-
 AC_CHECK_HEADERS([net/if_tun.h linux/if_tun.h netinet/in_systm.h crypt.h], [], [], [])
 
 if test "$ac_cv_header_crypt_h" = yes;then
@@ -392,7 +391,7 @@ AC_CHECK_MEMBER([struct sockaddr.sa_len],
 ])
 
 AC_CHECK_FUNCS([setproctitle vasprintf clock_gettime isatty pselect ppoll getpeereid sigaltstack])
-AC_CHECK_FUNCS([strlcpy posix_memalign malloc_trim strsep])
+AC_CHECK_FUNCS([strcasestr strlcpy posix_memalign malloc_trim strsep])
 
 if [ test -z "$LIBWRAP" ];then
 	libwrap_enabled="no"
@@ -688,7 +687,6 @@ AC_CONFIG_FILES([
 	src/version.inc
 	src/Makefile
 	doc/Makefile
-	gl/Makefile
 	tests/data/pam/ocserv
 	tests/data/pam/nss-passwd
 	tests/data/pam/nss-group

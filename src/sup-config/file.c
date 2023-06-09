@@ -29,8 +29,7 @@
 #include <limits.h>
 #include <common.h>
 #include <ip-util.h>
-#include <c-strcase.h>
-#include <c-ctype.h>
+#include <ctype.h>
 
 #include "inih/ini.h"
 
@@ -68,7 +67,7 @@
 #define READ_TF(varname, is_set) { \
 	char* tmp_tf = NULL; \
 	READ_RAW_STRING(tmp_tf); \
-	if (c_strcasecmp(tmp_tf, "true") == 0 || c_strcasecmp(tmp_tf, "yes") == 0) \
+	if (strcasecmp(tmp_tf, "true") == 0 || strcasecmp(tmp_tf, "yes") == 0) \
 		varname = 1; \
 	else \
 		varname = 0; \

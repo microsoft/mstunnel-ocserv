@@ -114,8 +114,6 @@ inline static vhost_cfg_st *default_vhost(struct list_head *vconfig)
 #define PREFIX_VHOST(vhost) (vhost!=NULL)?(vhost->name?_vhost_prefix(vhost->name):""):("")
 #define HAVE_VHOSTS(s) (list_tail(s->vconfig, struct vhost_cfg_st, list) == list_top(s->vconfig, struct vhost_cfg_st, list))?0:1
 
-#include <c-strcase.h>
-
 /* always returns a vhost */
 inline static vhost_cfg_st *find_vhost(struct list_head *vconfig, const char *name)
 {
@@ -124,7 +122,7 @@ inline static vhost_cfg_st *find_vhost(struct list_head *vconfig, const char *na
 		return default_vhost(vconfig);
 
 	list_for_each(vconfig, vhost, list) {
-		if (vhost->name != NULL && c_strcasecmp(vhost->name, name) == 0)
+		if (vhost->name != NULL && strcasecmp(vhost->name, name) == 0)
 			return vhost;
 	}
 

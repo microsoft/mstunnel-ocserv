@@ -36,7 +36,6 @@
 #include <tlslib.h>
 #include <script-list.h>
 #include <ip-lease.h>
-#include <minmax.h>
 #include "str.h"
 
 #include <vpn.h>
@@ -52,7 +51,6 @@
 #include <base64-helper.h>
 #include <sec-mod-sup-config.h>
 #include <sec-mod-acct.h>
-#include <c-strcase.h>
 #include <hmac.h>
 
 #ifdef HAVE_GSSAPI

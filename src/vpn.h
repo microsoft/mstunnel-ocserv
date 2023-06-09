@@ -31,7 +31,6 @@
 #include <unistd.h>
 #include <net/if.h>
 #include <netinet/in.h>
-#include <minmax.h>
 #include <auth/common.h>
 
 #include <ipc.pb-c.h>

@@ -26,12 +26,11 @@
 #include <time.h>
 #include <errno.h>
 #include <signal.h>
-#include <c-ctype.h>
+#include <ctype.h>
 #include <occtl/occtl.h>
 #include <common.h>
 #include <json.h>
 #include <vpn.h>
-#include <c-strcase.h>
 
 #define MAX_STR_SIZE 512
 

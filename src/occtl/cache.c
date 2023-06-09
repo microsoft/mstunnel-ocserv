@@ -24,8 +24,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <occtl/occtl.h>
-#include <c-strcase.h>
-#include <minmax.h>
 
 typedef struct uid_entries_st {
 	char* user;
@@ -73,7 +71,7 @@ unsigned i;
 
 	for (i=idx;i<entries_size;i++) {
 		if (match_size <= entries[i].user_size) {
-			if (c_strncasecmp(match, entries[i].user, match_size) == 0)
+			if (strncasecmp(match, entries[i].user, match_size) == 0)
 				return strdup(entries[i].user);
 		}
 	}
@@ -90,7 +88,7 @@ unsigned i;
 
 	for (i=idx;i<entries_size;i++) {
 		if (match_size <= entries[i].id_size) {
-			if (c_strncasecmp(match, entries[i].id, match_size) == 0) {
+			if (strncasecmp(match, entries[i].id, match_size) == 0) {
 				return strdup(entries[i].id);
 			}
 		}

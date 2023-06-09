@@ -125,12 +125,10 @@ AM_CPPFLAGS += \
 	-I$(top_builddir)/src/ \
 	-I$(top_srcdir)/src/common/ \
 	-I$(top_builddir)/src/common/ \
-	-I$(top_srcdir)/gl/ \
-	-I$(top_builddir)/gl/ \
 	-I$(top_srcdir)/ \
 	-I$(top_builddir)/
 
-LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/libccan.a $(CODE_COVERAGE_LDFLAGS)
+LDADD = $(LIBTALLOC_LIBS) ../src/libccan.a $(CODE_COVERAGE_LDFLAGS)
 
 kkdcp_parsing_SOURCES = kkdcp-parsing.c
 kkdcp_parsing_LDADD = $(LDADD)

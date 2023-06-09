@@ -24,7 +24,7 @@
 #endif
 #include <unistd.h>
 #include <vpn.h>
-#include <c-ctype.h>
+#include <ctype.h>
 #include "plain.h"
 #include "common-config.h"
 #include "auth/common.h"

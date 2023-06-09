@@ -28,7 +28,7 @@
 #endif
 #include <unistd.h>
 #include <vpn.h>
-#include <c-ctype.h>
+#include <ctype.h>
 #include "plain.h"
 #include "common-config.h"
 #include "auth/common.h"
@@ -105,7 +105,7 @@ break_group_list(void *pool, char *text,
 
 			/* remove any trailing space */
 			p2 = p-1;
-			while (c_isspace(*p2)) {
+			while (isspace(*p2)) {
 				*p2 = 0;
 				p2--;
 			}
@@ -113,7 +113,7 @@ break_group_list(void *pool, char *text,
 			p++;	/* move to next entry and skip white
 				 * space.
 				 */
-			while (c_isspace(*p))
+			while (isspace(*p))
 				p++;
 
 			if (len == 1) {
@@ -123,7 +123,7 @@ break_group_list(void *pool, char *text,
 		} else {
 			p2 = strrchr(broken_text[(*elements)-1], ' ');
 			if (p2 != NULL) {
-				while (c_isspace(*p2)) {
+				while (isspace(*p2)) {
 					*p2 = 0;
 					p2--;
 				}

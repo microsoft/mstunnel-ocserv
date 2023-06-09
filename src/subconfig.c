@@ -22,8 +22,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <c-strcase.h>
-#include <c-ctype.h>
+#include <ctype.h>
 
 #include <sec-mod-sup-config.h>
 #include <common.h>
@@ -56,7 +55,7 @@ unsigned expand_brackets_string(void *pool, const char *str, subcfg_val_st out[M
 		return 0;
 	}
 	p++;
-	while (c_isspace(*p))
+	while (isspace(*p))
 		p++;
 
 	do {
@@ -68,7 +67,7 @@ unsigned expand_brackets_string(void *pool, const char *str, subcfg_val_st out[M
 		len = p2 - p;
 
 		p2++;
-		while (c_isspace(*p2))
+		while (isspace(*p2))
 			p2++;
 
 		p3 = strchr(p2, ',');
@@ -83,11 +82,11 @@ unsigned expand_brackets_string(void *pool, const char *str, subcfg_val_st out[M
 		len2 = p3 - p2;
 
 		if (len > 0) {
-			while (c_isspace(p[len-1]))
+			while (isspace(p[len-1]))
 				len--;
 		}
 		if (len2 > 0) {
-			while (c_isspace(p2[len2-1]))
+			while (isspace(p2[len2-1]))
 				len2--;
 		}
 
@@ -95,7 +94,7 @@ unsigned expand_brackets_string(void *pool, const char *str, subcfg_val_st out[M
 		out[pos].value = talloc_strndup(pool, p2, len2);
 		pos++;
 		p = p2+len2;
-		while (c_isspace(*p)||*p==',')
+		while (isspace(*p)||*p==',')
 			p++;
 	} while(finish == 0 && pos < MAX_SUBOPTIONS);
 
@@ -116,18 +115,18 @@ void *gssapi_get_brackets_string(void *pool, struct perm_cfg_st *config, const c
 
 	vals_size = expand_brackets_string(pool, str, vals);
 	for (i=0;i<vals_size;i++) {
-		if (c_strcasecmp(vals[i].name, "keytab") == 0) {
+		if (strcasecmp(vals[i].name, "keytab") == 0) {
 			additional->keytab = vals[i].value;
 			vals[i].value = NULL;
-		} else if (c_strcasecmp(vals[i].name, "require-local-user-map") == 0) {
+		} else if (strcasecmp(vals[i].name, "require-local-user-map") == 0) {
 			additional->no_local_map = 1-CHECK_TRUE(vals[i].value);
-		} else if (c_strcasecmp(vals[i].name, "tgt-freshness-time") == 0) {
+		} else if (strcasecmp(vals[i].name, "tgt-freshness-time") == 0) {
 			additional->ticket_freshness_secs = atoi(vals[i].value);
 			if (additional->ticket_freshness_secs == 0) {
 				fprintf(stderr, "Invalid value for '%s': %s\n", vals[i].name, vals[i].value);
 				exit(EXIT_FAILURE);
 			}
-		} else if (c_strcasecmp(vals[i].name, "gid-min") == 0) {
+		} else if (strcasecmp(vals[i].name, "gid-min") == 0) {
 			additional->gid_min = atoi(vals[i].value);
 			if (additional->gid_min < 0) {
 				fprintf(stderr, "error in gid-min value: %d\n", additional->gid_min);
@@ -153,7 +152,7 @@ void *get_brackets_string1(void *pool, const char *str)
 		return NULL;
 	}
 	p++;
-	while (c_isspace(*p))
+	while (isspace(*p))
 		p++;
 
 	p2 = strchr(p, ',');
@@ -188,7 +187,7 @@ static void *get_brackets_string2(void *pool, const char *str)
 	}
 	p++;
 
-	while (c_isspace(*p))
+	while (isspace(*p))
 		p++;
 
 	p2 = strchr(p, ',');
@@ -234,13 +233,13 @@ void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config, const c
 		/* new format */
 		vals_size = expand_brackets_string(pool, str, vals);
 		for (i=0;i<vals_size;i++) {
-			if (c_strcasecmp(vals[i].name, "config") == 0) {
+			if (strcasecmp(vals[i].name, "config") == 0) {
 				additional->config = vals[i].value;
 				vals[i].value = NULL;
-			} else if (c_strcasecmp(vals[i].name, "nas-identifier") == 0) {
+			} else if (strcasecmp(vals[i].name, "nas-identifier") == 0) {
 				additional->nas_identifier = vals[i].value;
 				vals[i].value = NULL;
-			} else if (c_strcasecmp(vals[i].name, "groupconfig") == 0) {
+			} else if (strcasecmp(vals[i].name, "groupconfig") == 0) {
 				if (CHECK_TRUE(vals[i].value))
 					config->sup_config_type = SUP_CONFIG_RADIUS;
 			} else {
@@ -275,7 +274,7 @@ void *pam_get_brackets_string(void *pool, struct perm_cfg_st *config, const char
 	/* new format */
 	vals_size = expand_brackets_string(pool, str, vals);
 	for (i=0;i<vals_size;i++) {
-		if (c_strcasecmp(vals[i].name, "gid-min") == 0) {
+		if (strcasecmp(vals[i].name, "gid-min") == 0) {
 			additional->gid_min = atoi(vals[i].value);
 			if (additional->gid_min < 0) {
 				fprintf(stderr, "error in gid-min value: %d\n", additional->gid_min);
@@ -309,11 +308,11 @@ void *plain_get_brackets_string(void *pool, struct perm_cfg_st *config, const ch
 	} else {
 		vals_size = expand_brackets_string(pool, str, vals);
 		for (i=0;i<vals_size;i++) {
-			if (c_strcasecmp(vals[i].name, "passwd") == 0) {
+			if (strcasecmp(vals[i].name, "passwd") == 0) {
 				additional->passwd = vals[i].value;
 				vals[i].value = NULL;
 #ifdef HAVE_LIBOATH
-			} else if (c_strcasecmp(vals[i].name, "otp") == 0) {
+			} else if (strcasecmp(vals[i].name, "otp") == 0) {
 				additional->otp_file = vals[i].value;
 				vals[i].value = NULL;
 #endif
@@ -344,7 +343,7 @@ void *oidc_get_brackets_string(void * pool, struct perm_cfg_st *config, const ch
 	vals_size  = expand_brackets_string(pool, str, vals);
 
 	for (i = 0; i < vals_size; i ++)	{
-		if (c_strcasecmp(vals[i].name, "config") == 0) {
+		if (strcasecmp(vals[i].name, "config") == 0) {
 			additional = talloc_strdup(pool, vals[i].value);
 		}
 	}

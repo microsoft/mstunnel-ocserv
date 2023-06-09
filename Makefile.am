@@ -3,18 +3,14 @@ EXTRA_DIST = COPYING README.md CONTRIBUTING.md AUTHORS
 
 DISTCLEANFILES = AUTHORS
 
-SUBDIRS = gl
-SUBDIRS += src doc tests
+SUBDIRS = src doc tests
 
-ACLOCAL_AMFLAGS = -I m4 -I gl/m4
+ACLOCAL_AMFLAGS = -I m4
 
 @CODE_COVERAGE_RULES@
 
 local-code-coverage-output: code-coverage-capture
 	cat $(CODE_COVERAGE_OUTPUT_DIRECTORY)/index.html|grep headerCovTableEntry|grep "%"|head -1|sed 's/^.*>\([0-9\.\ %]*\)<.*$$/coverage lines: \1/'
-
-gl:
-	gnulib-tool --add-import --lgpl=2
 
 clang:
 	make clean

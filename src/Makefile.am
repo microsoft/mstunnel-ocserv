@@ -1,6 +1,6 @@
 include common.mk
 
-AM_CPPFLAGS += -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
+AM_CPPFLAGS += \
 	-I$(srcdir)/ -I$(builddir)/../ -I$(srcdir)/../ \
 	$(LIBGNUTLS_CFLAGS) -I$(srcdir)/common -I$(builddir)/common \
 	$(LIBPROTOBUF_C_CFLAGS) $(LIBLZ4_CFLAGS) \
@@ -18,7 +18,7 @@ BUILT_SOURCES = ipc.pb-c.c ipc.pb-c.h \
 EXTRA_DIST = version.inc.in version.inc \
 	ipc.proto ctl.proto http-heads.gperf common.mk ocserv-fw
 
-CORE_LDADD = ../gl/libgnu.a libccan.a libcommon.a
+CORE_LDADD = libccan.a libcommon.a
 CORE_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
 	$(NEEDED_LIBPROTOBUF_LIBS) $(LIBSYSTEMD) $(LIBTALLOC_LIBS) \
@@ -134,7 +134,7 @@ else
 occtl_occtl_SOURCES += occtl/geoip.c
 endif
 
-occtl_occtl_LDADD = ../gl/libgnu.a libcommon.a $(LIBREADLINE_LIBS) \
+occtl_occtl_LDADD = libcommon.a $(LIBREADLINE_LIBS) \
 	$(LIBNL3_LIBS) $(NEEDED_LIBPROTOBUF_LIBS) $(LIBTALLOC_LIBS) libccan.a \
 	libipc.a $(NEEDED_LIBPROTOBUF_LIBS) $(CODE_COVERAGE_LDFLAGS) \
 	$(LIBNETTLE_LIBS) $(MAXMIND_LIBS) $(GEOIP_LIBS)
@@ -145,7 +145,7 @@ bin_PROGRAMS += ocpasswd/ocpasswd
 
 ocpasswd_ocpasswd_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/ocpasswd
 ocpasswd_ocpasswd_SOURCES = ocpasswd/ocpasswd.c
-ocpasswd_ocpasswd_LDADD = ../gl/libgnu.a
+ocpasswd_ocpasswd_LDADD = 
 ocpasswd_ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT) $(CODE_COVERAGE_LDFLAGS) \
 	$(LIBNETTLE_LIBS)
 
@@ -154,8 +154,9 @@ ocpasswd_ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT) $(CODE_COVERAGE_LDFLAGS
 # Files common to ocserv and occtl.
 libcommon_a_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/common
 libcommon_a_SOURCES=common/common.c common/common.h common/system.c common/system.h \
-	common/cloexec.c common/cloexec.h common/base64-helper.c common/base64-helper.h
-libcommon_a_LIBS = ../gl/libgnu.a $(NEEDED_LIBPROTOBUF_LIBS)
+	common/cloexec.c common/cloexec.h common/base64-helper.c common/base64-helper.h \
+	common/strcasestr.c
+libcommon_a_LIBS = $(NEEDED_LIBPROTOBUF_LIBS)
 noinst_LIBRARIES += libcommon.a
 
 

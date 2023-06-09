@@ -42,8 +42,7 @@
 #include <gettime.h>
 #include <common.h>
 #include <html.h>
-#include <c-strcase.h>
-#include <c-ctype.h>
+#include <ctype.h>
 #include <worker-bandwidth.h>
 #include <signal.h>
 #include <poll.h>
@@ -687,7 +686,7 @@ static int hello_hook_func(gnutls_session_t session, unsigned int htype,
 			      "client requested hostname: %s", (char*)ws->buffer);
 
 			ws->vhost = find_vhost(ws->vconfig, (char*)ws->buffer);
-			if (ws->vhost->name && c_strcasecmp(ws->vhost->name, (char*)ws->buffer) != 0) {
+			if (ws->vhost->name && strcasecmp(ws->vhost->name, (char*)ws->buffer) != 0) {
 				oclog(ws, LOG_INFO,
 				      "client requested hostname %s does not match known vhost", (char*)ws->buffer);
 			}
