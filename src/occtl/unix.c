@@ -1091,8 +1091,8 @@ static char *int2str(char tmpbuf[MAX_TMPSTR_SIZE], int i)
 static
 int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 {
-	char *username = "";
-	char *groupname = "";
+	char *username;
+	char *groupname;
 	char str_since[64];
 	char tmpbuf[MAX_TMPSTR_SIZE];
 	char tmpbuf2[MAX_TMPSTR_SIZE];
