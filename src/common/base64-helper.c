@@ -22,8 +22,8 @@
 #include <talloc.h>
 #include "base64-helper.h"
 
-void oc_base64_encode (const char *restrict in, size_t inlen,
-                       char *restrict out, size_t outlen)
+void oc_base64_encode (const char *in, size_t inlen,
+                       char *out, size_t outlen)
 {
 	unsigned raw = BASE64_ENCODE_RAW_LENGTH(inlen);
 	if (outlen < raw+1) {
