@@ -30,7 +30,7 @@
 
 static char *find_space(char *str)
 {
-	while(*str != 0 && isspace(*str) == 0) {
+	while (*str != 0 && isspace(*str) == 0) {
 		str++;
 	}
 	if (isspace(*str))

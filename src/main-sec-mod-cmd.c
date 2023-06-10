@@ -94,7 +94,7 @@ int handle_sec_mod_commands(sec_mod_instance_st * sec_mod_instance)
 
 	do {
 		ret = recvmsg(sec_mod_instance->sec_mod_fd, &hdr, 0);
-	} while(ret == -1 && errno == EINTR);
+	} while (ret == -1 && errno == EINTR);
 	if (ret == -1) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR,

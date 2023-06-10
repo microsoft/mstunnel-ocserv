@@ -33,7 +33,7 @@ unsigned valid_hostname(const char *host)
 	if (*p == '-')
 		return 0;
 
-	while(*p != 0) {
+	while (*p != 0) {
 		if (!(isalnum(*p)) && !(*p == '-'))
 			return 0;
 		p++;

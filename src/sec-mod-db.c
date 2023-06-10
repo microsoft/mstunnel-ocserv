@@ -115,7 +115,7 @@ client_entry_st *new_client_entry(sec_mod_st *sec, struct vhost_cfg_st *vhost, c
 
 		/* check if in use */
 		te = find_client_entry(sec, e->sid);
-	} while(te != NULL && retries-- >= 0);
+	} while (te != NULL && retries-- >= 0);
 
 	if (te != NULL) {
 		seclog(sec, LOG_ERR,

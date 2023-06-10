@@ -74,7 +74,7 @@ static void parse_ssl_tlvs(struct worker_st *ws, uint8_t *data, size_t data_size
 {
 	pp2_tlv tlv;
 
-	while(data_size > 0) {
+	while (data_size > 0) {
 		AVAIL_HEADER_SIZE(data_size, sizeof(pp2_tlv));
 		memcpy(&tlv, data, sizeof(pp2_tlv));
 

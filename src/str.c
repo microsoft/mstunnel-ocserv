@@ -223,10 +223,10 @@ int str_replace_str(str_st *str, const str_rep_tab *tab)
 				/* not found */
 				return -1;
 			}
-		} while(1);
+		} while (1);
 
 		p = &str->data[pos];
-	} while(pos < str->length);
+	} while (pos < str->length);
 
 	return 0;
 }

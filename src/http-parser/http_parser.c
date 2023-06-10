@@ -53,7 +53,7 @@ static uint32_t max_header_size = HTTP_MAX_HEADER_SIZE;
 do {                                                                 \
   parser->nread = nread;                                             \
   parser->http_errno = (e);                                          \
-} while(0)
+} while (0)
 
 #define CURRENT_STATE() p_state
 #define UPDATE_STATE(V) p_state = (enum state) (V);

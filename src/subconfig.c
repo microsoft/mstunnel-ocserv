@@ -96,7 +96,7 @@ unsigned expand_brackets_string(void *pool, const char *str, subcfg_val_st out[M
 		p = p2+len2;
 		while (isspace(*p)||*p==',')
 			p++;
-	} while(finish == 0 && pos < MAX_SUBOPTIONS);
+	} while (finish == 0 && pos < MAX_SUBOPTIONS);
 
 	return pos;
 }

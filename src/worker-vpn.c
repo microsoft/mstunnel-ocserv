@@ -740,7 +740,7 @@ static void peek_client_hello(struct worker_st *ws, gnutls_session_t session, in
 			goto fallback;
 
 		hsize = (ws->buffer[3] << 8) | ws->buffer[4];
-	} while(hsize+TLS_RECORD_HEADER > size);
+	} while (hsize+TLS_RECORD_HEADER > size);
 
 	if (size < TLS_RECORD_HEADER+TLS_HANDSHAKE_HEADER+HANDSHAKE_SESSION_ID_POS)
 		goto fallback;

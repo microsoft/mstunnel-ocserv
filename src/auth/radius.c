@@ -226,7 +226,7 @@ static void parse_groupnames(struct radius_ctx_st *pctx, const char *full)
 
 		i = 0;
 		p2 = strsep(&p, ";");
-		while(p2 != NULL) {
+		while (p2 != NULL) {
 			pctx->groupnames[i++] = p2;
 			pctx->groupnames_size = i;
 
@@ -360,7 +360,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 
 		vp = recvd;
 
-		while(vp != NULL) {
+		while (vp != NULL) {
 			if (vp->attribute == PW_SERVICE_TYPE && vp->lvalue != PW_FRAMED) {
 				syslog(LOG_ERR,
 				       "%s:%u: unknown radius service type '%d'", __func__, __LINE__,
@@ -445,7 +445,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 
 		vp = recvd;
 
-		while(vp != NULL) {
+		while (vp != NULL) {
 			if (vp->attribute == PW_STATE && vp->type == PW_TYPE_STRING) {
 				/* State */
 				if (vp->lvalue > 0)
