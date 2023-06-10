@@ -699,12 +699,17 @@ url_handler_fn http_get_url_handler(const char *url)
 url_handler_fn http_post_url_handler(struct worker_st *ws, const char *url)
 {
 	const struct known_urls_st *p;
+	unsigned len = strlen(url);
 	unsigned i;
 
 	p = known_urls;
 	do {
-		if (p->url != NULL && strcmp(p->url, url) == 0)
-			return p->post_handler;
+		if (p->url != NULL) {
+			if ((len == p->url_size && strcmp(p->url, url) == 0) ||
+			    (len > p->url_size && strncmp(p->url, url, p->url_size) == 0
+			     && p->partial_match == 0 && url[p->url_size] == '?'))
+				return p->post_handler;
+		}
 		p++;
 	} while (p->url != NULL);
 
