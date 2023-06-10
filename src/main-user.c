@@ -200,7 +200,7 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 			if (proc->config->fw_ports[i]->negate)
 				negate = 1;
 
-			switch(proc->config->fw_ports[i]->proto) {
+			switch (proc->config->fw_ports[i]->proto) {
 			case PROTO_UDP:
 				ret = str_append_printf(&str_common, "udp %u ", proc->config->fw_ports[i]->port);
 				break;

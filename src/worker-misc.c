@@ -108,7 +108,7 @@ int handle_commands_from_main(struct worker_st *ws)
 
 	/*cmd_data_len = ret - 1;*/
 
-	switch(cmd) {
+	switch (cmd) {
 	case CMD_TERMINATE:
 		exit_worker_reason(ws, REASON_SERVER_DISCONNECT);
 	case CMD_UDP_FD: {

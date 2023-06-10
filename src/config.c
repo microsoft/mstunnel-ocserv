@@ -1619,7 +1619,7 @@ int cmd_parser (void *pool, int argc, char **argv, struct list_head *head, bool 
 		if (c == -1)
 			break;
 
-		switch(c) {
+		switch (c) {
 		case 'f':
 			vhost->perm_config.foreground = 1;
 			break;

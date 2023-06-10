@@ -2252,7 +2252,7 @@ http_errno_description(enum http_errno err) {
 
 static enum http_host_state
 http_parse_host_char(enum http_host_state s, const char ch) {
-  switch(s) {
+  switch (s) {
     case s_http_userinfo:
     case s_http_userinfo_start:
       if (ch == '@') {
@@ -2352,7 +2352,7 @@ http_parse_host(const char * buf, struct http_parser_url *u, int found_at) {
       return 1;
     }
 
-    switch(new_s) {
+    switch (new_s) {
       case s_http_host:
         if (s != s_http_host) {
           u->field_data[UF_HOST].off = (uint16_t)(p - buf);
