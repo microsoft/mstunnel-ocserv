@@ -27,9 +27,6 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#ifndef _GNU_SOURCE
-# define _GNU_SOURCE /* for vasprintf() */
-#endif
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
