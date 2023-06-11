@@ -1,6 +1,9 @@
 * Version 1.1.8 (unreleased)
 - Added "Camouflage" functionality that makes ocserv look
   like a web server to unauthorized parties.
+- Avoid login failure when the end point of server URI
+  contains a query string.
+
 
 * Version 1.1.7 (released 2023-05-07)
 - Emit a LOG_ERR error message with plain authentication fails
