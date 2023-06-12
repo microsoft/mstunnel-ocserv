@@ -166,6 +166,7 @@ inline static ssize_t dtls_pull_buffer_non_empty(gnutls_transport_ptr_t ptr)
 	return 0;
 }
 
+#if !defined(CAPTURE_LATENCY_SUPPORT)
 static
 ssize_t dtls_pull(gnutls_transport_ptr_t ptr, void *data, size_t size)
 {
@@ -184,6 +185,7 @@ ssize_t dtls_pull(gnutls_transport_ptr_t ptr, void *data, size_t size)
 	}
 	return recv(p->fd, data, size, 0);
 }
+#endif
 
 static
 int dtls_pull_timeout(gnutls_transport_ptr_t ptr, unsigned int ms)
