@@ -766,6 +766,60 @@ int serve_request_worker(sec_mod_st *sec, int cfd, pid_t pid, uint8_t *buffer, u
 		} \
 	} while (0)
 
+static void read_private_key(sec_mod_st *sec, vhost_cfg_st *vhost, unsigned force)
+{
+	int ret;
+	unsigned i;
+
+	/* read private keys */
+	for (i = 0; i < vhost->key_size; i++) {
+		gnutls_privkey_t p;
+
+		ret = gnutls_privkey_init(&p);
+		CHECK_LOOP_ERR(ret);
+
+		/* load the private key */
+		if (gnutls_url_is_supported(vhost->perm_config.key[i]) != 0) {
+			gnutls_privkey_set_pin_function(p,
+							pin_callback, &vhost->pins);
+			ret =
+			    gnutls_privkey_import_url(p,
+						      vhost->perm_config.key[i], 0);
+			CHECK_LOOP_ERR(ret);
+		} else {
+			gnutls_datum_t data;
+			ret = gnutls_load_file(vhost->perm_config.key[i], &data);
+			if (ret < 0) {
+				seclog(sec, LOG_ERR, "error loading file '%s'",
+				       vhost->perm_config.key[i]);
+				CHECK_LOOP_ERR(ret);
+			}
+
+			ret =
+			    gnutls_privkey_import_x509_raw(p, &data,
+							   GNUTLS_X509_FMT_PEM,
+							   NULL, 0);
+			/* GnuTLS 3.7.3 introduces a backwards incompatible change and
+			 * GNUTLS_E_PKCS11_PIN_ERROR is returned when an encrypted
+			 * file is loaded https://gitlab.com/gnutls/gnutls/-/issues/1321 */
+			if ((ret == GNUTLS_E_DECRYPTION_FAILED || ret == GNUTLS_E_PKCS11_PIN_ERROR) && vhost->pins.pin[0]) {
+				ret =
+				    gnutls_privkey_import_x509_raw(p, &data,
+								   GNUTLS_X509_FMT_PEM,
+								   vhost->pins.pin, 0);
+			}
+			CHECK_LOOP_ERR(ret);
+			gnutls_free(data.data);
+		}
+
+		if (vhost->key[i] != NULL) {
+			gnutls_privkey_deinit(vhost->key[i]);
+		}
+		vhost->key[i] = p;
+	}
+	seclog(sec, LOG_DEBUG, "%sloaded %d keys\n", PREFIX_VHOST(vhost), vhost->key_size);
+}
+
 static int load_keys(sec_mod_st *sec, unsigned force)
 {
 	unsigned i, reload_file;
@@ -806,54 +860,7 @@ static int load_keys(sec_mod_st *sec, unsigned force)
 			}
 		}
 
-		/* read private keys */
-		for (i = 0; i < vhost->key_size; i++) {
-			gnutls_privkey_t p;
-
-			ret = gnutls_privkey_init(&p);
-			CHECK_LOOP_ERR(ret);
-
-			/* load the private key */
-			if (gnutls_url_is_supported(vhost->perm_config.key[i]) != 0) {
-				gnutls_privkey_set_pin_function(p,
-								pin_callback, &vhost->pins);
-				ret =
-				    gnutls_privkey_import_url(p,
-							      vhost->perm_config.key[i], 0);
-				CHECK_LOOP_ERR(ret);
-			} else {
-				gnutls_datum_t data;
-				ret = gnutls_load_file(vhost->perm_config.key[i], &data);
-				if (ret < 0) {
-					seclog(sec, LOG_ERR, "error loading file '%s'",
-					       vhost->perm_config.key[i]);
-					CHECK_LOOP_ERR(ret);
-				}
-
-				ret =
-				    gnutls_privkey_import_x509_raw(p, &data,
-								   GNUTLS_X509_FMT_PEM,
-								   NULL, 0);
-				/* GnuTLS 3.7.3 introduces a backwards incompatible change and
-				 * GNUTLS_E_PKCS11_PIN_ERROR is returned when an encrypted
-				 * file is loaded https://gitlab.com/gnutls/gnutls/-/issues/1321 */
-				if ((ret == GNUTLS_E_DECRYPTION_FAILED || ret == GNUTLS_E_PKCS11_PIN_ERROR) && vhost->pins.pin[0]) {
-					ret =
-					    gnutls_privkey_import_x509_raw(p, &data,
-									   GNUTLS_X509_FMT_PEM,
-									   vhost->pins.pin, 0);
-				}
-				CHECK_LOOP_ERR(ret);
-
-				gnutls_free(data.data);
-			}
-
-			if (vhost->key[i] != NULL) {
-				gnutls_privkey_deinit(vhost->key[i]);
-			}
-			vhost->key[i] = p;
-		}
-		seclog(sec, LOG_DEBUG, "%sloaded %d keys\n", PREFIX_VHOST(vhost), vhost->key_size);
+		read_private_key(sec, vhost, force);
 	}
 	return 0;
 }
