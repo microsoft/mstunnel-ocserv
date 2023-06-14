@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <talloc.h>
 #include <assert.h>
+#include <stddef.h>
 /* for inet_ntop */
 #include <arpa/inet.h>
 #include <syslog.h>

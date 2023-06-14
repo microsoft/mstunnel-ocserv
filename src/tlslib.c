@@ -49,7 +49,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <c-ctype.h>
+#include <ctype.h>
 
 #ifndef UNDER_TEST
 static void tls_reload_ocsp(main_server_st* s, struct vhost_cfg_st *vhost);
@@ -1180,7 +1180,7 @@ void *calc_sha1_hash(void *pool, char* file, unsigned cert)
 
 	/* convert to all caps */
 	for (i=0;i<ret_size;i++)
-	        retval[i] = c_toupper(retval[i]);
+	        retval[i] = toupper(retval[i]);
 
 	return retval;
 }

@@ -75,10 +75,13 @@ dist_check_SCRIPTS += traffic lz4-compression lzs-compression \
 	aes256-cipher aes128-cipher oc-aes256-gcm-cipher oc-aes128-gcm-cipher \
 	test-config-per-group ac-aes128-gcm-cipher ac-aes256-gcm-cipher \
 	no-dtls-cipher psk-negotiate psk-negotiate-match test-multiple-client-ip
+if RADIUS_ENABLED
+dist_check_SCRIPTS += radius
+endif
 endif
 
 if RADIUS_ENABLED
-dist_check_SCRIPTS += radius radius-config
+dist_check_SCRIPTS += radius-config
 endif
 endif
 
@@ -122,12 +125,10 @@ AM_CPPFLAGS += \
 	-I$(top_builddir)/src/ \
 	-I$(top_srcdir)/src/common/ \
 	-I$(top_builddir)/src/common/ \
-	-I$(top_srcdir)/gl/ \
-	-I$(top_builddir)/gl/ \
 	-I$(top_srcdir)/ \
 	-I$(top_builddir)/
 
-LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/libccan.a $(CODE_COVERAGE_LDFLAGS)
+LDADD = $(LIBTALLOC_LIBS) ../src/libccan.a $(CODE_COVERAGE_LDFLAGS)
 
 kkdcp_parsing_SOURCES = kkdcp-parsing.c
 kkdcp_parsing_LDADD = $(LDADD)

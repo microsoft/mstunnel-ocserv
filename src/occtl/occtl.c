@@ -25,9 +25,9 @@
 #include <string.h>
 #include <time.h>
 #include <system.h>
-#include <c-ctype.h>
+#include <ctype.h>
+#include <locale.h>
 #include <occtl/occtl.h>
-#include <c-strcase.h>
 
 static int handle_reset_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 static int handle_help_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
@@ -150,7 +150,7 @@ unsigned check_cmd_help(const char *line)
 			tlen = commands[i].name_size;
 		}
 
-		if (c_strncasecmp(commands[i].name, line, tlen) == 0) {
+		if (strncasecmp(commands[i].name, line, tlen) == 0) {
 			status = 1;
 			if (commands[i].arg)
 				printf(" %12s %s\t%16s\n", commands[i].name,
@@ -307,7 +307,7 @@ unsigned check_cmd(const char *cmd, const char *input,
 	if (len == 0)
 		goto cleanup;
 
-	if (tlen >= len && c_strncasecmp(cmd, t, len) == 0 && cmd[len] == 0) {	/* match */
+	if (tlen >= len && strncasecmp(cmd, t, len) == 0 && cmd[len] == 0) {	/* match */
 		p = t + len;
 		while (whitespace(*p))
 			p++;
@@ -447,7 +447,7 @@ static char *command_generator(const char *text, int state)
 		if (cmd_start > name_size) {
 			/* check for user or ID options */
 			if (rl_line_buffer != NULL &&
-			    c_strncasecmp(rl_line_buffer, name, name_size) == 0
+			    strncasecmp(rl_line_buffer, name, name_size) == 0
 			    &&
 			    /* make sure only one argument is appended */
 			    rl_line_buffer[name_size] != 0 &&
@@ -487,11 +487,11 @@ static char *command_generator(const char *text, int state)
 			continue;
 
 		if (rl_line_buffer != NULL
-		    && c_strncasecmp(rl_line_buffer, name, cmd_start) != 0)
+		    && strncasecmp(rl_line_buffer, name, cmd_start) != 0)
 			continue;
 
 		name += cmd_start;
-		if (c_strncasecmp(name, text, len) == 0) {
+		if (strncasecmp(name, text, len) == 0) {
 			return strdup(name);
 		}
 	}
@@ -551,6 +551,12 @@ int main(int argc, char **argv)
 	void *gl_pool;
 	cmd_params_st params;
 	int ret;
+
+	/* ensure our string comparisons do not take into account any system
+	 * locale. We compare strings that come through our configuration or
+	 * network. */
+	setlocale(LC_CTYPE, "C");
+	setlocale(LC_COLLATE, "C");
 
 	memset(&params, 0, sizeof(params));
 

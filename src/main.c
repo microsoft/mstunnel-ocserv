@@ -48,6 +48,7 @@
 # include <tcpd.h>
 #endif
 #include <ev.h>
+#include <locale.h>
 
 #ifdef HAVE_LIBSYSTEMD
 # include <systemd/sd-daemon.h>
@@ -1317,6 +1318,12 @@ int main(int argc, char** argv)
 
 	saved_argc = argc;
 	saved_argv = argv;
+
+	/* ensure our string comparisons do not take into account any system
+	 * locale. We compare strings that come through our configuration or
+	 * network. */
+	setlocale(LC_CTYPE, "C");
+	setlocale(LC_COLLATE, "C");
 
 	processor_count = sysconf(_SC_NPROCESSORS_ONLN);
 

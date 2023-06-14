@@ -37,10 +37,7 @@
    * in unistd.h */
 # include <crypt.h>
 #endif
-
-/* Gnulib portability files. */
-#include <getpass.h>
-#include <minmax.h>
+#include <locale.h>
 
 #define DEFAULT_OCPASSWD "/etc/ocserv/ocpasswd"
 
@@ -66,6 +63,9 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 	size_t line_size;
 	ssize_t len, l;
 	int ret;
+
+	setlocale(LC_CTYPE, "C");
+	setlocale(LC_COLLATE, "C");
 
 	ret = gnutls_rnd(GNUTLS_RND_NONCE, _salt, sizeof(_salt));
 	if (ret < 0) {

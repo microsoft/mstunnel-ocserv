@@ -28,7 +28,6 @@
 #include <limits.h>
 #include <common.h>
 #include <ip-util.h>
-#include <c-strcase.h>
 
 #ifdef HAVE_RADIUS
 

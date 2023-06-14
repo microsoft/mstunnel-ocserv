@@ -19,6 +19,7 @@
 #include <config.h>
 
 #include <sys/resource.h>
+#include <locale.h>
 
 #include <system.h>
 #include "setproctitle.h"
@@ -70,6 +71,12 @@ int main(int argc, char **argv)
 			"This application is part of ocserv and should not be run in isolation\n");
 		exit(EXIT_FAILURE);
 	}
+
+	/* ensure our string comparisons do not take into account any system
+	 * locale. We compare strings that come through our configuration or
+	 * network. */
+	setlocale(LC_CTYPE, "C");
+	setlocale(LC_COLLATE, "C");
 
 	/* main pool */
 	main_pool = talloc_init("main");

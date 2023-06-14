@@ -27,17 +27,15 @@
 #include <time.h>
 #include <errno.h>
 #include <signal.h>
-#include <c-ctype.h>
+#include <ctype.h>
 #include <ctl.h>
 #include <ctl.pb-c.h>
 #include <occtl/occtl.h>
 #include <common.h>
-#include <c-strcase.h>
 #include <arpa/inet.h>
 #include <system.h>
 #include <termios.h>
 #include <unistd.h>
-#include <minmax.h>
 #include <sys/select.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -1091,8 +1089,8 @@ static char *int2str(char tmpbuf[MAX_TMPSTR_SIZE], int i)
 static
 int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 {
-	char *username = "";
-	char *groupname = "";
+	char *username;
+	char *groupname;
 	char str_since[64];
 	char tmpbuf[MAX_TMPSTR_SIZE];
 	char tmpbuf2[MAX_TMPSTR_SIZE];

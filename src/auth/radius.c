@@ -25,7 +25,7 @@
 #include <syslog.h>
 #include <unistd.h>
 #include <vpn.h>
-#include <c-ctype.h>
+#include <ctype.h>
 #include <arpa/inet.h> /* inet_ntop */
 #include "radius.h"
 #include "auth/common.h"

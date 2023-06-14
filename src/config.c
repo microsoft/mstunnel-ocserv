@@ -29,8 +29,7 @@
 #include <limits.h>
 #include <common.h>
 #include <ip-util.h>
-#include <c-strcase.h>
-#include <c-ctype.h>
+#include <ctype.h>
 #include <auth/pam.h>
 #include <acct/pam.h>
 #include <auth/radius.h>
@@ -107,7 +106,7 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 
 #define PREAD_STRING(pool, varname) { \
 	unsigned len = strlen(value); \
-	while(len > 0 && c_isspace(value[len-1])) \
+	while(len > 0 && isspace(value[len-1])) \
 		len--; \
 	varname = talloc_strndup(pool, value, len); \
 	}
@@ -121,7 +120,7 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 
 #define READ_TF(varname) \
 	do { \
-		if (c_strcasecmp(value, "true") == 0 || c_strcasecmp(value, "yes") == 0) \
+		if (strcasecmp(value, "true") == 0 || strcasecmp(value, "yes") == 0) \
 			varname = 1; \
 		else \
 			varname = 0; \
@@ -235,7 +234,7 @@ static void figure_auth_funcs(void *pool, const char *vhostname,
 		for (j=0;j<auth_size;j++) {
 			found = 0;
 			for (i=0;i<ARRAY_SIZE(avail_auth_types);i++) {
-				if (c_strncasecmp(auth[j], avail_auth_types[i].name, avail_auth_types[i].name_size) == 0) {
+				if (strncasecmp(auth[j], avail_auth_types[i].name, avail_auth_types[i].name_size) == 0) {
 					if (avail_auth_types[i].get_brackets_string)
 						config->auth[0].additional = avail_auth_types[i].get_brackets_string(pool, config, auth[j]+avail_auth_types[i].name_size);
 
@@ -275,7 +274,7 @@ static void figure_auth_funcs(void *pool, const char *vhostname,
 		for (j=0;j<auth_size;j++) {
 			found = 0;
 			for (i=0;i<ARRAY_SIZE(avail_auth_types);i++) {
-				if (c_strncasecmp(auth[j], avail_auth_types[i].name, avail_auth_types[i].name_size) == 0) {
+				if (strncasecmp(auth[j], avail_auth_types[i].name, avail_auth_types[i].name_size) == 0) {
 					if (avail_auth_types[i].get_brackets_string)
 						config->auth[x].additional = avail_auth_types[i].get_brackets_string(pool, config, auth[j]+avail_auth_types[i].name_size);
 
@@ -334,7 +333,7 @@ static void figure_acct_funcs(void *pool, const char *vhostname, struct perm_cfg
 
 	/* Set the accounting method */
 	for (i=0;i<ARRAY_SIZE(avail_acct_types);i++) {
-		if (c_strncasecmp(acct, avail_acct_types[i].name, avail_acct_types[i].name_size) == 0) {
+		if (strncasecmp(acct, avail_acct_types[i].name, avail_acct_types[i].name_size) == 0) {
 			if (avail_acct_types[i].mod == NULL)
 				continue;
 
@@ -436,10 +435,10 @@ char *sanitize_config_value(void *pool, const char *value)
 	ssize_t len = strlen(value);
 	unsigned i = 0;
 
-	while(c_isspace(value[len-1]) || value[len-1] == '"')
+	while(isspace(value[len-1]) || value[len-1] == '"')
 		len--;
 
-	while(c_isspace(value[i]) || value[i] == '"') {
+	while(isspace(value[i]) || value[i] == '"') {
 		i++;
 		len--;
 	}
@@ -676,12 +675,12 @@ char *sanitize_name(void *pool, const char *p)
 {
 	size_t len;
 	/* cleanup spaces before and after */
-	while (c_isspace(*p))
+	while (isspace(*p))
 		p++;
 
 	len = strlen(p);
 	if (len > 0) {
-		while (c_isspace(p[len-1]))
+		while (isspace(p[len-1]))
 			len--;
 	}
 
@@ -733,7 +732,7 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 			}
 		}
 
-		if (c_strcasecmp(section+6, vname) != 0) {
+		if (strcasecmp(section+6, vname) != 0) {
 			fprintf(stderr, NOTESTR"virtual host name '%s' was canonicalized to '%s'\n",
 				section+6, vname);
 		}
@@ -1431,7 +1430,7 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 	}
 
 	if (config->cert_req != 0 && config->cert_user_oid != NULL) {
-		if (!c_isdigit(config->cert_user_oid[0]) && strcmp(config->cert_user_oid, "SAN(rfc822name)") != 0) {
+		if (!isdigit(config->cert_user_oid[0]) && strcmp(config->cert_user_oid, "SAN(rfc822name)") != 0) {
 			fprintf(stderr, ERRSTR"%sthe option 'cert-user-oid' has a unsupported value\n", PREFIX_VHOST(vhost));
 			exit(EXIT_FAILURE);
 		}

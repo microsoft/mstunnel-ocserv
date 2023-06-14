@@ -137,9 +137,21 @@ size_t oc_strlcpy(char *dst, char const *src, size_t siz);
 # define strlcpy oc_strlcpy
 #endif
 
+#ifndef HAVE_STRCASESTR
+char * oc_strcasestr(const char *s, const char *find);
+# define strcasestr oc_strcasestr
+#endif
+
 #define SAFE_ID_SIZE (BASE64_ENCODE_RAW_LENGTH(20)+1)
 char *calc_safe_id(const uint8_t *data, unsigned size, char *output, unsigned output_size);
 
+#ifndef MIN
+# define MIN(x,y) (((x)<(y))?(x):(y))
+#endif
+
+#ifndef MAX
+# define MAX(x,y) (((x)>(y))?(x):(y))
+#endif
 
 extern int saved_argc;
 extern char **saved_argv;

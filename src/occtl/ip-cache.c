@@ -24,8 +24,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <occtl/occtl.h>
-#include <c-strcase.h>
-#include <minmax.h>
 #include <common.h>
 
 typedef struct ip_entries_st {
@@ -68,7 +66,7 @@ unsigned i;
 
 	for (i=idx;i<ip_entries_size;i++) {
 		if (match_size <= ip_entries[i].ip_size) {
-			if (c_strncasecmp(match, ip_entries[i].ip, match_size) == 0)
+			if (strncasecmp(match, ip_entries[i].ip, match_size) == 0)
 				return strdup(ip_entries[i].ip);
 		}
 	}

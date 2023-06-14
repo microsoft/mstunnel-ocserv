@@ -32,7 +32,7 @@ oc_base64_decode(const uint8_t *src, unsigned src_length,
 int oc_base64_decode_alloc(void *pool, const char *in, size_t inlen,
                            char **out, size_t *outlen);
 
-void oc_base64_encode (const char *restrict in, size_t inlen,
-                       char *restrict out, size_t outlen);
+void oc_base64_encode (const char *in, size_t inlen,
+                       char *out, size_t outlen);
 
 #endif

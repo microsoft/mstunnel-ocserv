@@ -21,11 +21,10 @@
  */
 
 #include <config.h>
-#include <c-ctype.h>
+#include <ctype.h>
 #include <string.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <minmax.h>
 #include <str.h>
 #include <main.h>
 #include "vasprintf.h"
@@ -37,7 +36,7 @@ void trim_trailing_whitespace(char *str)
 
 	if (len > 0) {
 		p = str+len-1;
-		while (p >= str && c_isspace(*p)) {
+		while (p >= str && isspace(*p)) {
 			*p = 0;
 			p--;
 		}

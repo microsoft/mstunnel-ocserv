@@ -21,8 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <common-config.h>
-#include <c-strcase.h>
-#include <c-ctype.h>
+#include <ctype.h>
 #include <talloc.h>
 
 #include <vpn.h>
@@ -69,13 +68,13 @@ int cfg_parse_ports(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, const 
 
 	p = str;
 
-	while (c_isspace(*p))
+	while (isspace(*p))
 		p++;
 
 	if (*p == '!') {
 		negate = 1;
 		p++;
-		while (c_isspace(*p) || (*p == '(')) {
+		while (isspace(*p) || (*p == '(')) {
 			if (*p == '(')
 				bracket_start = 1;
 			p++;
@@ -89,7 +88,7 @@ int cfg_parse_ports(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, const 
 
 	do {
 
-		while (c_isspace(*p))
+		while (isspace(*p))
 			p++;
 
 		if (strncasecmp(p, "tcp", 3) == 0) {
@@ -115,7 +114,7 @@ int cfg_parse_ports(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, const 
 			return -1;
 		}
 
-		while (c_isspace(*p))
+		while (isspace(*p))
 			p++;
 
 		if (*p != '(') {
@@ -139,7 +138,7 @@ int cfg_parse_ports(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, const 
 		}
 
 		p2++;
-		while (c_isspace(*p2))
+		while (isspace(*p2))
 			p2++;
 
 		if (*p2 == 0 || (negate != 0 && *p2 == ')')) {

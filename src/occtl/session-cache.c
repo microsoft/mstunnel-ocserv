@@ -24,8 +24,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <occtl/occtl.h>
-#include <c-strcase.h>
-#include <minmax.h>
 #include <common.h>
 
 typedef struct session_entries_st {
@@ -60,7 +58,7 @@ unsigned i;
 		return NULL;
 
 	for (i=idx;i<session_entries_size;i++) {
-		if (c_strncasecmp(match, session_entries[i].session, MIN(match_size, SAFE_ID_SIZE)) == 0)
+		if (strncasecmp(match, session_entries[i].session, MIN(match_size, SAFE_ID_SIZE)) == 0)
 			return strdup(session_entries[i].session);
 	}
 

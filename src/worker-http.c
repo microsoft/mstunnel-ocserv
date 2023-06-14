@@ -33,8 +33,7 @@
 
 #include <nettle/base64.h>
 #include <base64-helper.h>
-#include <c-strcase.h>
-#include <c-ctype.h>
+#include <ctype.h>
 
 #include <vpn.h>
 #include <worker.h>
@@ -243,7 +242,7 @@ unsigned switch_comp_priority(void *pool, const char *modstring)
 		goto finish;
 	}
 	for (i = 0; i < ARRAY_SIZE(comp_methods); i++) {
-		if (c_strcasecmp(algo, comp_methods[i].name) == 0) {
+		if (strcasecmp(algo, comp_methods[i].name) == 0) {
 			comp_methods[i].server_prio = priority;
 			ret = 1;
 			goto finish;
@@ -566,7 +565,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		str = (char *)value;
 		while ((token = strtok(str, ",")) != NULL) {
 			for (i = 0; i < ARRAY_SIZE(comp_methods); i++) {
-				if (c_strcasecmp(token, comp_methods[i].name) == 0) {
+				if (strcasecmp(token, comp_methods[i].name) == 0) {
 					if (comp_cand == NULL ||
 					    comp_cand->server_prio <
 					    comp_methods[i].server_prio) {
@@ -605,7 +604,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		str = (char *)value;
 		while ((token = strtok(str, ";")) != NULL) {
 			p = token;
-			while (c_isspace(*p)) {
+			while (isspace(*p)) {
 				p++;
 			}
 			tmplen = strlen(p);
@@ -614,7 +613,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 				tmplen -= 7;
 				p += 7;
 
-				while (tmplen > 1 && c_isspace(p[tmplen - 1])) {
+				while (tmplen > 1 && isspace(p[tmplen - 1])) {
 					tmplen--;
 				}
 
@@ -645,7 +644,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 				p += 14;
 				tmplen -= 14;
 
-				while (tmplen > 1 && c_isspace(p[tmplen - 1])) {
+				while (tmplen > 1 && isspace(p[tmplen - 1])) {
 					tmplen--;
 				}
 

@@ -35,7 +35,6 @@
 #include <errno.h>
 #include <cloexec.h>
 #include <ip-lease.h>
-#include <minmax.h>
 
 #if defined(HAVE_LINUX_IF_TUN_H)
 # include <linux/if_tun.h>

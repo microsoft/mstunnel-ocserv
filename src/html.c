@@ -24,8 +24,7 @@
 #include <unistd.h>
 #include <syslog.h>
 #include <common.h>
-#include <c-strcase.h>
-#include <c-ctype.h>
+#include <ctype.h>
 #include <wchar.h>
 
 #include "html.h"
@@ -46,22 +45,22 @@ char *unescape_html(void *pool, const char *html, unsigned len, unsigned *out_le
 		}
 
 		if (html[i] == '&') {
-			if (!c_strncasecmp(&html[i], "&lt;", 4)) {
+			if (!strncasecmp(&html[i], "&lt;", 4)) {
 				msg[pos++] = '<';
 				i += 4;
-			} else if (!c_strncasecmp(&html[i], "&gt;", 4)) {
+			} else if (!strncasecmp(&html[i], "&gt;", 4)) {
 				msg[pos++] = '>';
 				i += 4;
-			} else if (!c_strncasecmp(&html[i], "&nbsp;", 6)) {
+			} else if (!strncasecmp(&html[i], "&nbsp;", 6)) {
 				msg[pos++] = ' ';
 				i += 6;
-			} else if (!c_strncasecmp(&html[i], "&quot;", 6)) {
+			} else if (!strncasecmp(&html[i], "&quot;", 6)) {
 				msg[pos++] = '"';
 				i += 6;
-			} else if (!c_strncasecmp(&html[i], "&amp;", 5)) {
+			} else if (!strncasecmp(&html[i], "&amp;", 5)) {
 				msg[pos++] = '&';
 				i += 5;
-			} else if (!c_strncasecmp(&html[i], "&apos;", 6)) {
+			} else if (!strncasecmp(&html[i], "&apos;", 6)) {
 				msg[pos++] = '\'';
 				i += 6;
 			} else if (!strncmp(&html[i], "&#", 2)) {
@@ -164,7 +163,7 @@ char *escape_url(void *pool, const char *url, unsigned len, unsigned *out_len)
 		return NULL;
 
 	for (i = pos = 0; i < len;) {
-		if (c_isalnum(url[i]) || url[i]=='-' || url[i]=='_' || url[i]=='.' || url[i]=='~') {
+		if (isalnum(url[i]) || url[i]=='-' || url[i]=='_' || url[i]=='.' || url[i]=='~') {
 			msg[pos++] = url[i++];
 		} else if (url[i] == ' ') {
 			msg[pos++] = '+';

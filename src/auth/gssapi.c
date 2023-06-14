@@ -28,7 +28,7 @@
 #include <syslog.h>
 #include <unistd.h>
 #include <vpn.h>
-#include <c-ctype.h>
+#include <ctype.h>
 #include "gssapi.h"
 #include "auth/common.h"
 #include "auth-unix.h"

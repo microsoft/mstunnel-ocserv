@@ -17,7 +17,6 @@
  *   Nikos Mavrogiannopoulos <n.mavrogiannopoulos@gmail.com>
  */
 
-#define _GNU_SOURCE		/* asprintf */
 #include <config.h>
 #include <ctype.h>
 #include <stdio.h>
