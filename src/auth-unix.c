@@ -91,7 +91,7 @@ void unix_group_list(void *pool, unsigned gid_min, char ***groupname, unsigned *
 		goto exit;
 	}
 
-	while((grp = getgrent()) != NULL && (*groupname_size) < MAX_GROUPS) {
+	while ((grp = getgrent()) != NULL && (*groupname_size) < MAX_GROUPS) {
 		if (grp->gr_gid >= gid_min) {
 			(*groupname)[(*groupname_size)] = talloc_strdup(*groupname, grp->gr_name);
 			if ((*groupname)[(*groupname_size)] == NULL)

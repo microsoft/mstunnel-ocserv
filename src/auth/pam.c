@@ -168,7 +168,7 @@ int pret;
 
  wait:
 	/* give control back to the main process */
-	while(1) {
+	while (1) {
 		co_resume();
 	}
 }

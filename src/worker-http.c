@@ -878,7 +878,7 @@ int add_owasp_headers(worker_st * ws)
 {
 	unsigned i;
 
-	for(i=0; i < GETCONFIG(ws)->included_http_headers_size; i++)
+	for (i=0; i < GETCONFIG(ws)->included_http_headers_size; i++)
 	{
 		if (cstp_printf(ws, "%s", GETCONFIG(ws)->included_http_headers[i]) < 0 ||
 		    cstp_puts(ws, "\r\n") < 0)

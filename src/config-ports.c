@@ -149,7 +149,7 @@ int cfg_parse_ports(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, const 
 		}
 		p=p2;
 		p++;
-	} while(finish == 0);
+	} while (finish == 0);
 
 	return 0;
 }

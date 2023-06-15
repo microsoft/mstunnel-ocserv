@@ -29,7 +29,7 @@
 inline static
 const char *sup_config_name(unsigned s)
 {
-	switch(s) {
+	switch (s) {
 	case SUP_CONFIG_FILE:
 		return "file";
 	case SUP_CONFIG_RADIUS:

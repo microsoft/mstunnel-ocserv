@@ -263,7 +263,7 @@ lock_user(const char *fpasswd, const char *username)
 				continue;
 			p++;
 
-			if(*p != '!') {
+			if (*p != '!') {
 				l = p-line;
 				fwrite(line, 1, l, fd2);
 				fputc('!', fd2);
@@ -428,7 +428,7 @@ int main(int argc, char **argv)
 		if (c == -1)
 			break;
 
-		switch(c) {
+		switch (c) {
 		case 'c':
 			if (fpasswd) {
 				fprintf(stderr, "-c option cannot be specified multiple time\n");

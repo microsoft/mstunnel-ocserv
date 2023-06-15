@@ -1469,7 +1469,7 @@ int handle_events_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 	tcsetattr(STDIN_FILENO, TCSANOW, &tio_new);
 
 	/* start listening for updates */
-	while(1) {
+	while (1) {
 		FD_ZERO(&rfds);
 #ifndef __clang_analyzer__
 		/* for some reason this confuses the clang static analyzer */

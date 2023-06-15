@@ -54,7 +54,7 @@ struct ip_lease_st * cache;
 struct htable_iter iter;
 
 	cache = htable_first(&db->ht, &iter);
-	while(cache != NULL) {
+	while (cache != NULL) {
 		/* disable the destructor */
 		cache->db = NULL;
 		talloc_free(cache);
@@ -336,7 +336,7 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 
 		if (icmp_ping4(s, (void*)&proc->ipv4->rip) == 0)
 			break;
-	} while(1);
+	} while (1);
 
 	return 0;
 
@@ -501,7 +501,7 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 
 		if (proc->ipv6->prefix != 128 || icmp_ping6(s, (void*)&proc->ipv6->rip) == 0)
 			break;
-	} while(1);
+	} while (1);
 
  finish:
 	proc->ipv6->prefix = subnet_prefix;

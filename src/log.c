@@ -34,7 +34,7 @@
  * for logging */
 static unsigned check_priority(int *priority, int debug_prio)
 {
-	switch(*priority) {
+	switch (*priority) {
 	case LOG_ERR:
 	case LOG_WARNING:
 	case LOG_NOTICE:

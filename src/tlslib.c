@@ -99,7 +99,7 @@ ssize_t cstp_send(worker_st *ws, const void *data,
 	const uint8_t* p = data;
 
 	if (ws->session != NULL) {
-		while(left > 0) {
+		while (left > 0) {
 			ret = gnutls_record_send(ws->session, p, data_size);
 			if (ret < 0) {
 				if (ret != GNUTLS_E_AGAIN && ret != GNUTLS_E_INTERRUPTED) {
@@ -160,7 +160,7 @@ int recv_remaining(int fd, uint8_t *p, int left)
 	unsigned total = 0;
 	int ret;
 
-	while(left > 0) {
+	while (left > 0) {
 		ret = recv(fd, p, left, 0);
 		if (ret == -1 && counter > 0 && (errno == EINTR || errno == EAGAIN)) {
 			counter--;
@@ -269,7 +269,7 @@ ssize_t cstp_recv(worker_st *ws, void *data, size_t data_size)
 				counter--;
 				ms_sleep(20);
 			}
-		} while(ret == -1 && (errno == EINTR || errno == EAGAIN) && counter > 0);
+		} while (ret == -1 && (errno == EINTR || errno == EAGAIN) && counter > 0);
 	}
 
 	return ret;
@@ -371,7 +371,7 @@ ssize_t dtls_send(struct dtls_st *dtls, const void *data,
 	int left = data_size;
 	const uint8_t* p = data;
 
-	while(left > 0) {
+	while (left > 0) {
 		ret = gnutls_record_send(dtls->dtls_session, p, data_size);
 		if (ret < 0) {
 			if (ret != GNUTLS_E_AGAIN && ret != GNUTLS_E_INTERRUPTED) {
@@ -420,7 +420,7 @@ void tls_cache_deinit(tls_sess_db_st* db)
 	struct htable_iter iter;
 
 	cache = htable_first(db->ht, &iter);
-	while(cache != NULL) {
+	while (cache != NULL) {
 		if (cache->session_data_size > 0) {
 			safe_memset(cache->session_data, 0, cache->session_data_size);
 			cache->session_data_size = 0;

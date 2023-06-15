@@ -106,7 +106,7 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 
 #define PREAD_STRING(pool, varname) { \
 	unsigned len = strlen(value); \
-	while(len > 0 && isspace(value[len-1])) \
+	while (len > 0 && isspace(value[len-1])) \
 		len--; \
 	varname = talloc_strndup(pool, value, len); \
 	}
@@ -435,10 +435,10 @@ char *sanitize_config_value(void *pool, const char *value)
 	ssize_t len = strlen(value);
 	unsigned i = 0;
 
-	while(isspace(value[len-1]) || value[len-1] == '"')
+	while (isspace(value[len-1]) || value[len-1] == '"')
 		len--;
 
-	while(isspace(value[i]) || value[i] == '"') {
+	while (isspace(value[i]) || value[i] == '"') {
 		i++;
 		len--;
 	}
@@ -518,7 +518,7 @@ static void load_iroutes(struct cfg_st *config)
 				}
 				append_iroutes_from_file(config, path);
 			}
-		} while(r != NULL);
+		} while (r != NULL);
 		closedir(dir);
 	}
 }
@@ -1619,7 +1619,7 @@ int cmd_parser (void *pool, int argc, char **argv, struct list_head *head, bool 
 		if (c == -1)
 			break;
 
-		switch(c) {
+		switch (c) {
 		case 'f':
 			vhost->perm_config.foreground = 1;
 			break;

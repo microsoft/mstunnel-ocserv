@@ -106,7 +106,7 @@ void safe_memset(void *data, int c, size_t size)
 	if (size > 0)
 		do {
 			memset(data, c, size);
-		} while(vdata[volatile_zero] != c);
+		} while (vdata[volatile_zero] != c);
 }
 
 inline static
@@ -118,14 +118,14 @@ void ms_sleep(unsigned ms)
 	tv.tv_sec = 0;
 	tv.tv_nsec = ms * 1000 * 1000;
 
-	while(tv.tv_nsec >= 1000000000) {
+	while (tv.tv_nsec >= 1000000000) {
 		tv.tv_nsec -= 1000000000;
 		tv.tv_sec++;
 	}
 
 	do {
 		ret = nanosleep(&tv, NULL);
-	} while(ret == -1 && errno == EINTR);
+	} while (ret == -1 && errno == EINTR);
 }
 
 const char *ps_status_to_str(int status, unsigned cookie);
