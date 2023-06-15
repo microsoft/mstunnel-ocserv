@@ -22,9 +22,6 @@
 
 #ifdef HAVE_LIBSECCOMP
 
-#ifndef _GNU_SOURCE
-# define _GNU_SOURCE
-#endif
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <seccomp.h>
