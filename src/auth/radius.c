@@ -235,8 +235,13 @@ static void parse_groupnames(struct radius_ctx_st *pctx, const char *full)
 
 			p2 = strsep(&p, ";");
 
-			if (pctx->groupnames_size == MAX_GROUPS)
+			if (pctx->groupnames_size == MAX_GROUPS) {
+				if (p2)
+					syslog(LOG_WARNING,
+					       "radius-auth: cannot handle more than %d groups, ignoring trailing group(s) %s",
+					       MAX_GROUPS, p2);
 				break;
+			}
 		}
 	} else {
 		syslog(LOG_DEBUG, "radius-auth: found group string %s", full);
