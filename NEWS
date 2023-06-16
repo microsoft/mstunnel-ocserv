@@ -1,4 +1,5 @@
 * Version 1.1.8 (unreleased)
+- Enhanced the seccomp filters to open files related to FIPS compliance on Suse
 - Added "Camouflage" functionality that makes ocserv look
   like a web server to unauthorized parties.
 - Avoid login failure when the end point of server URI

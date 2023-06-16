@@ -74,7 +74,6 @@ int disable_system_calls(struct worker_st *ws)
 {
 	int ret;
 	scmp_filter_ctx ctx;
-	vhost_cfg_st *vhost = NULL;
 
 	if (set_sigsys_handler(ws))
 	{
@@ -184,30 +183,21 @@ int disable_system_calls(struct worker_st *ws)
 	ADD_SYSCALL(socket, 0);
 	ADD_SYSCALL(connect, 0);
 
+	ADD_SYSCALL(open, 0);
 	ADD_SYSCALL(openat, 0);
 	ADD_SYSCALL(fstat, 0);
-	ADD_SYSCALL(stat, 0);
 #if defined(SYS_fstat64) || defined(__NR_fstat64)
 	ADD_SYSCALL(fstat64, 0);
 #endif
+	ADD_SYSCALL(stat, 0);
+#if defined(SYS_stat64) || defined(__NR_stat64)
 	ADD_SYSCALL(stat64, 0);
+#endif
 	ADD_SYSCALL(newfstatat, 0);
 	ADD_SYSCALL(lseek, 0);
 
 	ADD_SYSCALL(getsockopt, 0);
 	ADD_SYSCALL(setsockopt, 0);
-
-
-#ifdef ANYCONNECT_CLIENT_COMPAT
-	/* we need to open files when we have an xml_config_file setup on any vhost */
-	list_for_each(ws->vconfig, vhost, list) {
-		if (vhost->perm_config.config->xml_config_file) {
-			ADD_SYSCALL(open, 0);
-			ADD_SYSCALL(openat, 0);
-			break;
-		}
-	}
-#endif
 
 	/* this we need to get the MTU from
 	 * the TUN device */
