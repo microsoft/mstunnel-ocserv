@@ -102,10 +102,13 @@ ATTRIBUTE	Framed-IP-Netmask	9	ipaddr
 # a CIDR string)
 ATTRIBUTE	Framed-Route		22	string
 
-# Sets group name using format "OU=group1;group2"
+# There are two ways to set a group, either in the
+# format "OU=group1;group2" or by a single group name
+# in the attribute. It is possible to specify multiple
+# groups in separate class attributes.
 # Note that this works only when groupconfig is set to
 # true, and if the groups sent by the server are made known
-# to ocserv, via the select-group variable.
+# to ocserv, via the select-group config variable.
 ATTRIBUTE	Class			25	string
 
 # sets DNS servers
