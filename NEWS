@@ -1,4 +1,5 @@
 * Version 1.1.8 (unreleased)
+- Make sure we print proper JSON with `occtl --debug --json`
 - Fixed issue with group selection on radius servers sending multiple
   group class attributes (#489).
 - Enhanced the seccomp filters to open files related to FIPS compliance on Suse
