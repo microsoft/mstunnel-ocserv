@@ -57,7 +57,7 @@ as compiling and testing code and features.
 
 ## CCAN
 
-The directly `src/ccan` contains libraries from the
+The directory `src/ccan` contains libraries from the
 [CCAN project](https://github.com/rustyrussell/ccan).
 When considering a helper module, check CCAN first.
 
