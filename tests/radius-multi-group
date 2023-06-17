@@ -1,0 +1,246 @@
+#!/bin/bash
+#
+# Copyright (C) 2018 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# This tests operation/traffic under compression (lzs or lz4).
+
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+PATH=${PATH}:/usr/sbin
+IP=$(which ip)
+OUTFILE=traffic.$$.tmp
+RADIUSLOG=radius-group.$$.log
+RADIUSD=$(which radiusd)
+
+if test -z "${RADIUSD}";then
+	RADIUSD=$(which freeradius)
+fi
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+
+if test -z "${IP}";then
+	echo "no IP tool is present"
+	exit 77
+fi
+
+if test -z "${RADIUSD}";then
+	echo "no radiusd is present"
+	exit 77
+fi
+
+if test "$(id -u)" != "0";then
+	echo "This test must be run as root"
+	exit 77
+fi
+
+echo "Testing ocserv and radius... "
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  test -n "${RADIUSPID}" && kill ${RADIUSPID} >/dev/null 2>&1
+  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
+  test -f "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
+  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  rm -f ${OUTFILE} 2>&1
+}
+trap finish EXIT
+
+# server address
+ADDRESS=10.55.93.0
+CLI_ADDRESS=10.55.92.1
+
+# These must match the data/raddb/users:test-class user
+VPNNET=192.168.94.0/24
+VPNADDR=192.168.94.192
+VPNNET6=fc7d:b139:f7ba:5f51:c634:e98e:b777:0/112
+VPNADDR6=fc7d:b139:f7ba:5f51:c634:e98e:b777:1
+OCCTL_SOCKET=./occtl-radius-group-$$.socket
+
+. `dirname $0`/ns.sh
+
+${CMDNS2} ${IP} link set dev lo up
+
+# Run servers
+${CMDNS2} ${RADIUSD} -d ${srcdir}/data/raddb/ -s -x -l ${RADIUSLOG} &
+RADIUSPID=$!
+
+update_config radius-multi-group.config
+if test "$VERBOSE" = 1;then
+DEBUG="-d 3"
+fi
+
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+
+sleep 4
+
+USERNAME=test-multi-class
+GROUP=unknown
+echo " * Testing whether the unknown group is accepted... "
+echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} -authgroup ${GROUP} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly
+if test $? = 0;then
+	echo "Connected to server although we shouldn't with this group"
+	exit 1
+fi
+
+USERNAME=test-multi-class
+GROUP=nonexistent
+echo " * Testing whether a non existent group is accepted... "
+echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} -authgroup ${GROUP} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly
+if test $? = 0;then
+	echo "Connected to server although we shouldn't with this group"
+	exit 1
+fi
+
+echo " * Tests the radius group functionality"
+USERNAME=test-multi-class
+GROUP=group2
+( echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} --authgroup ${GROUP} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+if test $? != 0;then
+	echo "Could not connect to server"
+	exit 1
+fi
+
+sleep 6
+
+${CMDNS1} ${IP} addr show|grep $(echo ${VPNADDR}|cut -d '.' -f 1-3)
+if test $? != 0;then
+	${CMDNS1} ${IP} addr show
+	echo "Did not find expected IP in VPN"
+	exit 1
+fi
+
+#${CMDNS1} ping -w 3 ${VPNADDR}
+#if test $? != 0;then
+#	echo "Could not ping server VPN IP"
+#	exit 1
+#fi
+
+MATCH="Groupname: ${GROUP}"
+${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME} >${OUTFILE} 2>&1
+grep "${MATCH}" ${OUTFILE}
+if test $? != 0;then
+	cat ${OUTFILE}
+	echo "could not find group information"
+	exit 1
+fi
+
+test -f "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
+
+sleep 4
+
+GROUP=group4
+echo " * Tests a different group functionality (${GROUP})"
+USERNAME=test-multi-class
+( echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} --authgroup ${GROUP} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+if test $? != 0;then
+	echo "Could not connect to server"
+	exit 1
+fi
+
+sleep 6
+
+${CMDNS1} ${IP} addr show|grep $(echo ${VPNADDR}|cut -d '.' -f 1-3)
+if test $? != 0;then
+	${CMDNS1} ${IP} addr show
+	echo "Did not find expected IP in VPN"
+	exit 1
+fi
+
+MATCH="Groupname: ${GROUP}"
+${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME} >${OUTFILE} 2>&1
+grep "${MATCH}" ${OUTFILE}
+if test $? != 0;then
+	cat ${OUTFILE}
+	echo "could not find group information"
+	exit 1
+fi
+
+test -f "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
+
+sleep 6
+
+GROUP=group4
+echo " * Tests a multiple OU= groups functionality ($GROUP)"
+USERNAME=test-multi-class-ou
+( echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} --authgroup ${GROUP} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+if test $? != 0;then
+	echo "Could not connect to server"
+	exit 1
+fi
+
+sleep 6
+
+${CMDNS1} ${IP} addr show|grep $(echo ${VPNADDR}|cut -d '.' -f 1-3)
+if test $? != 0;then
+	${CMDNS1} ${IP} addr show
+	echo "Did not find expected IP in VPN"
+	exit 1
+fi
+
+MATCH="Groupname: ${GROUP}"
+${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME} >${OUTFILE} 2>&1
+grep "${MATCH}" ${OUTFILE}
+if test $? != 0;then
+	cat ${OUTFILE}
+	echo "could not find group information"
+	exit 1
+fi
+
+test -f "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
+sleep 4
+
+GROUP=group1
+echo " * Tests a multiple OU= groups functionality ($GROUP)"
+USERNAME=test-multi-class-ou
+( echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} --authgroup ${GROUP} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+if test $? != 0;then
+	echo "Could not connect to server"
+	exit 1
+fi
+
+sleep 6
+
+${CMDNS1} ${IP} addr show|grep $(echo ${VPNADDR}|cut -d '.' -f 1-3)
+if test $? != 0;then
+	${CMDNS1} ${IP} addr show
+	echo "Did not find expected IP in VPN"
+	exit 1
+fi
+
+MATCH="Groupname: ${GROUP}"
+${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME} >${OUTFILE} 2>&1
+grep "${MATCH}" ${OUTFILE}
+if test $? != 0;then
+	cat ${OUTFILE}
+	echo "could not find group information"
+	exit 1
+fi
+
+exit 0

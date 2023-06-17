@@ -45,7 +45,8 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem ns.sh common.sh certs/server-cert.pem
 	data/haproxy-proxyproto.cfg scripts/proxy-connectscript data/haproxy-proxyproto-v1.config \
 	data/haproxy-proxyproto-v1.cfg scripts/proxy-connectscript-v1 data/test-multiple-client-ip.config \
 	data/test-client-bypass-protocol.config asan.supp certs/ca.tmpl certs/server-cert.tmpl \
-	certs/user-cert.tmpl data/test-camouflage.config data/test-camouflage-norealm.config
+	certs/user-cert.tmpl data/test-camouflage.config data/test-camouflage-norealm.config \
+	data/radius-multi-group.config
 
 xfail_scripts =
 dist_check_SCRIPTS =  ocpasswd-test
@@ -66,7 +67,7 @@ dist_check_SCRIPTS += haproxy-connect test-iroute test-multi-cookie test-pass-sc
 	test-camouflage-norealm
 
 if RADIUS_ENABLED
-dist_check_SCRIPTS += radius-group radius-otp
+dist_check_SCRIPTS += radius-group radius-multi-group radius-otp
 endif
 
 #other tests requiring nuttcp for traffic
