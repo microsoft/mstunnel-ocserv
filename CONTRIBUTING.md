@@ -55,19 +55,11 @@ as compiling and testing code and features.
 [Guidelines to consider when reviewing.](https://github.com/thoughtbot/guides/tree/master/code-review)
 
 
-## Gnulib / CCAN
+## CCAN
 
-The directory `gl/`, contains gnulib files. The directly `src/ccan` contains
-libraries from the [CCAN project](https://github.com/rustyrussell/ccan),
-both are used as collections of helper code.
-
-To update to the latest gnulib sources you can run:
-```
-$ make gl
-```
-
-When considering a helper module check those projects; we have a mild
-preference towards CCAN.
+The directory `src/ccan` contains libraries from the
+[CCAN project](https://github.com/rustyrussell/ccan).
+When considering a helper module, check CCAN first.
 
 
 # Coding style

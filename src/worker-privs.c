@@ -38,9 +38,6 @@
 # endif
 #endif
 
-/* On certain cases gnulib defines gettimeofday as macro; avoid that */
-#undef gettimeofday
-
 #ifdef USE_SECCOMP_TRAP
 # define _SECCOMP_ERR SCMP_ACT_TRAP
 #include <execinfo.h>
