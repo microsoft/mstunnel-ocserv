@@ -391,7 +391,7 @@ AC_CHECK_MEMBER([struct sockaddr.sa_len],
 ])
 
 AC_CHECK_FUNCS([setproctitle vasprintf clock_gettime isatty pselect ppoll getpeereid sigaltstack])
-AC_CHECK_FUNCS([strcasestr strlcpy posix_memalign malloc_trim strsep])
+AC_CHECK_FUNCS([strlcpy posix_memalign malloc_trim strsep])
 
 if [ test -z "$LIBWRAP" ];then
 	libwrap_enabled="no"
