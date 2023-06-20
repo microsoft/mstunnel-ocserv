@@ -91,7 +91,7 @@ ${CMDNS1} ping -c 3 ${VPNADDR}
 
 set +e
 
-${OCCTL} -s ${OCCTL_SOCKET} --json --debug show users >${OUTFILE}
+${OCCTL} -s ${OCCTL_SOCKET} --json show users >${OUTFILE}
 if test $? != 0;then
 	echo "occtl show users failed!"
 	exit 1
@@ -103,7 +103,19 @@ if test $? != 0;then
 	exit 1
 fi
 
-${OCCTL} -s ${OCCTL_SOCKET} --json --debug show user ${USERNAME} >${OUTFILE}
+${OCCTL} -s ${OCCTL_SOCKET} --json --debug show users >${OUTFILE}
+if test $? != 0;then
+	echo "occtl show users --debug failed!"
+	exit 1
+fi
+
+json_verify <${OUTFILE}
+if test $? != 0;then
+	echo "occtl show users --debug json invalid"
+	exit 1
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} --json show user ${USERNAME} >${OUTFILE}
 if test $? != 0;then
 	echo "occtl show user failed!"
 	exit 1
@@ -115,7 +127,19 @@ if test $? != 0;then
 	exit 1
 fi
 
-${OCCTL} -s ${OCCTL_SOCKET} --json --debug show status >${OUTFILE}
+${OCCTL} -s ${OCCTL_SOCKET} --json --debug show user ${USERNAME} >${OUTFILE}
+if test $? != 0;then
+	echo "occtl show user --debug failed!"
+	exit 1
+fi
+
+json_verify <${OUTFILE}
+if test $? != 0;then
+	echo "occtl show user --debug json invalid"
+	exit 1
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} --json show status >${OUTFILE}
 if test $? != 0;then
 	echo "occtl show status failed!"
 	exit 1
@@ -127,7 +151,19 @@ if test $? != 0;then
 	exit 1
 fi
 
-${OCCTL} -s ${OCCTL_SOCKET} --json --debug show session all >${OUTFILE}
+${OCCTL} -s ${OCCTL_SOCKET} --json --debug show status >${OUTFILE}
+if test $? != 0;then
+	echo "occtl show status --debug failed!"
+	exit 1
+fi
+
+json_verify <${OUTFILE}
+if test $? != 0;then
+	echo "occtl show status --debug json invalid"
+	exit 1
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} --json show session all >${OUTFILE}
 if test $? != 0;then
 	echo "occtl show session all failed!"
 	exit 1
@@ -136,6 +172,18 @@ fi
 json_verify <${OUTFILE}
 if test $? != 0;then
 	echo "occtl show session all json invalid"
+	exit 1
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} --json --debug show session all >${OUTFILE}
+if test $? != 0;then
+	echo "occtl show session all --debug failed!"
+	exit 1
+fi
+
+json_verify <${OUTFILE}
+if test $? != 0;then
+	echo "occtl show session all --debug json invalid"
 	exit 1
 fi
 
