@@ -103,6 +103,18 @@ if test $? != 0;then
 	exit 1
 fi
 
+${OCCTL} -s ${OCCTL_SOCKET} --json --debug show users >${OUTFILE}
+if test $? != 0;then
+	echo "occtl show users --debug failed!"
+	exit 1
+fi
+
+json_verify <${OUTFILE}
+if test $? != 0;then
+	echo "occtl show users --debug json invalid"
+	exit 1
+fi
+
 ${OCCTL} -s ${OCCTL_SOCKET} --json show user ${USERNAME} >${OUTFILE}
 if test $? != 0;then
 	echo "occtl show user failed!"
@@ -112,6 +124,18 @@ fi
 json_verify <${OUTFILE}
 if test $? != 0;then
 	echo "occtl show user json invalid"
+	exit 1
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} --json --debug show user ${USERNAME} >${OUTFILE}
+if test $? != 0;then
+	echo "occtl show user --debug failed!"
+	exit 1
+fi
+
+json_verify <${OUTFILE}
+if test $? != 0;then
+	echo "occtl show user --debug json invalid"
 	exit 1
 fi
 
@@ -127,6 +151,18 @@ if test $? != 0;then
 	exit 1
 fi
 
+${OCCTL} -s ${OCCTL_SOCKET} --json --debug show status >${OUTFILE}
+if test $? != 0;then
+	echo "occtl show status --debug failed!"
+	exit 1
+fi
+
+json_verify <${OUTFILE}
+if test $? != 0;then
+	echo "occtl show status --debug json invalid"
+	exit 1
+fi
+
 ${OCCTL} -s ${OCCTL_SOCKET} --json show session all >${OUTFILE}
 if test $? != 0;then
 	echo "occtl show session all failed!"
@@ -136,6 +172,18 @@ fi
 json_verify <${OUTFILE}
 if test $? != 0;then
 	echo "occtl show session all json invalid"
+	exit 1
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} --json --debug show session all >${OUTFILE}
+if test $? != 0;then
+	echo "occtl show session all --debug failed!"
+	exit 1
+fi
+
+json_verify <${OUTFILE}
+if test $? != 0;then
+	echo "occtl show session all --debug json invalid"
 	exit 1
 fi
 
