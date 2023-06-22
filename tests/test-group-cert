@@ -28,7 +28,10 @@ eval "${GETPORT}"
 
 echo "Testing local backend with certificate... "
 
-launch_sr_server -d 1 -f -c data/test-group-cert.config & PID=$!
+update_config test-group-cert.config
+launch_simple_sr_server -d 1 -f -c ${CONFIG}
+PID=$!
+
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (without certificate)... "
@@ -38,25 +41,25 @@ echo -n "Connecting to obtain cookie (without certificate)... "
 echo ok
 
 echo -n "Connecting to obtain cookie - group1 (with certificate)... "
-( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group1 -q $ADDRESS:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group1 -q $ADDRESS:$PORT --sslkey ${srcdir}/certs/user-group-key.pem -c ${srcdir}/certs/user-group-cert.pem -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
 
 echo -n "Connecting to obtain cookie - group2 (with certificate)... "
-( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group2 -q $ADDRESS:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group2 -q $ADDRESS:$PORT --sslkey ${srcdir}/certs/user-group-key.pem -c ${srcdir}/certs/user-group-cert.pem -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
 
 echo -n "Connecting to obtain cookie - group3 (hidden) (with certificate)... "
-( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group3 -q $ADDRESS:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group3 -q $ADDRESS:$PORT --sslkey ${srcdir}/certs/user-group-key.pem -c ${srcdir}/certs/user-group-cert.pem -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
 
 echo -n "Connecting to obtain cookie - group4 (with certificate)... "
-( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group4 -q $ADDRESS:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group4 -q $ADDRESS:$PORT --sslkey ${srcdir}/certs/user-group-key.pem -c ${srcdir}/certs/user-group-cert.pem -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
