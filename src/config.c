@@ -74,35 +74,31 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 #define WARNSTR "warning: "
 #define NOTESTR "note: "
 
-#define READ_MULTI_LINE(varname, num) \
-	do { \
-		if (_add_multi_line_val(pool, &varname, &num, value) < 0) { \
+#define READ_MULTI_LINE(varname, num) { \
+	if (_add_multi_line_val(pool, &varname, &num, value) < 0) { \
+		fprintf(stderr, ERRSTR"memory\n"); \
+		exit(EXIT_FAILURE); \
+	}}
+
+#define READ_MULTI_BRACKET_LINE(varname, varname2, num) { \
+	if (varname == NULL || varname2 == NULL) { \
+		num = 0; \
+		varname = talloc_size(pool, sizeof(char*)*DEFAULT_CONFIG_ENTRIES); \
+		varname2 = talloc_size(pool, sizeof(char*)*DEFAULT_CONFIG_ENTRIES); \
+		if (varname == NULL || varname2 == NULL) { \
 			fprintf(stderr, ERRSTR"memory\n"); \
 			exit(EXIT_FAILURE); \
 		} \
-	} while (0)
-
-#define READ_MULTI_BRACKET_LINE(varname, varname2, num) \
-	do { \
-		if (varname == NULL || varname2 == NULL) { \
-			num = 0; \
-			varname = talloc_size(pool, sizeof(char*)*DEFAULT_CONFIG_ENTRIES); \
-			varname2 = talloc_size(pool, sizeof(char*)*DEFAULT_CONFIG_ENTRIES); \
-			if (varname == NULL || varname2 == NULL) { \
-				fprintf(stderr, ERRSTR"memory\n"); \
-				exit(EXIT_FAILURE); \
-			} \
-		} \
-		if (num < DEFAULT_CONFIG_ENTRIES) { \
-			char *xp; \
-			varname[num] = talloc_strdup(pool, value); \
-			xp = strchr(varname[num], '['); if (xp != NULL) *xp = 0; \
-			varname2[num] = get_brackets_string1(pool, value); \
-			num++; \
-			varname[num] = NULL; \
-			varname2[num] = NULL; \
-		} \
-	} while (0)
+	} \
+	if (num < DEFAULT_CONFIG_ENTRIES) { \
+		char *xp; \
+		varname[num] = talloc_strdup(pool, value); \
+		xp = strchr(varname[num], '['); if (xp != NULL) *xp = 0; \
+		varname2[num] = get_brackets_string1(pool, value); \
+		num++; \
+		varname[num] = NULL; \
+		varname2[num] = NULL; \
+	}}
 
 #define PREAD_STRING(pool, varname) { \
 	unsigned len = strlen(value); \
@@ -119,27 +115,25 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 	}
 
 #define READ_TF(varname) \
-	do { \
+	{ \
 		if (strcasecmp(value, "true") == 0 || strcasecmp(value, "yes") == 0) \
 			varname = 1; \
 		else \
 			varname = 0; \
-	} while (0)
+	}
 
 #define READ_NUMERIC(varname) { \
 	varname = strtol(value, NULL, 10); \
 	}
 
 #define READ_PRIO_TOS(varname) \
-	do { \
-		if (strncmp(value, "0x", 2) == 0) { \
-			varname = strtol(value, NULL, 16); \
-			varname = TOS_PACK(varname); \
-		} else { \
-			varname = strtol(value, NULL, 10); \
-			varname++; \
-		} \
-	} while (0)
+	if (strncmp(value, "0x", 2) == 0) { \
+		varname = strtol(value, NULL, 16); \
+		varname = TOS_PACK(varname); \
+	} else { \
+		varname = strtol(value, NULL, 10); \
+		varname++; \
+	}
 
 struct snapshot_t * config_snapshot = NULL;
 
