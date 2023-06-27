@@ -114,26 +114,25 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 	strlcpy(varname, value, sizeof(varname)); \
 	}
 
-#define READ_TF(varname) \
-	{ \
-		if (strcasecmp(value, "true") == 0 || strcasecmp(value, "yes") == 0) \
-			varname = 1; \
-		else \
-			varname = 0; \
+#define READ_TF(varname) { \
+	if (strcasecmp(value, "true") == 0 || strcasecmp(value, "yes") == 0) \
+		varname = 1; \
+	else \
+		varname = 0; \
 	}
 
 #define READ_NUMERIC(varname) { \
 	varname = strtol(value, NULL, 10); \
 	}
 
-#define READ_PRIO_TOS(varname) \
+#define READ_PRIO_TOS(varname) { \
 	if (strncmp(value, "0x", 2) == 0) { \
 		varname = strtol(value, NULL, 16); \
 		varname = TOS_PACK(varname); \
 	} else { \
 		varname = strtol(value, NULL, 10); \
 		varname++; \
-	}
+	}}
 
 struct snapshot_t * config_snapshot = NULL;
 

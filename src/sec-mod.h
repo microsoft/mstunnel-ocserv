@@ -142,15 +142,15 @@ void expire_client_entry(sec_mod_st *sec, client_entry_st * e);
 void cleanup_client_entries(sec_mod_st *sec);
 
 #ifdef __GNUC__
-# define seclog(sec, prio, fmt, ...) \
+# define seclog(sec, prio, fmt, ...) { \
 	if (prio != LOG_DEBUG || GETPCONFIG(sec)->debug >= 3) { \
 		syslog(prio, "sec-mod: "fmt, ##__VA_ARGS__); \
-	}
+	}}
 #else
-# define seclog(sec,prio,...) \
+# define seclog(sec,prio,...) { \
 	if (prio != LOG_DEBUG || GETPCONFIG(sec)->debug >= 3) { \
 		 syslog(prio, __VA_ARGS__); \
-	}
+	}}
 #endif
 
 void  seclog_hex(const struct sec_mod_st* sec, int priority,
