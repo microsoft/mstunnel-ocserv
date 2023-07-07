@@ -74,7 +74,7 @@ typedef struct vhost_cfg_st {
 /* macros to retrieve the default vhost configuration; they
  * are non-null as there is always a configured host. */
 #ifdef __clang_analyzer__
-static volatile void *v = 0xffffffff;
+static volatile void *v = (void*)0xffffffff;
 
 static inline vhost_cfg_st *default_vhost(void * s) __attribute__((returns_nonnull));
 static inline vhost_cfg_st *default_vhost(void * s)
