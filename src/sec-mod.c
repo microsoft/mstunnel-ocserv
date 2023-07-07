@@ -757,14 +757,12 @@ int serve_request_worker(sec_mod_st *sec, int cfd, pid_t pid, uint8_t *buffer, u
 	return ret;
 }
 
-#define CHECK_LOOP_ERR(x) \
-	do { \
-		if (force != 0) { GNUTLS_FATAL_ERR(x); } \
-		else { if (ret < 0) { \
-			seclog(sec, LOG_ERR, "could not reload key %s", vhost->perm_config.key[i]); \
-			continue; } \
-		} \
-	} while (0)
+#define CHECK_LOOP_ERR(x) { \
+	if (force != 0) { GNUTLS_FATAL_ERR(x); } \
+	else { if (ret < 0) { \
+		seclog(sec, LOG_ERR, "could not reload key %s", vhost->perm_config.key[i]); \
+		continue; } \
+	}}
 
 static void read_private_key(sec_mod_st *sec, vhost_cfg_st *vhost, unsigned force)
 {
