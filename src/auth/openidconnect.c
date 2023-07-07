@@ -314,6 +314,7 @@ static bool oidc_fetch_oidc_keys(oidc_vctx_st * vctx)
 {
 	bool result = false;
 	json_t *jwks = NULL;
+	json_t *oidc_config = NULL;
 	json_t *openid_configuration_url =
 	    json_object_get(vctx->config, "openid_configuration_url");
 
@@ -327,7 +328,7 @@ static bool oidc_fetch_oidc_keys(oidc_vctx_st * vctx)
 		goto cleanup;
 	}
 
-	json_t *oidc_config =
+	oidc_config =
 	    oidc_fetch_json_from_uri(vctx->pool,
 					   json_string_value
 				       (openid_configuration_url));
