@@ -415,7 +415,7 @@ static-analyzers/Fedora:
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:
   - autoreconf -fvi -Werror
-  - scan-build ./configure
+  - scan-build ./configure --enable-oidc-auth --enable-latency-stats
   - scan-build --status-bugs -o scan-build-src make -j$JOBS
   - cppcheck --force -q -Isrc/ -Isrc/occtl -Igl/ -I. --error-exitcode=1 src/ -i src/inih -USELF_TEST
   tags:
