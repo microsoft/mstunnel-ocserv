@@ -1,7 +1,8 @@
-* Version 1.1.8 (unreleased)
+* Version 1.2.0 (unreleased)
 - Make sure we print proper JSON with `occtl --debug --json`
-- Fixed issue with group selection on radius servers sending multiple
-  group class attributes (#489).
+- Enhanced radius group support to enable radius servers send multiple
+  group class attributes (#489). See doc/README-radius.md for
+  more information.
 - Enhanced the seccomp filters to open files related to FIPS compliance on Suse
 - Added "Camouflage" functionality that makes ocserv look
   like a web server to unauthorized parties.
