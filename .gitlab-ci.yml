@@ -10,6 +10,7 @@ variables:
   FEDORA_BUILD: buildenv-fedora38
   UBUNTU16_BUILD: buildenv-ubuntu
   UBUNTU20_BUILD: buildenv-ubuntu20
+  UBUNTU22_BUILD: buildenv-ubuntu22
   CENTOS8_BUILD: buildenv-centos8
   CENTOS9_BUILD: buildenv-centos9
   CENTOS7_BUILD: buildenv-centos7
@@ -99,6 +100,32 @@ Ubuntu20.04:
   - make -j$JOBS
   - export MALLOC_CHECK_=3
   - make check -j$JOBS
+  tags:
+  - shared
+  - linux
+  except:
+  - tags
+  - schedules
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - ./*.log
+      - ./tests/*.log
+
+Ubuntu22.04:
+  stage: testing
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$UBUNTU22_BUILD
+  script:
+  - git submodule update --init
+  - autoreconf -fvi
+  - ./configure --enable-oidc-auth --enable-latency-stats
+  - make -j$JOBS
+  - export MALLOC_CHECK_=3
+# There is an issue with gssapi on this version of Ubuntu. While
+# the package exists, it doesn't work as openssl doesn't support
+# md4. See https://bugs.launchpad.net/ubuntu/+source/gss-ntlmssp/+bug/1995915
+  - make check -j$JOBS XFAIL_TESTS="test-gssapi"
   tags:
   - shared
   - linux
