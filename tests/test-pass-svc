@@ -1,0 +1,78 @@
+#!/bin/sh
+#
+# Copyright (C) 2023 Gareth Palmer
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+PIDFILE=ocserv-pid.$$.tmp
+TMPFILE=test-pass-svc.$$.tmp
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+
+echo "Testing local backend with username-password... "
+
+update_config test1.config
+echo "udp-port = 0" >>${CONFIG}
+echo "cisco-svc-client-compat = true" >>${CONFIG}
+launch_sr_server -d 1 -p ${PIDFILE} -f -c ${CONFIG} & PID=$!
+wait_server $PID
+
+echo "Connecting to obtain non-auth cookies... "
+( LD_PRELOAD=libsocket_wrapper.so curl --user-agent "Cisco SVC IPPhone Client v1.0" --silent --insecure https://$ADDRESS:$PORT/svc --include --request GET --output $TMPFILE ) ||
+	fail $PID "GET request failed"
+
+grep -q "^Set-Cookie: webvpn=; expires=" $TMPFILE || fail $PID "Did not receive cookie"
+grep -q "^Set-Cookie: webvpnlogin=1" $TMPFILE || fail $PID "Did not receive non-auth cookie"
+
+echo "Connecting to obtain cookie... "
+( LD_PRELOAD=libsocket_wrapper.so curl --user-agent "Cisco SVC IPPhone Client v1.0" --silent --insecure https://$ADDRESS:$PORT/svc --include --request POST --data "username=test&password=test" --output $TMPFILE ) ||
+	fail $PID "POST request failed"
+
+grep -q "^Set-Cookie: webvpn=[^;]\+" $TMPFILE || fail $PID "Did not receive cookie"
+
+echo "Connecting to obtain cookie with wrong password... "
+( LD_PRELOAD=libsocket_wrapper.so curl --user-agent "Cisco SVC IPPhone Client v1.0" --silent --insecure https://$ADDRESS:$PORT/svc --include --request POST --data "username=test&password=tost" --output $TMPFILE ) ||
+	fail $PID "POST request failed"
+
+grep -q "Set-Cookie: webvpn=[^;]\+" $TMPFILE && fail $PID "Received cookie when we shouldn't"
+
+echo "Connecting to obtain cookie with empty password... "
+( LD_PRELOAD=libsocket_wrapper.so curl --user-agent "Cisco SVC IPPhone Client v1.0" --silent --insecure https://$ADDRESS:$PORT/svc --include --request POST --data "username=test&password=" --output $TMPFILE ) ||
+	fail $PID "POST request failed"
+
+grep -q "Set-Cookie: webvpn=[^;]\+" $TMPFILE && fail $PID "Received cookie when we shouldn't"
+
+echo "Connecting to obtain cookie with wrong username... "
+( LD_PRELOAD=libsocket_wrapper.so curl --user-agent "Cisco SVC IPPhone Client v1.0" --silent --insecure https://$ADDRESS:$PORT/svc --include --request POST --data "username=tost&password=test" --output $TMPFILE ) ||
+	fail $PID "POST request failed"
+
+grep -q "Set-Cookie: webvpn=[^;]\+" $TMPFILE && fail $PID "Received cookie when we shouldn't"
+
+if ! test -f ${PIDFILE};then
+	fail $PID "Could not find pid file ${PIDFILE}"
+fi
+
+cleanup
+
+rm -f "$TMPFILE"
+
+exit 0

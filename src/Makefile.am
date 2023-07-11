@@ -75,7 +75,7 @@ ocserv_worker_SOURCES = $(CORE_SOURCES) \
 	html.c html.h http-heads.h worker.c worker.h worker-auth.c \
 	worker-bandwidth.c worker-bandwidth.h worker-http.c worker-http-handlers.c \
 	worker-kkdcp.c worker-misc.c worker-privs.c worker-proxyproto.c \
-	worker-resume.c worker-vpn.c
+	worker-resume.c worker-vpn.c worker-svc.c
 
 ocserv_worker_LDADD = $(CORE_LDADD)
 

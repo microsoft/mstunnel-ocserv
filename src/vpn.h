@@ -305,6 +305,7 @@ struct cfg_st {
 	unsigned cisco_client_compat; /* do not require client certificate,
 	                               * and allow auth to complete in different
 	                               * TCP sessions. */
+	unsigned cisco_svc_client_compat; /* force allowed ciphers and disable dtls-legacy */
 	unsigned rate_limit_ms; /* if non zero force a connection every rate_limit milliseconds if ocserv-sm is heavily loaded */
 	unsigned ping_leases; /* non zero if we need to ping prior to leasing */
 	unsigned server_drain_ms; /* how long to wait after we stop accepting new connections before closing old connections */

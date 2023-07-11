@@ -1,0 +1,83 @@
+#!/bin/sh
+#
+# Copyright (C) 2023 Gareth Palmer
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+TMPFILE=test-cert-svc.$$.tmp
+
+CRLNAME=crl.pem.$$.tmp
+CRLTMPLNAME=crl.tmpl.$$.tmp
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+
+echo "Testing ocserv with certificates... "
+
+rm -f "${CRLNAME}" "${CRLTMPLNAME}"
+echo crl_next_update = 999 >"${CRLTMPLNAME}"
+echo crl_number = 1 >>"${CRLTMPLNAME}"
+
+certtool --generate-crl --load-ca-privkey "${srcdir}/certs/ca-key.pem" --load-ca-certificate "${srcdir}/certs/ca.pem" \
+	--outfile "${CRLNAME}" --template "${CRLTMPLNAME}" >/dev/null 2>&1
+if test $? != 0;then
+	kill $PID
+	exit 77
+fi
+
+update_config test3.config
+echo "udp-port = 0" >>${CONFIG}
+echo "cisco-svc-client-compat = true" >>${CONFIG}
+launch_simple_sr_server -d 1 -f -c ${CONFIG}
+PID=$!
+
+wait_server $PID
+
+echo -n "Connecting to obtain cookie (without certificate)... "
+( LD_PRELOAD=libsocket_wrapper.so curl --user-agent "Cisco SVC IPPhone Client v1.0" --silent --insecure https://$ADDRESS:$PORT/svc --include --request POST --output $TMPFILE ) ||
+	fail $PID "POST request failed"
+
+grep -q "Set-Cookie: webvpn=[^;]\+" $TMPFILE && fail $PID "Could connect without certificate"
+echo "ok (failed as expected)"
+
+echo -n "Connecting to obtain cookie (with invalid certificate)... "
+( LD_PRELOAD=libsocket_wrapper.so curl --user-agent "Cisco SVC IPPhone Client v1.0" --silent --insecure --key "${srcdir}/certs/user-key.pem" --cert "${srcdir}/certs/user-cert-invalid.pem" https://$ADDRESS:$PORT/svc --include --request POST --output $TMPFILE ) ||
+	echo "" >$TMPFILE
+
+grep -q "Set-Cookie: webvpn=[^;]\+" $TMPFILE && fail $PID "Could connect with invalid certificate"
+echo "ok (failed as expected)"
+
+echo -n "Connecting to obtain cookie (with certificate)... "
+( LD_PRELOAD=libsocket_wrapper.so curl --user-agent "Cisco SVC IPPhone Client v1.0" --silent --insecure --key "${srcdir}/certs/user-key.pem" --cert "${srcdir}/certs/user-cert.pem" https://$ADDRESS:$PORT/svc --include --request POST --output $TMPFILE ) ||
+	fail $PID "POST request failed"
+
+grep -q "Set-Cookie: webvpn=[^;]\+" $TMPFILE || fail $PID "Could not connect with certificate"
+echo ok
+
+rm -f "${CRLNAME}" "${CRLTMPLNAME}" "${TMPFILE}"
+
+cleanup
+
+if test $? != 0;then
+	exit 1
+fi
+
+exit 0

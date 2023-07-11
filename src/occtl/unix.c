@@ -603,10 +603,13 @@ int handle_disconnect_id_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_s
 
 static const char *fix_ciphersuite(char *txt)
 {
-	if (txt != NULL && txt[0] != 0) {
-		if (strlen(txt) > 16 && strncmp(txt, "(DTLS", 5) == 0 &&
-		    (strncmp(&txt[8], ")-(RSA)-", 8) == 0 || strncmp(&txt[8], ")-(PSK)-", 8) == 0)) {
+	if (txt != NULL && txt[0] != 0 && strlen(txt) > 16 && strncmp(txt, "(DTLS", 5) == 0) {
+		if (strncmp(&txt[8], ")-(RSA)-", 8) == 0 || strncmp(&txt[8], ")-(PSK)-", 8) == 0) {
 			return txt + 16;
+		} else if (strncmp(&txt[8], ")-(ECDHE-RSA)-", 14) == 0) {
+			return txt + 22;
+		} else {
+			return txt + 10;
 		}
 	}
 

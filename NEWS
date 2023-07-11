@@ -8,6 +8,9 @@
 - Avoid login failure when the end point of server URI
   contains a query string.
 - Eliminated the need for using the gnulib portability library.
+- Add support for Cisco Enterprise phones to authenticate via
+  the /svc endpoint and the 'cisco-svc-client-compat' config
+  option.
 
 
 * Version 1.1.7 (released 2023-05-07)
