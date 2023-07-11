@@ -3,7 +3,8 @@
 - Enhanced radius group support to enable radius servers send multiple
   group class attributes (#489). See doc/README-radius.md for
   more information.
-- Enhanced the seccomp filters to open files related to FIPS compliance on Suse
+- Enhanced the seccomp filters to open files related to FIPS compliance
+  on Suse
 - Added "Camouflage" functionality that makes ocserv look
   like a web server to unauthorized parties.
 - Avoid login failure when the end point of server URI
