@@ -46,7 +46,7 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem ns.sh common.sh certs/server-cert.pem
 	data/haproxy-proxyproto-v1.cfg scripts/proxy-connectscript-v1 data/test-multiple-client-ip.config \
 	data/test-client-bypass-protocol.config asan.supp certs/ca.tmpl certs/server-cert.tmpl \
 	certs/user-cert.tmpl data/test-camouflage.config data/test-camouflage-norealm.config \
-	data/radius-multi-group.config
+	data/radius-multi-group.config data/test-group-cert.config
 
 xfail_scripts =
 dist_check_SCRIPTS =  ocpasswd-test
