@@ -74,6 +74,7 @@ static const struct known_urls_st known_urls[] = {
 	LL("/+CSCOT+/", get_string_handler, NULL),
 	LL("/logout", get_empty_handler, NULL),
 #endif
+	LL("/svc", get_svc_handler, post_svc_handler),
 	{NULL, 0, 0, NULL, NULL}
 };
 
@@ -169,6 +170,29 @@ static const dtls_ciphersuite_st ciphersuites12[] = {
 	 .gnutls_cipher = GNUTLS_CIPHER_AES_256_GCM,
 	 .dtls12_mode = 1,
 	 .server_prio = 90
+	},
+	/* these next two are currently only used by cisco-svc-client-compat devices */
+	{
+	 .oc_name = "ECDHE-RSA-AES128-GCM-SHA256",
+	 .gnutls_name =
+	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-128-GCM:+AEAD:+SHA256:+ECDHE-RSA:+SIGN-ALL:"WORKAROUND_STR,
+	 .gnutls_version = GNUTLS_DTLS1_2,
+	 .gnutls_mac = GNUTLS_MAC_AEAD,
+	 .gnutls_kx = GNUTLS_KX_ECDHE_RSA,
+	 .gnutls_cipher = GNUTLS_CIPHER_AES_128_GCM,
+	 .dtls12_mode = 1,
+	 .server_prio = 70,
+	},
+	{
+	 .oc_name = "ECDHE-RSA-AES256-GCM-SHA384",
+	 .gnutls_name =
+	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-256-GCM:+AEAD:+SHA384:+ECDHE-RSA:+SIGN-ALL:"WORKAROUND_STR,
+	 .gnutls_version = GNUTLS_DTLS1_2,
+	 .gnutls_mac = GNUTLS_MAC_AEAD,
+	 .gnutls_kx = GNUTLS_KX_ECDHE_RSA,
+	 .gnutls_cipher = GNUTLS_CIPHER_AES_256_GCM,
+	 .dtls12_mode = 1,
+	 .server_prio = 80,
 	}
 };
 
@@ -423,6 +447,9 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		} else if (strncasecmp(req->user_agent, "AnyLink Secure Client", 21) == 0) {
 			oclog(ws, LOG_DEBUG, "Detected AnyLink");
 			req->user_agent_type = AGENT_ANYLINK;
+		} else if (strncasecmp(req->user_agent, "Cisco SVC IPPhone Client", 24) == 0) {
+			oclog(ws, LOG_DEBUG, "Detected Cisco SVC IPPhone Client");
+			req->user_agent_type = AGENT_SVC_IPPHONE;
 		} else {
 			oclog(ws, LOG_DEBUG, "Unknown client (%s)", req->user_agent);
 		}

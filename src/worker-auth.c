@@ -109,7 +109,6 @@ static const char ocv3_success_msg_foot[] = "</auth>\n";
 #endif
 
 
-static int get_cert_info(worker_st * ws);
 static int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg);
 
 #ifdef SUPPORT_OIDC_AUTH
@@ -770,7 +769,7 @@ int connect_to_secmod(worker_st * ws)
 	return sd;
 }
 
-static int recv_auth_reply(worker_st * ws, int sd, char **txt, unsigned *pcounter)
+int recv_auth_reply(worker_st * ws, int sd, char **txt, unsigned *pcounter)
 {
 	int ret;
 	SecAuthReplyMsg *msg = NULL;
@@ -859,7 +858,6 @@ static int recv_auth_reply(worker_st * ws, int sd, char **txt, unsigned *pcounte
 }
 
 /* grabs the username from the session certificate */
-static
 int get_cert_info(worker_st * ws)
 {
 	const gnutls_datum_t *cert;
@@ -1248,7 +1246,6 @@ int match_password_in_reply(worker_st * ws, char *body, unsigned body_length,
  * @xml_field: the XML field to check for (e.g., MYFIELD)
  * @value: the value that was found
  */
-static
 int parse_reply(worker_st * ws, char *body, unsigned body_length,
 		const char *field, unsigned field_size,
 		const char *xml_field, unsigned xml_field_size,

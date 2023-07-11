@@ -921,6 +921,8 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 			fprintf(stderr, NOTESTR"'always-require-cert' was replaced by 'cisco-client-compat'\n");
 			config->cisco_client_compat = 1;
 		}
+	} else if (strcmp(name, "cisco-svc-client-compat") == 0) {
+		READ_TF(config->cisco_svc_client_compat);
 	} else if (strcmp(name, "dtls-psk") == 0) {
 		if (!WARN_ON_VHOST(vhost->name, "dtls-psk", dtls_psk))
 			READ_TF(config->dtls_psk);
@@ -1460,6 +1462,19 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 		}
 	}
 #endif
+
+	if (config->cisco_svc_client_compat) {
+		if (!config->dtls_legacy && !silent) {
+			fprintf(stderr, NOTESTR"%sthe cisco-svc-client-compat option implies dtls-legacy = true; enabling\n", PREFIX_VHOST(vhost));
+		}
+		config->dtls_legacy = 1;
+
+		/* The client will only connect to port 443 */
+		if (vhost->perm_config.udp_port != 0 && vhost->perm_config.udp_port != 443) {
+			fprintf(stderr, ERRSTR"%s cisco-svc-client-compat option requires udp-port = 443\n", PREFIX_VHOST(vhost));
+			exit(EXIT_FAILURE);
+		}
+	}
 
 	if (config->priorities == NULL) {
 		char *tmp = "";

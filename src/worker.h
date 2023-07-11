@@ -93,7 +93,8 @@ enum {
 	AGENT_OPENCONNECT,
 	AGENT_ANYCONNECT,
 	AGENT_OPENCONNECT_CLAVISTER,
-	AGENT_ANYLINK
+	AGENT_ANYLINK,
+	AGENT_SVC_IPPHONE
 };
 
 typedef int (*decompress_fn)(void* dst, int maxDstSize, const void* src, int src_size);
@@ -340,6 +341,9 @@ int get_cert_handler(worker_st * ws, unsigned http_ver);
 int get_cert_der_handler(worker_st * ws, unsigned http_ver);
 int get_ca_handler(worker_st * ws, unsigned http_ver);
 int get_ca_der_handler(worker_st * ws, unsigned http_ver);
+int get_svc_handler(worker_st *ws, unsigned http_ver);
+int post_svc_handler(worker_st *ws, unsigned http_ver);
+
 
 int response_404(worker_st *ws, unsigned http_ver);
 int response_401(worker_st *ws, unsigned http_ver, char* realm);
@@ -413,6 +417,13 @@ int send_msg_to_secmod(worker_st * ws, int sd, uint8_t cmd,
 
 	return send_msg(ws, sd, cmd, msg, get_size, pack);
 }
+
+int recv_auth_reply(worker_st * ws, int sd, char **txt, unsigned *pcounter);
+int get_cert_info(worker_st * ws);
+int parse_reply(worker_st * ws, char *body, unsigned body_length,
+		const char *field, unsigned field_size,
+		const char *xml_field, unsigned xml_field_size,
+		char **value);
 
 inline static
 int send_msg_to_main(worker_st *ws, uint8_t cmd,
