@@ -1,18 +1,18 @@
-* Version 1.2.0 (unreleased)
-- Make sure we print proper JSON with `occtl --debug --json`
+* Version 1.2.0 (released 2023-07-11)
+- Add support for Cisco Enterprise phones to authenticate via
+  the /svc endpoint and the 'cisco-svc-client-compat' config
+  option.
 - Enhanced radius group support to enable radius servers send multiple
   group class attributes (#489). See doc/README-radius.md for
   more information.
 - Enhanced the seccomp filters to open files related to FIPS compliance
-  on Suse
+  on SuSe (#491)
 - Added "Camouflage" functionality that makes ocserv look
   like a web server to unauthorized parties.
 - Avoid login failure when the end point of server URI
   contains a query string.
+- Make sure we print proper JSON with `occtl --debug --json` (#517)
 - Eliminated the need for using the gnulib portability library.
-- Add support for Cisco Enterprise phones to authenticate via
-  the /svc endpoint and the 'cisco-svc-client-compat' config
-  option.
 
 
 * Version 1.1.7 (released 2023-05-07)
