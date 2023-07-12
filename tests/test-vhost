@@ -22,6 +22,7 @@ SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 NO_NEED_ROOT=1
 TMPFILE=pid.$$.tmp
+OCCTL_SOCKET=./occtl-vhost0-$$.socket
 
 VERBOSE=1
 

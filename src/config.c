@@ -1347,6 +1347,8 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 	unsigned j, i;
 	struct cfg_st *config;
 
+	assert(vhost->name == NULL || defvhost != NULL);
+
 	config = vhost->perm_config.config;
 
 	if (vhost->perm_config.auth[0].enabled == 0) {
@@ -1494,9 +1496,13 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 		exit(EXIT_FAILURE);
 	}
 
-	if (!vhost->name && config->network.name[0] == 0) {
-		fprintf(stderr, ERRSTR"%sthe 'device' configuration option must be specified!\n", PREFIX_VHOST(vhost));
-		exit(EXIT_FAILURE);
+	if (config->network.name[0] == 0) {
+		if (!vhost->name) {
+			fprintf(stderr, ERRSTR"%sthe 'device' configuration option must be specified!\n", PREFIX_VHOST(vhost));
+			exit(EXIT_FAILURE);
+		} else {
+			strlcpy(config->network.name, defvhost->perm_config.config->network.name, sizeof(config->network.name));
+		}
 	}
 
 	if (config->mobile_dpd == 0)
