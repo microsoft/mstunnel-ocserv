@@ -1920,7 +1920,9 @@ static int connect_handler(worker_st * ws)
 
 	cookie_authenticate_or_exit(ws);
 
-	if (strcmp(req->url, "/CSCOSSLC/tunnel") != 0) {
+	/* The Clavister Android VPN client has a defect and
+	 * asks for CSCOSSLC/tunnel instead of /CSCOSSLC/tunnel */
+	if (strcmp(req->url, "/CSCOSSLC/tunnel") != 0 && strcmp(req->url, "CSCOSSLC/tunnel") != 0) {
 		oclog(ws, LOG_INFO, "bad connect request: '%s'\n", req->url);
 		response_404(ws, 1);
 		cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
