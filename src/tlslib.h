@@ -72,31 +72,36 @@ size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac
 # define syslog_open 0
 #endif
 
-#define DTLS_FATAL_ERR_CMD(x, CMD) { \
-	if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
+#define GNUTLS_ALERT_PRINT(ws, session, err) { \
+	if (err == GNUTLS_E_FATAL_ALERT_RECEIVED || err == GNUTLS_E_WARNING_ALERT_RECEIVED) { \
+		oclog(ws, LOG_NOTICE, "TLS alert (at %s:%d): %s", __FILE__, __LINE__, gnutls_alert_get_name(gnutls_alert_get(session))); \
+	}}
+
+#define DTLS_FATAL_ERR_CMD(err, CMD) { \
+	if (err < 0 && gnutls_error_is_fatal (err) != 0) { \
 		if (syslog_open) \
-			syslog(LOG_WARNING, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
+			syslog(LOG_WARNING, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(err)); \
 		else \
-			fprintf(stderr, "GnuTLS error (at %s:%d): %s\n", __FILE__, __LINE__, gnutls_strerror(x)); \
+			fprintf(stderr, "GnuTLS error (at %s:%d): %s\n", __FILE__, __LINE__, gnutls_strerror(err)); \
 		CMD; \
 	}}
 
-#define DTLS_FATAL_ERR(x) DTLS_FATAL_ERR_CMD(x, exit(EXIT_FAILURE))
+#define DTLS_FATAL_ERR(err) DTLS_FATAL_ERR_CMD(err, exit(EXIT_FAILURE))
 
-#define CSTP_FATAL_ERR_CMD(ws, x, CMD) { \
+#define CSTP_FATAL_ERR_CMD(ws, err, CMD) { \
 	if (ws->session != NULL) { \
-		if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
-			oclog(ws, LOG_WARNING, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
+		if (err < 0 && gnutls_error_is_fatal (err) != 0) { \
+			oclog(ws, LOG_WARNING, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(err)); \
 			CMD; \
 		} \
 	} else { \
-		if (x < 0 && errno != EINTR && errno != EAGAIN) { \
+		if (err < 0 && errno != EINTR && errno != EAGAIN) { \
 			oclog(ws, LOG_WARNING, "socket error (at %s:%d): %s", __FILE__, __LINE__, strerror(errno)); \
 			CMD; \
 		} \
 	}}
 
-#define CSTP_FATAL_ERR(ws, x) CSTP_FATAL_ERR_CMD(ws, x, exit(EXIT_FAILURE))
+#define CSTP_FATAL_ERR(ws, err) CSTP_FATAL_ERR_CMD(ws, err, exit(EXIT_FAILURE))
 
 void tls_close(gnutls_session_t session);
 
