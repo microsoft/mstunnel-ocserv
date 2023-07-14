@@ -875,6 +875,7 @@ void vpn_server(struct worker_st *ws)
 		do {
 			ret = gnutls_handshake(session);
 		} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
+		GNUTLS_ALERT_PRINT(ws, session, ret);
 		GNUTLS_FATAL_ERR(ret);
 
 		oclog(ws, LOG_DEBUG, "TLS handshake completed");
@@ -1455,6 +1456,7 @@ static int dtls_mainloop(worker_st * ws, struct dtls_st * dtls, struct timespec 
 			} while (ret == GNUTLS_E_AGAIN
 				 || ret == GNUTLS_E_INTERRUPTED);
 
+			GNUTLS_ALERT_PRINT(ws, dtls->dtls_session, ret);
 			DTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
 			oclog(ws, LOG_DEBUG, "DTLS rehandshake completed");
 
@@ -1597,6 +1599,7 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 		do {
 			ret = gnutls_handshake(ws->session);
 		} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
+		GNUTLS_ALERT_PRINT(ws, ws->session, ret);
 		DTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
 
 		ws->last_tls_rehandshake = tnow->tv_sec;
@@ -1917,7 +1920,9 @@ static int connect_handler(worker_st * ws)
 
 	cookie_authenticate_or_exit(ws);
 
-	if (strcmp(req->url, "/CSCOSSLC/tunnel") != 0) {
+	/* The Clavister Android VPN client has a defect and
+	 * asks for CSCOSSLC/tunnel instead of /CSCOSSLC/tunnel */
+	if (strcmp(req->url, "/CSCOSSLC/tunnel") != 0 && strcmp(req->url, "CSCOSSLC/tunnel") != 0) {
 		oclog(ws, LOG_INFO, "bad connect request: '%s'\n", req->url);
 		response_404(ws, 1);
 		cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
