@@ -35,7 +35,7 @@ Debian:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
   - autoreconf -fvi
-  - ./configure --without-nuttcp-tests --enable-oidc-auth
+  - ./configure --enable-oidc-auth
   - make -j$JOBS
   - export OCSERV_ALLOW_BROKEN_CLIENTS=1
   - make check -j$JOBS
@@ -62,31 +62,6 @@ i386/Debian:
   - ./configure --enable-oidc-auth --without-radius
   - make -j$JOBS
   - make check -j$JOBS VERBOSE=1
-  tags:
-  - shared
-  - linux
-  except:
-  - tags
-  - schedules
-  artifacts:
-    expire_in: 1 week
-    when: on_failure
-    paths:
-      - ./*.log
-      - ./tests/*.log
-
-Ubuntu16.04:
-  stage: testing
-  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$UBUNTU16_BUILD
-  script:
-  - git submodule update --init
-  - autoreconf -fvi
-  - ./configure --without-nuttcp-tests
-  - make -j$JOBS
-# ubuntu16.04 openconnect doesn't support pin-sha256
-  - find ./tests/ -maxdepth 1 -type f -exec sed -i 's@pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=@2c46d7319df419c92ad59e38f0bb9681c088f1dc@g' '{}' ';'
-# this version of openconnect doesn't work with IPv6 only
-  - make check -j$JOBS XFAIL_TESTS="ipv6-iface ipv6-small-net"
   tags:
   - shared
   - linux
@@ -179,7 +154,7 @@ Centos9:
   script:
   - git submodule update --init
   - autoreconf -fvi
-  - ./configure --without-nuttcp-tests
+  - ./configure
   - chmod og-w tests/data/raddb
   - chmod og-w tests/data/raddb/*
   - make -j$JOBS

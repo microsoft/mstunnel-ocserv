@@ -155,7 +155,7 @@ if test $? != 0;then
 fi
 
 set -e
-${CMDNS2} nuttcp -1
+${CMDNS2} iperf3 -s -D -1
 
 echo " * ping remote address"
 
@@ -166,7 +166,7 @@ ${CMDNS1} ping -c 3 ${VPNADDR}
 ${CMDNS1} ping -6 -c 3 ${VPNADDR6}
 
 echo " * traffic"
-${CMDNS1} nuttcp -T 6 -t ${VPNADDR}
+${CMDNS1} iperf3 -t 6 -c ${VPNADDR}
 
 set +e
 

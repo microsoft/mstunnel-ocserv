@@ -37,7 +37,7 @@ apt-get install -y libpam0g-dev liblz4-dev libseccomp-dev \
 	libreadline-dev libnl-route-3-dev libkrb5-dev libradcli-dev \
 	libcurl4-gnutls-dev libcjose-dev libjansson-dev liboath-dev \
 	libprotobuf-c-dev libtalloc-dev libhttp-parser-dev protobuf-c-compiler \
-	gperf nuttcp lcov libuid-wrapper libpam-wrapper libnss-wrapper \
+	gperf iperf3 lcov libuid-wrapper libpam-wrapper libnss-wrapper \
 	libsocket-wrapper gss-ntlmssp haproxy iputils-ping freeradius \
 	gawk gnutls-bin iproute2 yajl-tools tcpdump
 ```
@@ -50,7 +50,7 @@ yum install -y gnutls-devel libev-devel
 yum install -y pam-devel lz4-devel libseccomp-devel readline-devel \
 	libnl3-devel krb5-devel radcli-devel libcurl-devel cjose-devel \
 	jansson-devel liboath-devel protobuf-c-devel libtalloc-devel \
-	http-parser-devel protobuf-c gperf nuttcp lcov uid_wrapper \
+	http-parser-devel protobuf-c gperf iperf3 lcov uid_wrapper \
 	pam_wrapper nss_wrapper socket_wrapper gssntlmssp haproxy iputils \
 	freeradius gawk gnutls-utils iproute yajl tcpdump
 ```

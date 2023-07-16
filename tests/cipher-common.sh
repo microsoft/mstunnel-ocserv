@@ -107,25 +107,28 @@ fi
 set -e
 echo " * ping remote address"
 
-${CMDNS2} nuttcp -1
+${CMDNS2} iperf3 -s -D -1
 
 ${CMDNS1} ping -c 3 ${VPNADDR}
 
 sleep 2
 
-echo " * Transmitting with nuttcp"
+echo " * Transmitting with iperf3"
 
-${CMDNS1} nuttcp -T 6 -t ${VPNADDR}
+${CMDNS1} iperf3 -t 6 -c ${VPNADDR}
 
 # IPv6
-
-${CMDNS2} nuttcp -1
+echo " * Ping with IPv6"
 
 ${CMDNS1} ping -6 -c 3 ${VPNADDR6}
 
-echo " * Receiving with nuttcp"
+${CMDNS2} iperf3 -s -D -1
 
-${CMDNS1} nuttcp -T 6 -r ${VPNADDR}
+sleep 2
+
+echo " * Receiving with iperf3"
+
+${CMDNS1} iperf3 -t 6 -R -c ${VPNADDR}
 
 set +e
 
