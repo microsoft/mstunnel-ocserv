@@ -234,11 +234,12 @@ int post_svc_handler(worker_st *ws, unsigned http_ver)
 
 	if (ret < 0) {
 		oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: 401 Unauthorized");
-		cstp_printf(ws, "HTTP/1.%d 401 Authentication failed\r\n"
-			    "Content-Length: 0\r\n"
-			    "\r\n", http_ver);
+		ret = cstp_printf(ws, "HTTP/1.%d 401 Authentication failed\r\n"
+				  "Content-Length: 0\r\n"
+				  "\r\n", http_ver);
 
-		cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
+		if (ret >= 0)
+			cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
 		exit_worker(ws);
 		return -1;
 	}
