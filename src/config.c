@@ -1366,8 +1366,7 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 
 	if (vhost->perm_config.port == 0) {
 		if (defvhost) {
-			if (vhost->perm_config.port)
-				vhost->perm_config.port = defvhost->perm_config.port;
+			vhost->perm_config.port = defvhost->perm_config.port;
 		} else {
 			fprintf(stderr, ERRSTR"%sthe tcp-port option is mandatory!\n", PREFIX_VHOST(vhost));
 			exit(EXIT_FAILURE);
