@@ -108,9 +108,9 @@ int handle_sec_mod_commands(sec_mod_instance_st * sec_mod_instance)
 		return ERR_BAD_COMMAND;
 	}
 
-	if (ret < 5 || cmd <= MIN_SECM_CMD || cmd >= MAX_SECM_CMD) {
-		mslog(s, NULL, LOG_ERR, "main received invalid message from sec-mod of %u bytes (cmd: %u)\n",
-		      (unsigned)length, (unsigned)cmd);
+	if (ret < 5 || cmd <= MIN_SECM_CMD || cmd >= MAX_SECM_CMD || (int)length < 0) {
+		mslog(s, NULL, LOG_ERR, "main received invalid message from sec-mod of %d bytes (cmd: %u)\n",
+		      (int)length, (unsigned)cmd);
 		return ERR_BAD_COMMAND;
 	}
 
