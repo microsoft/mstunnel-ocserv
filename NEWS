@@ -1,6 +1,8 @@
 * Version 1.2.1 (unreleased)
 - Accept the Clavister OneConnect VPN Android client (#485)
 - No longer require to set device name per vhost (#480)
+- nuttcp tests were replaced with iperf3 that is available
+  in more environments
 
 
 * Version 1.2.0 (released 2023-07-11)
