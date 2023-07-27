@@ -5,6 +5,7 @@ ocserv*.tar.xz*
 *.trs
 *.gcda
 *.gcno
+.gitlab-token
 ocserv
 ocserv-worker
 configure
