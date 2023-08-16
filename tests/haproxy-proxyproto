@@ -18,14 +18,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+OCCTL="${OCCTL:-../src/occtl/occtl}"
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 PIDFILE=ocserv-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
 HACONFIG=haproxy.conf.$$.tmp
 PATH=${PATH}:/usr/sbin
+OCCTL_SOCKET=./occtl-haproxy-$$.socket
 HAPROXY=$(which haproxy)
 IP=$(which ip)
+OUTPUT=./proxyproto.tmp
 
 . `dirname $0`/common.sh
 
@@ -63,6 +66,7 @@ function finish {
   test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
   test -n "${NUTTCPPID}" && kill ${NUTTCPPID} >/dev/null 2>&1
   rm -f proxyproto-connect-ok
+  rm -f $OUTPUT
 }
 trap finish EXIT
 
@@ -113,6 +117,40 @@ echo " * ping remote address"
 ${CMDNS1} ping -c 3 ${VPNADDR}
 
 set +e
+
+${CMDNS2} ${OCCTL} -j -s ${OCCTL_SOCKET} show user test >$OUTPUT
+if test $? != 0;then
+	echo "occtl didn't find connected user!"
+	exit 1
+fi
+REMOTE_IP=$(cat $OUTPUT|grep "Remote IP"|sed 's/[",\ ]//g'|cut -d ':' -f 2)
+
+if test "$REMOTE_IP" != "$CLI_ADDRESS";then
+	echo Remote IP: $REMOTE_IP
+	echo Client IP: $CLI_ADDRESS
+	exit 1
+fi
+
+echo " * Connecting with wrong password ${ADDRESS}:${HAPORT}..."
+( echo "xxest" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${HAPORT} -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly )
+if test $? = 0;then
+	echo "Got cookie unexpectedly!"
+	exit 1
+fi
+
+( echo "xxest" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${HAPORT} -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly )
+if test $? = 0;then
+	echo "Got cookie unexpectedly!"
+	exit 1
+fi
+
+${CMDNS2} ${OCCTL} -s ${OCCTL_SOCKET} show ip ban points >${OUTPUT}
+POINTS=$(grep "$CLI_ADDRESS" ${OUTPUT}|tr -s ' '|sed 's/^ //g'|cut -d ' ' -f 2)
+if test "$POINTS" -lt 20;then
+	echo "Client did not get ban points ($CLI_ADDRESS - $POINTS)"
+	cat $OUTPUT
+	exit 1
+fi
 
 echo " * checking for connect-ok"
 if ! test -f proxyproto-connect-ok;then
