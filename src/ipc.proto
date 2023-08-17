@@ -248,7 +248,7 @@ message sec_auth_init_msg
 	optional string group_name = 4; /* selected group name */
 	optional string cert_user_name = 5;
 	repeated string cert_group_names = 6;
-	required string ip = 8;
+	required string remote_ip = 8;
 	required uint32 auth_type = 9 [default = 0];
 	optional string our_ip = 10;
 	optional string user_agent = 11;
@@ -257,6 +257,8 @@ message sec_auth_init_msg
 	optional string vhost = 14;
 	required uint64 session_start_time = 15;
 	required bytes hmac = 16;
+	required string orig_remote_ip = 17; /* if proxy proto is in use this is
+					the original IP that initiated the session */
 }
 
 /* SEC_AUTH_CONT */

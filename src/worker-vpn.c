@@ -829,6 +829,9 @@ void vpn_server(struct worker_st *ws)
 			      "could not parse proxy protocol header; discarding connection");
 			exit_worker(ws);
 		}
+
+		/* update ws->remote_ip_str */
+		human_addr2((const struct sockaddr *)&ws->remote_addr, ws->remote_addr_len, ws->remote_ip_str, sizeof(ws->remote_ip_str), 0);
 	} else {
 		oclog(ws, LOG_DEBUG, "accepted connection");
 	}

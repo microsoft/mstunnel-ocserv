@@ -112,7 +112,8 @@ static int client_auth(worker_st *ws, char *password)
 		init.auth_type |= AUTH_TYPE_CERTIFICATE;
 	}
 	init.vhost = ws->vhost->name;
-	init.ip = ws->remote_ip_str;
+	init.remote_ip = ws->remote_ip_str;
+	init.orig_remote_ip = ws->orig_remote_ip_str;
 	init.our_ip = ws->our_ip_str;
 	init.session_start_time = ws->session_start_time;
 	init.hmac.data = (uint8_t*)ws->sec_auth_init_hmac;

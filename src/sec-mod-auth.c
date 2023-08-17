@@ -782,9 +782,9 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 	/* Authenticate the client parameters */
 	session_start_time = (time_t)req->session_start_time; // avoid time_t size problem
 
-	hmac_components[0].data =  req->ip;
+	hmac_components[0].data =  req->orig_remote_ip;
 	// req->ip is required and protobuf doesn't permit null for required parameters
-	hmac_components[0].length = strlen(req->ip);
+	hmac_components[0].length = strlen(req->orig_remote_ip);
 	hmac_components[1].data = req->our_ip;
 	hmac_components[1].length = req->our_ip ? strlen(req->our_ip) : 0;
 	hmac_components[2].data = (void*)&session_start_time;
@@ -804,7 +804,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 		return -1;
 	}
 
-	e = new_client_entry(sec, vhost, req->ip, pid);
+	e = new_client_entry(sec, vhost, req->remote_ip, pid);
 	if (e == NULL) {
 		seclog(sec, LOG_ERR, "cannot initialize memory");
 		return -1;
@@ -820,7 +820,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 		common_auth_init_st st;
 
 		st.username = req->user_name;
-		st.ip = req->ip;
+		st.ip = req->remote_ip;
 		st.our_ip = req->our_ip;
 		st.user_agent = req->user_agent;
 		st.id = pid;
@@ -878,7 +878,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 	e->status = PS_AUTH_INIT;
 	seclog(sec, LOG_DEBUG, "auth init %sfor user '%s' "SESSION_STR" of group: '%s' from '%s'",
 	       req->tls_auth_ok?"(with cert) ":"",
-	       e->acct_info.username, e->acct_info.safe_id, e->acct_info.groupname, req->ip);
+	       e->acct_info.username, e->acct_info.safe_id, e->acct_info.groupname, req->remote_ip);
 
 	if (need_continue != 0) {
 		ret = ERR_AUTH_CONTINUE;

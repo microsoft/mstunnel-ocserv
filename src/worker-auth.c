@@ -1594,7 +1594,11 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		}
 
 		ireq.vhost = ws->vhost->name;
-		ireq.ip = ws->remote_ip_str;
+
+		/* if proxy protocol is in use we need a saved version of remote_ip_str or
+		 * sec-mod will not authenticate the client. */
+		ireq.remote_ip = ws->remote_ip_str;
+		ireq.orig_remote_ip = ws->orig_remote_ip_str;
 		ireq.our_ip = ws->our_ip_str;
 		ireq.session_start_time = ws->session_start_time;
 		ireq.hmac.data = (uint8_t*)ws->sec_auth_init_hmac;

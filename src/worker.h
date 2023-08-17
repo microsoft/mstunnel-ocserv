@@ -224,6 +224,10 @@ typedef struct worker_st {
 	socklen_t remote_addr_len;
 	char our_ip_str[MAX_IP_STR];
 	char remote_ip_str[MAX_IP_STR];
+
+	/* this is a snapshot of remote_ip_str at process start - doesn't
+	 * get updated. */
+	char orig_remote_ip_str[MAX_IP_STR];
 	const uint8_t sec_auth_init_hmac[HMAC_DIGEST_SIZE];
 
 	int proto; /* AF_INET or AF_INET6 */

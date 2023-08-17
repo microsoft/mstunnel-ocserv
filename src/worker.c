@@ -301,6 +301,8 @@ static int set_ws_from_env(worker_st * ws)
 
 	strlcpy(ws->remote_ip_str, msg->remote_ip_str,
 		sizeof(ws->remote_ip_str));
+	strlcpy(ws->orig_remote_ip_str, msg->remote_ip_str,
+		sizeof(ws->orig_remote_ip_str));
 	strlcpy(ws->our_ip_str, msg->our_ip_str, sizeof(ws->our_ip_str));
 
 	for (index = 0; index < msg->n_snapshot_entries; index++) {
