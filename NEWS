@@ -1,4 +1,4 @@
-* Version 1.2.1 (unreleased)
+* Version 1.2.1 (released 2023-08-22)
 - Accept the Clavister OneConnect VPN Android client (#485)
 - No longer require to set device name per vhost (#480)
 - Account the correct number of points when proxyproto is in use (#529)
