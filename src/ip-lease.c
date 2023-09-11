@@ -27,7 +27,7 @@
 #include <icmp-ping.h>
 #include <arpa/inet.h>
 
-void ip_from_seed(uint8_t *seed, unsigned seed_size,
+static void ip_from_seed(uint8_t *seed, unsigned seed_size,
 		void *ip, size_t ip_size)
 {
 	uint8_t digest[20];
