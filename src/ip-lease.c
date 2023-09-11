@@ -104,7 +104,7 @@ struct ip_lease_st t;
 void steal_ip_leases(struct proc_st* proc, struct proc_st *thief)
 {
 	/* here we reset the old tun device, and assign the old addresses
-	 * to a new device. We cannot re-use the old device because the
+	 * to a new device. We cannot reuse the old device because the
 	 * fd is only available to the worker process and not here (main)
 	 */
 	reset_tun(proc);

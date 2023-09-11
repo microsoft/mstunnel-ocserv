@@ -201,7 +201,7 @@ int handle_auth_cookie_req(sec_mod_instance_st * sec_mod_instance, struct proc_s
 		put_into_cgroup(s, proc->config->cgroup, proc->pid);
 	}
 
-	/* disconnect and re-use previous session's IPs*/
+	/* disconnect and reuse previous session's IPs*/
 	if (old_proc != NULL) {
 		if (strcmp(proc->username, old_proc->username) != 0) {
 			mslog(s, old_proc, LOG_ERR, "the user of the new session doesn't match the old (new: %s)",
@@ -209,7 +209,7 @@ int handle_auth_cookie_req(sec_mod_instance_st * sec_mod_instance, struct proc_s
 			return -1;
 		}
 
-		mslog(s, old_proc, LOG_INFO, "disconnecting previous user session due to session re-use");
+		mslog(s, old_proc, LOG_INFO, "disconnecting previous user session due to session reuse");
 
 		/* steal its leases */
 		steal_ip_leases(old_proc, proc);
@@ -245,7 +245,7 @@ int handle_auth_cookie_req(sec_mod_instance_st * sec_mod_instance, struct proc_s
  * users are found.
  *
  * In addition this function will also check whether the cookie
- * used had been re-used before, and then disconnect the old session
+ * used had been reused before, and then disconnect the old session
  * (cookies are unique).
  */
 int check_multiple_users(main_server_st *s, struct proc_st* proc)
