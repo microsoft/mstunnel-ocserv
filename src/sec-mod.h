@@ -86,7 +86,7 @@ typedef struct common_acct_info_st {
 typedef struct client_entry_st {
 	/* A unique session identifier used to distinguish sessions
 	 * prior to authentication. It is sent as cookie to the client
-	 * who re-uses it when it performs authentication in multiple
+	 * who reuses it when it performs authentication in multiple
 	 * sessions.
 	 */
 	uint8_t sid[SID_SIZE];

@@ -25,7 +25,7 @@ srcdir=${srcdir:-.}
 
 eval "${GETPORT}"
 
-echo "Testing whether cookies are being re-used... "
+echo "Testing whether cookies are being reused... "
 
 PIDFILE1="${srcdir}/ci$$-1.pid.tmp"
 PIDFILE2="${srcdir}/ci$$-2.pid.tmp"
