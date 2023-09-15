@@ -753,7 +753,7 @@ static void peek_client_hello(struct worker_st *ws, gnutls_session_t session, in
 }
 #endif
 
-void check_camouflage_url(struct worker_st *ws)
+static void check_camouflage_url(struct worker_st *ws)
 {
 	if (WSCONFIG(ws)->camouflage_secret == NULL)
 		return;
