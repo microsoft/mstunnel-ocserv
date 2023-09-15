@@ -493,6 +493,7 @@ void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final, unsigned
 	ban_ip_reply_msg__free_unpacked(reply, &pa);
 }
 
+static
 void send_stats_to_secmod(worker_st * ws, time_t now, unsigned discon_reason)
 {
 	CliStatsMsg msg = CLI_STATS_MSG__INIT;
