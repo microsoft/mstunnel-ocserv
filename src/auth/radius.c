@@ -287,9 +287,21 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 
 		if (inet_pton(AF_INET, pctx->our_ip, &in) != 0) {
 			in.s_addr = ntohl(in.s_addr);
-			rc_avpair_add(pctx->vctx->rh, &send, PW_NAS_IP_ADDRESS, (char*)&in, sizeof(struct in_addr), 0);
+			if (rc_avpair_add(pctx->vctx->rh, &send, PW_NAS_IP_ADDRESS, (char*)&in, sizeof(struct in_addr), 0) == NULL) {
+				syslog(LOG_ERR,
+				       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
+				       pctx->username);
+				ret = ERR_AUTH_FAIL;
+				goto cleanup;
+			}
 		} else if (inet_pton(AF_INET6, pctx->our_ip, &in6) != 0) {
-			rc_avpair_add(pctx->vctx->rh, &send, PW_NAS_IPV6_ADDRESS, (char*)&in6, sizeof(struct in6_addr), 0);
+			if (rc_avpair_add(pctx->vctx->rh, &send, PW_NAS_IPV6_ADDRESS, (char*)&in6, sizeof(struct in6_addr), 0) == NULL) {
+				syslog(LOG_ERR,
+				       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
+				       pctx->username);
+				ret = ERR_AUTH_FAIL;
+				goto cleanup;
+			}
 		}
 	}
 
