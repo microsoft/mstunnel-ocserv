@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2023 Nikos Mavrogiannopoulos
  * Copyright (C) 2015, 2016 Red Hat, Inc.
  *
  * This file is part of ocserv.
@@ -1616,6 +1616,23 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 	return ret;
 }
 
+/* Returns true if the data provided are not IP control messages
+ * (ICMP, IGMP). */
+static bool is_data(const uint8_t *data, size_t size)
+{
+	if (size > 20) {
+		uint8_t version = data[0] >> 4;
+		if (version == 0x04) {
+			if (data[9] == 0x01 || data[9] == 0x02) /* ICMP/IGMP */
+				return 0;
+		} else if (version == 0x06) {
+			if (data[9] == 0x3A || data[9] == 0x80)
+				return 0;
+		}
+	}
+	return 1;
+}
+
 static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 {
 	int ret, l, e;
@@ -1643,7 +1660,6 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 		oclog(ws, LOG_INFO, "TUN device returned zero");
 		return 0;
 	}
-
 
 	dtls_to_send.data = ws->buffer;
 	dtls_to_send.size = l;
@@ -1731,7 +1747,9 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 			ret = cstp_send(ws, cstp_to_send.data, cstp_to_send.size + 8);
 			CSTP_FATAL_ERR_CMD(ws, ret, exit_worker_reason(ws, REASON_ERROR));
 		}
-		ws->last_nc_msg = tnow->tv_sec;
+
+		if (is_data(ws->buffer + 8, l)) /* do not account ICMP */
+			ws->last_nc_msg = tnow->tv_sec;
 	}
 
 	return 0;
@@ -2596,7 +2614,9 @@ static int parse_data(struct worker_st *ws, uint8_t *buf, size_t buf_size,
 			return -1;
 		}
 		ws->tun_bytes_in += plain_size;
-		ws->last_nc_msg = now;
+
+		if (is_data(plain, plain_size)) /* do not account ICMP */
+			ws->last_nc_msg = now;
 
 		break;
 	default:
