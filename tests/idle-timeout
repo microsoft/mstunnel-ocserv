@@ -1,0 +1,100 @@
+#!/bin/bash
+#
+# Copyright (C) 2023 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+OCCTL_SOCKET=./occtl-ban-$$.socket
+PIDFILE=ocserv-pid.$$.tmp
+CPIDFILE=openpid.$$.tmp
+OUTFILE=ban.$$.tmp
+
+ADDRESS=10.23.2.1
+CLI_ADDRESS=10.23.1.1
+VPNNET=172.34.215.0/24
+VPNADDR=172.34.215.1
+VPNNET6=fd7b:b45a:eef2:3dee:b86c:b589:fce9:0/112
+VPNADDR6=fd7b:b45a:eef2:3dee:b86c:b589:fce9:0
+
+. `dirname $0`/common.sh
+. `dirname $0`/ns.sh
+
+eval "${GETPORT}"
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
+  test -n "${CPIDFILE}" && rm -f ${CPIDFILE} >/dev/null 2>&1
+  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  test -n "${OUTFILE}" && rm -f ${OUTFILE} >/dev/null 2>&1
+}
+trap finish EXIT
+
+echo "Testing whether idle timeout works as expected... "
+
+update_config idle-timeout.config
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} -d 3 & PID=$!
+
+sleep 5
+
+echo "Connecting to obtain cookie... "
+eval `echo "test" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=`
+
+if [ -z "$COOKIE" ];then
+	fail $PID "Could not obtain cookie"
+fi
+
+#echo "Cookie: $COOKIE"
+sleep 1
+echo ""
+echo "Connecting with cookie... "
+${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u test -C "$COOKIE" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --background --pid-file "${CPIDFILE}"
+
+sleep 4
+
+if [ ! -f "${CPIDFILE}" ];then
+	fail $PID "It was not possible to establish session!"
+fi
+
+echo "ping remote address"
+
+set -e
+${CMDNS1} ping -c 3 ${VPNADDR}
+${CMDNS2} ${OCCTL} -s ${OCCTL_SOCKET} show user test
+set +e
+
+# We wait more than the configured time as idle timeout is enforced every
+# a couple of seconds.
+echo "Waiting for idle timeout... "
+sleep 60
+
+${CMDNS2} ${OCCTL} -s ${OCCTL_SOCKET} show user test
+if test $? = 0;then
+	fail $PID "Client listed in occtl after timeout!"
+fi
+
+${CMDNS1} ping -c 3 ${VPNADDR}
+if test $? = 0;then
+	fail $PID "Client remains connected after timeout!"
+fi
+
+exit 0
