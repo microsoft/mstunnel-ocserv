@@ -1,7 +1,7 @@
 * Version 1.2.2 (unreleased)
-- Revert fix for #444. It was causing issues in the session and
-  accounting data tracking of ocserv (#541)
-- No longer account ICMP and IGMP data for idle detection.
+- Fix session and accounting data tracking of ocserv. This
+  reverts fix for #444 (#541)
+- No longer account ICMP and IGMP data for idle detection
 
 
 * Version 1.2.1 (released 2023-08-22)
