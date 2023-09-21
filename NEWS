@@ -1,7 +1,7 @@
-* Version 1.2.2 (unreleased)
+* Version 1.2.2 (released 2023-09-21)
 - Fix session and accounting data tracking of ocserv. This
   reverts fix for #444 (#541)
-- No longer account ICMP and IGMP data for idle detection
+- No longer account ICMP and IGMP data for idle session detection
 
 
 * Version 1.2.1 (released 2023-08-22)
