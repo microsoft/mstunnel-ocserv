@@ -1180,6 +1180,7 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 		print_single_value_ex(out, params, "Connected at", str_since, tmpbuf, 1);
 
 		if (HAVE_JSON(params)) {
+			print_single_value_int(out, params, "raw_connected_at", t, 1);
 			print_single_value(out, params, "Full session", shorten(args->user[i]->safe_id.data, args->user[i]->safe_id.len, 0), 1);
 #ifdef OCSERV_0_11_6_COMPAT
 			/* compat with previous versions */
