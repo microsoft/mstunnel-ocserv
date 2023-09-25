@@ -1,3 +1,7 @@
+* Version 1.2.3 (unreleased)
+- occtl: added machine-readable "raw_connected_at" field for user stats
+
+
 * Version 1.2.2 (released 2023-09-21)
 - Fix session and accounting data tracking of ocserv. This
   reverts fix for #444 (#541)
