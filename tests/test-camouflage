@@ -65,6 +65,21 @@ if [ -z "${COOKIE}" ];then
 fi
 echo "OK"
 
+echo "Cookie: \"${COOKIE}\""
+
+# Ensure a valid HTTP cookie for cURL
+if echo "${COOKIE}" | grep -q -E "[a-z_]+=[^;]+"; then
+	HTTP_COOKIE=${COOKIE}
+else
+	HTTP_COOKIE="webvpn=${COOKIE}"
+fi
+
+echo "Checking with CURL that server returns HTTP 200 for user authenticated GET"
+http_result=$(curl --insecure https://localhost:${PORT}/cert.pem --output /dev/null --cookie "${HTTP_COOKIE}" --silent --write-out "%{http_code}")
+if [ "${http_result}" != "200" ]; then
+	fail ${PID} "Server returned ${http_result} instead of 200 for GET"
+fi
+echo "OK"
 
 echo "Connecting with cookie..."
 $OPENCONNECT -q localhost:${PORT} -u test -C "${COOKIE}" --servercert ${SERVERCERT} --script=/bin/true --verbose --pid-file "${CLIENTPIDFILE}" --background

@@ -759,6 +759,11 @@ static void check_camouflage_url(struct worker_st *ws)
 	if (WSCONFIG(ws)->camouflage_secret == NULL)
 		return;
 
+	if (ws->auth_state >= S_AUTH_COOKIE) {
+		ws->camouflage_check_passed = 1;
+		return;
+	}
+
 	char* url_camouflage_part = strchr(ws->req.url, '?');
 	if (url_camouflage_part
 		&& !strcmp(url_camouflage_part + 1, WSCONFIG(ws)->camouflage_secret))
