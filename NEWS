@@ -1,5 +1,6 @@
 * Version 1.2.3 (unreleased)
 - occtl: added machine-readable "raw_connected_at" field for user stats
+- Modified "Camouflage" functionality to allow AnyConnect clients (#544)
 
 
 * Version 1.2.2 (released 2023-09-21)
