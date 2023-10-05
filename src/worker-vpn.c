@@ -2114,9 +2114,6 @@ static int connect_handler(worker_st * ws)
 		}
 	}
 
-	/* While anyconnect clients can handle the assignment
-	 * of an IPv6 address, they cannot handle routes or DNS
-	 * in IPv6. So we disable IPv6 after an IP is assigned. */
 	if (ws->full_ipv6 == 0) {
 		req->no_ipv6 = 1;
 		oclog(ws, LOG_INFO, "IPv6 routes/DNS disabled because IPv6 support was not requested.");
