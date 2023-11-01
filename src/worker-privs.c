@@ -182,7 +182,9 @@ int disable_system_calls(struct worker_st *ws)
 
 	ADD_SYSCALL(open, 0);
 	ADD_SYSCALL(openat, 0);
+#if defined(SYS_fstat) || defined(__NR_fstat)
 	ADD_SYSCALL(fstat, 0);
+#endif
 #if defined(SYS_fstat64) || defined(__NR_fstat64)
 	ADD_SYSCALL(fstat64, 0);
 #endif
@@ -190,7 +192,9 @@ int disable_system_calls(struct worker_st *ws)
 #if defined(SYS_stat64) || defined(__NR_stat64)
 	ADD_SYSCALL(stat64, 0);
 #endif
+#if defined(SYS_newfstatat) || defined(__NR_newfstatat)
 	ADD_SYSCALL(newfstatat, 0);
+#endif
 	ADD_SYSCALL(lseek, 0);
 
 	ADD_SYSCALL(getsockopt, 0);
