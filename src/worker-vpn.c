@@ -1540,7 +1540,7 @@ static int dtls_mainloop(worker_st * ws, struct dtls_st * dtls, struct timespec 
 			      ws->link_mtu, data_mtu);
 			ws->dtls_active_session++;
 			oclog(ws, LOG_DEBUG,
-				  "Maing DTLS session %d active", ws->dtls_active_session);
+				  "Main DTLS session %d active", ws->dtls_active_session);
 			session_info_send(ws);
 		}
 
