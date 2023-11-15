@@ -43,8 +43,8 @@
 #endif
 
 #define RAD_GROUP_NAME PW_CLASS
-#define RAD_IPV4_DNS1 ((311<<16)|(28))
-#define RAD_IPV4_DNS2 ((311<<16)|(29))
+#define RAD_MS_PRIMARY_DNS_SERVER   ((311<<16)|(28)) /* RFC 2548 */
+#define RAD_MS_SECONDARY_DNS_SERVER ((311<<16)|(29)) /* RFC 2548 */
 
 #if defined(LEGACY_RADIUS)
 # ifndef PW_DELEGATED_IPV6_PREFIX
@@ -410,8 +410,13 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 				/* DNS-Server-IPv6-Address */
 				if (pctx->ipv6_dns1[0] == 0)
 					inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6_dns1, sizeof(pctx->ipv6_dns1));
-				else
+				else if (pctx->ipv6_dns2[0] == 0)
 					inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6_dns2, sizeof(pctx->ipv6_dns2));
+				else {
+					char dst[MAX_IP_STR];
+					inet_ntop(AF_INET6, vp->strvalue, dst, sizeof(dst));
+					syslog(LOG_NOTICE, "radius-auth: cannot handle more than 2 DNS servers, ignoring additional DNS server from RADIUS: %s", dst);
+				}
 			} else if (vp->attribute == PW_FRAMED_IP_ADDRESS && vp->type == PW_TYPE_IPADDR) {
 				/* Framed-IP-Address */
 				if (vp->lvalue != 0xffffffff && vp->lvalue != 0xfffffffe) {
@@ -427,11 +432,11 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 				/* Framed-IP-Netmask */
 				ipv4 = htonl(vp->lvalue);
 				inet_ntop(AF_INET, &ipv4, pctx->ipv4_mask, sizeof(pctx->ipv4_mask));
-			} else if (vp->attribute == RAD_IPV4_DNS1 && vp->type == PW_TYPE_IPADDR) {
+			} else if (vp->attribute == RAD_MS_PRIMARY_DNS_SERVER && vp->type == PW_TYPE_IPADDR) {
 				/* MS-Primary-DNS-Server */
 				ipv4 = htonl(vp->lvalue);
 				inet_ntop(AF_INET, &ipv4, pctx->ipv4_dns1, sizeof(pctx->ipv4_dns1));
-			} else if (vp->attribute == RAD_IPV4_DNS2 && vp->type == PW_TYPE_IPADDR) {
+			} else if (vp->attribute == RAD_MS_SECONDARY_DNS_SERVER && vp->type == PW_TYPE_IPADDR) {
 				/* MS-Secondary-DNS-Server */
 				ipv4 = htonl(vp->lvalue);
 				inet_ntop(AF_INET, &ipv4, pctx->ipv4_dns2, sizeof(pctx->ipv4_dns2));
@@ -470,7 +475,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 			vp = vp->next;
 		}
 
-		/* PW_STATE or PW_REPLY_MESSAGE is empty or MAX_CHALLENGES limit exceeded*/
+		/* PW_STATE or PW_REPLY_MESSAGE is empty or MAX_CHALLENGES limit exceeded */
 		if ((pctx->pass_msg[0] == 0) || (pctx->state == NULL) || (pctx->passwd_counter >= MAX_CHALLENGES)) {
 			strlcpy(pctx->pass_msg, pass_msg_failed, sizeof(pctx->pass_msg));
 			syslog(LOG_ERR, "radius-auth: Access-Challenge with invalid State or Reply-Message, or max number of password requests exceeded");
