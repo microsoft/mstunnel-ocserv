@@ -99,6 +99,7 @@ with_local_protobuf_c=no
  else
   AC_MSG_WARN([[***
 *** libprotobuf-c was not found.
+*** An included version of the library will be used.
 ***]])
  fi
 ]
@@ -163,6 +164,7 @@ with_local_talloc=no,
  else
   AC_MSG_WARN([[***
 *** libtalloc was not found.
+*** An included version of talloc will be used.
 ***]])
  fi
 ]
@@ -328,7 +330,7 @@ if test "$test_for_radius" = yes;then
 		  [AC_MSG_RESULT(no)
    	           AC_MSG_WARN([[
 ***
-*** radcli 1.2.1 or later was not found. Radius support will be disabled.
+*** radcli 1.2.5 or later was not found. Radius support will be disabled.
 *** See http://radcli.github.io/radcli/
 *** ]])])
 		LIBS="$oldlibs"
