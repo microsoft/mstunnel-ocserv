@@ -1,8 +1,9 @@
 * Version 1.2.3 (unreleased)
+- ocserv-fw: Move under libexec.
+- ocserv-fw: Fixed clean_all_rules logic on multiple similar devices (!384)
 - Warn when more than 2 DNS server IPv6 addresses are sent by Radius.
 - occtl: added machine-readable "raw_connected_at" field for user stats
 - Modified "Camouflage" functionality to allow AnyConnect clients (#544)
-- ocserv-fw: Fixed clean_all_rules logic on multiple similar devices (!384)
 
 
 * Version 1.2.2 (released 2023-09-21)
