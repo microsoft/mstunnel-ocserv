@@ -39,6 +39,7 @@
 #include <hmac.h>
 #include "vhost.h"
 #include "ev.h"
+#include "common/common.h"
 
 // Name of environment variable used to pass worker_startup_msg
 // between ocserv-main and ocserv-worker.

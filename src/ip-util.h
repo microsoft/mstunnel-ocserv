@@ -25,7 +25,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#define MAX_IP_STR 46
 // Lower MTU bound is the value defined in RFC 791
 #define RFC_791_MTU (68)
 // Upper bound is the maximum DTLS frame size

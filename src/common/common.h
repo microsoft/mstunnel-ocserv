@@ -34,7 +34,7 @@
 void _talloc_free2(void *ctx, void *ptr);
 void *_talloc_size2(void *ctx, size_t size);
 
-#define MAX_IP_STR 46
+#define MAX_IP_STR INET6_ADDRSTRLEN /* can hold both IPv6 and IPv4 addresses */
 
 #define DEFAULT_SOCKET_TIMEOUT 10
 

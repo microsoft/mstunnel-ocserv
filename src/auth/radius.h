@@ -22,6 +22,7 @@
 # define RADIUS_H
 
 # include <sec-mod-auth.h>
+# include "common/common.h"
 
 # ifdef HAVE_RADIUS
 
