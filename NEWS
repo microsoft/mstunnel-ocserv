@@ -1,6 +1,7 @@
 * Version 1.2.3 (unreleased)
 - occtl: added machine-readable "raw_connected_at" field for user stats
 - Modified "Camouflage" functionality to allow AnyConnect clients (#544)
+- ocserv-fw: Fixed clean_all_rules logic on multiple similar devices (!384)
 
 
 * Version 1.2.2 (released 2023-09-21)

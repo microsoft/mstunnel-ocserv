@@ -76,8 +76,8 @@ execute_next_script() {
 }
 
 clean_all_rules() {
-	eval "$(iptables -S | grep "comment ${COMMENT}" | grep -e "-[io] ${DEVICE}" | sed -e 's/-A/-D/g' -e 's/^-/iptables -/g')" 2>/dev/null
-	eval "$(ip6tables -S | grep "comment ${COMMENT}" | grep -e "-[io] ${DEVICE}" | sed -e 's/-A/-D/g' -e 's/^-/ip6tables -/g')" 2>/dev/null
+	eval "$(iptables -S | grep "comment ${COMMENT}" | grep -e "-[io] ${DEVICE}\b" | sed -e 's/-A/-D/g' -e 's/^-/iptables -/g')" 2>/dev/null
+	eval "$(ip6tables -S | grep "comment ${COMMENT}" | grep -e "-[io] ${DEVICE}\b" | sed -e 's/-A/-D/g' -e 's/^-/ip6tables -/g')" 2>/dev/null
 	iptables -X ${SEC_FORWARD_CHAIN} 2>/dev/null
 	ip6tables -X ${SEC_FORWARD_CHAIN} 2>/dev/null
 }
