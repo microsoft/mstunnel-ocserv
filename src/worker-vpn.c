@@ -2073,7 +2073,7 @@ static int connect_handler(worker_st * ws)
 
 	/* Send IP addresses */
 	if (ws->vinfo.ipv4 && req->no_ipv4 == 0) {
-		oclog(ws, LOG_INFO, "sending IPv4 %s", ws->vinfo.ipv4);
+		oclog(ws, LOG_NOTICE, "sending IPv4 %s", ws->vinfo.ipv4);
 		ret =
 		    cstp_printf(ws, "X-CSTP-Address: %s\r\n",
 			       ws->vinfo.ipv4);
@@ -2088,7 +2088,7 @@ static int connect_handler(worker_st * ws)
 	}
 
 	if (ws->vinfo.ipv6 && req->no_ipv6 == 0 && ws->user_config->ipv6_prefix != 0) {
-		oclog(ws, LOG_INFO, "sending IPv6 %s/%u", ws->vinfo.ipv6, ws->user_config->ipv6_subnet_prefix);
+		oclog(ws, LOG_NOTICE, "sending IPv6 %s/%u", ws->vinfo.ipv6, ws->user_config->ipv6_subnet_prefix);
 		if (ws->full_ipv6 && ws->user_config->ipv6_subnet_prefix) {
 			ret =
 			    cstp_printf(ws,
