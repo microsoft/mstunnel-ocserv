@@ -120,6 +120,15 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 		msg->config->has_ipv6_subnet_prefix = 1;
 	}
 
+	if (pctx->rx_per_sec) {
+		msg->config->has_rx_per_sec = 1;
+		msg->config->rx_per_sec = pctx->rx_per_sec;
+	}
+	if (pctx->tx_per_sec) {
+		msg->config->has_tx_per_sec = 1;
+		msg->config->tx_per_sec = pctx->tx_per_sec;
+	}
+
 	return 0;
 }
 

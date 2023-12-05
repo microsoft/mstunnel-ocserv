@@ -1,4 +1,5 @@
 * Version 1.2.4 (unreleased)
+- Get connection speed limits (traffic shaping) from RADIUS (#554)
 - Use "OpenConnect VPN server" as the long package name. Keep "ocserv" as a
   short name.
 - usage: open issues on GitLab to report bugs.
