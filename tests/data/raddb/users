@@ -132,7 +132,9 @@ testtime	Cleartext-Password := "test"
 	Framed-IP-Netmask = 255.255.255.0,
 	Framed-MTU = 1500,
 	Session-Timeout = 60,
-	Acct-Interim-Interval = 20
+	Acct-Interim-Interval = 20,
+	RP-Upstream-Speed-Limit = 16,
+	RP-Downstream-Speed-Limit = 64
 
 test1-otp            Cleartext-Password := "test1-otp-stage%{string:State}", Tmp-Integer-0 := 3
         Service-Type = Framed-User,

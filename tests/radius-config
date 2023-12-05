@@ -161,6 +161,21 @@ if test $? != 0;then
 	exit 1
 fi
 
+grep "Limit RX: 16" ${OUTFILE}
+if test $? != 0;then
+	${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
+	echo "occtl show user didn't find upstream speed limit!"
+	exit 1
+fi
+
+grep "Limit TX: 64" ${OUTFILE}
+if test $? != 0;then
+	${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
+	echo "occtl show user didn't find downstream speed limit!"
+	exit 1
+fi
+
+
 echo "Waiting for accounting report"
 
 wait_file_contents ${RADIUSLOG} "Acct-Input-Octets = [1-9]+" 35
