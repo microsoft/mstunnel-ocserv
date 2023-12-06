@@ -18,6 +18,7 @@
 
 #include <config.h>
 #include "ip-util.h"
+#include "common/common.h"
 #include <string.h>
 #include <stdio.h>
 #include <talloc.h>
