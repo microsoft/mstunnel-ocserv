@@ -43,6 +43,14 @@ void *_talloc_size2(void *ctx, size_t size);
 #define PROTOBUF_ALLOCATOR(name, pool) \
 	ProtobufCAllocator name = {.alloc = _talloc_size2, .free = _talloc_free2, .allocator_data = pool}
 
+#ifndef MIN
+# define MIN(x,y) (((x)<(y))?(x):(y))
+#endif
+
+#ifndef MAX
+# define MAX(x,y) (((x)>(y))?(x):(y))
+#endif
+
 void set_non_block(int fd);
 void set_block(int fd);
 
@@ -139,14 +147,6 @@ size_t oc_strlcpy(char *dst, char const *src, size_t siz);
 
 #define SAFE_ID_SIZE (BASE64_ENCODE_RAW_LENGTH(20)+1)
 char *calc_safe_id(const uint8_t *data, unsigned size, char *output, unsigned output_size);
-
-#ifndef MIN
-# define MIN(x,y) (((x)<(y))?(x):(y))
-#endif
-
-#ifndef MAX
-# define MAX(x,y) (((x)>(y))?(x):(y))
-#endif
 
 extern int saved_argc;
 extern char **saved_argv;
