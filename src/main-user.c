@@ -47,7 +47,7 @@
 #include <script-list.h>
 #include <ccan/list/list.h>
 
-#define OCSERV_FW_SCRIPT "/usr/bin/ocserv-fw"
+#define OCSERV_FW_SCRIPT "/usr/libexec/ocserv-fw"
 
 #define APPEND_TO_STR(str, val) \
 	do { \

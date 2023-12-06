@@ -58,7 +58,7 @@ ACCT_SOURCES=acct/radius.c acct/radius.h acct/pam.c acct/pam.h
 
 
 sbin_PROGRAMS = ocserv ocserv-worker
-bin_SCRIPTS = ocserv-fw
+libexec_SCRIPTS = ocserv-fw
 
 ocserv_SOURCES = $(CORE_SOURCES) $(AUTH_SOURCES) $(ACCT_SOURCES) \
 	main.c main-auth.c main-ban.c main-ban.h main-ctl-unix.c main-proc.c \
