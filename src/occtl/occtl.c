@@ -20,6 +20,7 @@
  */
 
 #include <config.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -242,9 +243,9 @@ time2human(uint64_t microseconds, char* output, unsigned output_size)
 	if (microseconds < 1000) {
 		snprintf(output, output_size, "<1ms");
 	} else if (microseconds < 1000000) {
-		snprintf(output, output_size, "%ldms", microseconds / 1000);
+		snprintf(output, output_size, "%" PRIu64 "ms", microseconds / 1000);
 	} else {
-		snprintf(output, output_size, "%lds", microseconds / 1000000);
+		snprintf(output, output_size, "%" PRIu64 "s", microseconds / 1000000);
 	}
 }
 
