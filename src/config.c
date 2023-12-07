@@ -211,7 +211,7 @@ static void check_for_duplicate_password_auth(struct perm_cfg_st *config, const 
 
 static void figure_auth_funcs(void *pool, const char *vhostname,
 			      struct perm_cfg_st *config, char **auth, unsigned auth_size,
-			      unsigned primary)
+			      unsigned primary, unsigned is_worker)
 {
 	unsigned j, i;
 	unsigned found;
@@ -260,7 +260,9 @@ static void figure_auth_funcs(void *pool, const char *vhostname,
 			}
 			talloc_free(auth[j]);
 		}
-		fprintf(stderr, NOTESTR"%s: setting '%s' as primary authentication method\n", vhostname, config->auth[0].name);
+
+		if (!is_worker)
+			fprintf(stderr, NOTESTR"%s: setting '%s' as primary authentication method\n", vhostname, config->auth[0].name);
 	} else {
 		unsigned x = config->auth_methods;
 		/* Append authentication methods (alternative options) */
@@ -272,7 +274,8 @@ static void figure_auth_funcs(void *pool, const char *vhostname,
 						config->auth[x].additional = avail_auth_types[i].get_brackets_string(pool, config, auth[j]+avail_auth_types[i].name_size);
 
 					config->auth[x].name = talloc_strdup(pool, avail_auth_types[i].name);
-					fprintf(stderr, NOTESTR"%s: enabling '%s' as authentication method\n", vhostname, avail_auth_types[i].name);
+					if (!is_worker)
+						fprintf(stderr, NOTESTR"%s: enabling '%s' as authentication method\n", vhostname, avail_auth_types[i].name);
 
 					check_for_duplicate_password_auth(config, vhostname, avail_auth_types[i].type);
 					config->auth[x].amod = avail_auth_types[i].mod;
@@ -316,7 +319,8 @@ static acct_types_st avail_acct_types[] =
 #endif
 };
 
-static void figure_acct_funcs(void *pool, const char *vhostname, struct perm_cfg_st *config, const char *acct)
+static void figure_acct_funcs(void *pool, const char *vhostname, struct perm_cfg_st *config,
+			      const char *acct, unsigned is_worker)
 {
 	unsigned i;
 	unsigned found = 0;
@@ -349,7 +353,9 @@ static void figure_acct_funcs(void *pool, const char *vhostname, struct perm_cfg
 		fprintf(stderr, ERRSTR"%s: unknown or unsupported accounting method: %s\n", vhostname, acct);
 		exit(EXIT_FAILURE);
 	}
-	fprintf(stderr, NOTESTR"%ssetting '%s' as accounting method\n", vhostname, config->acct.name);
+
+	if (!is_worker)
+		fprintf(stderr, NOTESTR"%ssetting '%s' as accounting method\n", vhostname, config->acct.name);
 }
 
 #ifdef HAVE_GSSAPI
@@ -595,6 +601,7 @@ static vhost_cfg_st *vhost_add(void *pool, struct list_head *head, const char *n
 struct ini_ctx_st {
 	struct list_head *head;
 	unsigned reload;
+	unsigned is_worker;
 	const char *file;
 	void *pool;
 };
@@ -689,6 +696,7 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 	struct cfg_st *config;
 	void *pool;
 	unsigned reload = ctx->reload;
+	unsigned is_worker = ctx->is_worker;
 	int ret;
 	unsigned stage1_found = 1;
 	unsigned force_cert_auth;
@@ -705,7 +713,7 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 		char *vname;
 
 		if (strncmp(section, "vhost:", 6) != 0) {
-			if (reload == 0)
+			if (reload == 0 && is_worker == 0)
 				fprintf(stderr, WARNSTR"skipping unknown section '%s'\n", section);
 			return 1;
 		}
@@ -727,13 +735,15 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 		}
 
 		if (strcasecmp(section+6, vname) != 0) {
-			fprintf(stderr, NOTESTR"virtual host name '%s' was canonicalized to '%s'\n",
-				section+6, vname);
+			if (reload == 0 && is_worker == 0)
+				fprintf(stderr, NOTESTR"virtual host name '%s' was canonicalized to '%s'\n",
+					section+6, vname);
 		}
 
 		if (!found_vhost) {
 			/* add */
-			fprintf(stderr, NOTESTR"adding virtual host: %s\n", vname);
+			if (reload == 0 && is_worker == 0)
+				fprintf(stderr, NOTESTR"adding virtual host: %s\n", vname);
 			vhost = vhost_add(ctx->pool, ctx->head, vname, reload);
 		}
 		talloc_free(vname);
@@ -823,7 +833,7 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 		} else if (strcmp(name, "pid-file") == 0) {
 			if (pid_file[0] == 0) {
 				READ_STATIC_STRING(pid_file);
-			} else if (reload == 0)
+			} else if (reload == 0 && !ctx->is_worker)
 				fprintf(stderr, NOTESTR"skipping 'pid-file' config option\n");
 		} else if (strcmp(name, "sec-mod-scale") == 0) {
 			if (!PWARN_ON_VHOST(vhost->name, "sec-mod-scale", sec_mod_scale))
@@ -1182,6 +1192,7 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 	memset(&ctx, 0, sizeof(ctx));
 	ctx.file = file;
 	ctx.reload = (flags&CFG_FLAG_RELOAD)?1:0;
+	ctx.is_worker = (flags&CFG_FLAG_WORKER)?1:0;
 	ctx.head = head;
 
 #if defined(PROC_FS_SUPPORTED)
@@ -1282,10 +1293,13 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 				exit(EXIT_FAILURE);
 			}
 
-			figure_auth_funcs(vhost, PREFIX_VHOST(vhost), &vhost->perm_config, vhost->auth, vhost->auth_size, 1);
-			figure_auth_funcs(vhost, PREFIX_VHOST(vhost), &vhost->perm_config, vhost->eauth, vhost->eauth_size, 0);
+			figure_auth_funcs(vhost, PREFIX_VHOST(vhost), &vhost->perm_config,
+					  vhost->auth, vhost->auth_size, 1, ctx.is_worker);
+			figure_auth_funcs(vhost, PREFIX_VHOST(vhost), &vhost->perm_config,
+					  vhost->eauth, vhost->eauth_size, 0, ctx.is_worker);
 
-			figure_acct_funcs(vhost, PREFIX_VHOST(vhost), &vhost->perm_config, vhost->acct);
+			figure_acct_funcs(vhost, PREFIX_VHOST(vhost), &vhost->perm_config,
+					  vhost->acct, ctx.is_worker);
 
 			vhost->auth_init = 1;
 		}
@@ -1334,9 +1348,10 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 			vhost->urlfw = NULL;
 		}
 #endif
-		fprintf(stderr, NOTESTR"%ssetting '%s' as supplemental config option\n",
-			PREFIX_VHOST(vhost),
-			sup_config_name(vhost->perm_config.sup_config_type));
+		if (!ctx.is_worker)
+			fprintf(stderr, NOTESTR"%ssetting '%s' as supplemental config option\n",
+				PREFIX_VHOST(vhost),
+				sup_config_name(vhost->perm_config.sup_config_type));
 	}
 }
 
