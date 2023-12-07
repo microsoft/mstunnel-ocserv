@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2023 Nikos Mavrogiannopoulos
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,42 +28,60 @@
 
 #include <worker.h>
 #include <main.h>
-#include <sec-mod.h>
+#include "sec-mod.h"
+#include "log.h"
 
 /* Returns zero when the given priority is not sufficient
- * for logging */
-static unsigned check_priority(int *priority, int debug_prio)
+ * for logging. Updates the priority with */
+static unsigned check_priority(int oc_priority, int log_prio, int *syslog_prio)
 {
-	switch (*priority) {
+	switch (oc_priority) {
 	case LOG_ERR:
 	case LOG_WARNING:
 	case LOG_NOTICE:
+		if (syslog_prio)
+			*syslog_prio = oc_priority;
 		break;
 	case LOG_DEBUG:
-		if (debug_prio < DEBUG_DEBUG)
+		if (log_prio < OCLOG_DEBUG)
 			return 0;
+		if (syslog_prio)
+			*syslog_prio = oc_priority;
 		break;
 	case LOG_INFO:
-		if (debug_prio < DEBUG_INFO)
+		if (log_prio < OCLOG_INFO)
 			return 0;
+
+		if (syslog_prio)
+			*syslog_prio = oc_priority;
 		break;
 	case LOG_HTTP_DEBUG:
-		if (debug_prio < DEBUG_HTTP)
+		if (log_prio < OCLOG_HTTP)
 			return 0;
-	        *priority = LOG_INFO;
+
+		if (syslog_prio)
+			*syslog_prio = LOG_DEBUG;
 		break;
 	case LOG_TRANSFER_DEBUG:
-		if (debug_prio < DEBUG_TRANSFERRED)
+		if (log_prio < OCLOG_TRANSFERRED)
 			return 0;
-	        *priority = LOG_DEBUG;
+
+
+		if (syslog_prio)
+			*syslog_prio = LOG_DEBUG;
 		break;
 	case LOG_SENSITIVE:
-		if (debug_prio < DEBUG_SENSITIVE)
+		if (log_prio < OCLOG_SENSITIVE)
 			return 0;
-	        *priority = LOG_DEBUG;
+
+		if (syslog_prio)
+			*syslog_prio = LOG_DEBUG;
 		break;
 	default:
-		syslog(LOG_DEBUG, "unknown log level %d", *priority);
+		syslog(LOG_DEBUG, "unknown log level %d", oc_priority);
+
+		if (syslog_prio)
+			*syslog_prio = LOG_DEBUG;
         }
 
         return 1;
@@ -76,15 +94,16 @@ void __attribute__ ((format(printf, 3, 4)))
 	char name[MAX_USERNAME_SIZE+MAX_HOSTNAME_SIZE+3];
 	const char* ip;
 	va_list args;
-	int debug_prio;
+	int log_prio;
 	unsigned have_vhosts;
+	int syslog_prio;
 
 	if (ws->vhost)
-		debug_prio = WSPCONFIG(ws)->debug;
+		log_prio = WSPCONFIG(ws)->log_level;
 	else
-		debug_prio = GETPCONFIG(ws)->debug;
+		log_prio = GETPCONFIG(ws)->log_level;
 
-	if (!check_priority(&priority, debug_prio))
+	if (!check_priority(priority, log_prio, &syslog_prio))
 		return;
 
 	ip = ws->remote_ip_str;
@@ -104,7 +123,7 @@ void __attribute__ ((format(printf, 3, 4)))
 	} else
 		name[0] = 0;
 
-	syslog(priority, "worker%s: %s %s", name, ip?ip:"[unknown]", buf);
+	oc_syslog(syslog_prio, "worker%s: %s %s", name, ip?ip:"[unknown]", buf);
 }
 
 /* proc is optional */
@@ -117,13 +136,14 @@ void __attribute__ ((format(printf, 4, 5)))
 	char name[MAX_USERNAME_SIZE+MAX_HOSTNAME_SIZE+3];
 	const char* ip = NULL;
 	va_list args;
-	int debug_prio = 1;
+	int log_prio = DEFAULT_LOG_LEVEL;
 	unsigned have_vhosts;
+	int syslog_prio;
 
 	if (s)
-		debug_prio = GETPCONFIG(s)->debug;
+		log_prio = GETPCONFIG(s)->log_level;
 
-	if (!check_priority(&priority, debug_prio))
+	if (!check_priority(priority, log_prio, &syslog_prio))
 		return;
 
 	if (proc) {
@@ -148,7 +168,7 @@ void __attribute__ ((format(printf, 4, 5)))
 	} else
 		name[0] = 0;
 
-	syslog(priority, "main%s:%s %s", name, ip?ip:"[unknown]", buf);
+	oc_syslog(syslog_prio, "main%s:%s %s", name, ip?ip:"[unknown]", buf);
 }
 
 void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
@@ -158,14 +178,12 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
 	int ret;
 	size_t buf_size;
 	gnutls_datum_t data = {bin, bin_size};
-	int debug_prio;
+	int log_prio = DEFAULT_LOG_LEVEL;
 
 	if (s)
-		debug_prio = GETPCONFIG(s)->debug;
-	else
-		debug_prio = 1;
+		log_prio = GETPCONFIG(s)->log_level;
 
-	if (priority == LOG_DEBUG && debug_prio == 0)
+	if (!check_priority(priority, log_prio, NULL))
 		return;
 
 	if (b64) {
@@ -187,14 +205,14 @@ void  oclog_hex(const worker_st* ws, int priority,
 	int ret;
 	size_t buf_size;
 	gnutls_datum_t data = {bin, bin_size};
-	int debug_prio;
+	int log_prio;
 
 	if (ws->vhost)
-		debug_prio = WSPCONFIG(ws)->debug;
+		log_prio = WSPCONFIG(ws)->log_level;
 	else
-		debug_prio = GETPCONFIG(ws)->debug;
+		log_prio = GETPCONFIG(ws)->log_level;
 
-	if (priority == LOG_DEBUG && debug_prio == 0)
+	if (!check_priority(priority, log_prio, NULL))
 		return;
 
 	if (b64) {
@@ -216,8 +234,11 @@ void  seclog_hex(const struct sec_mod_st* sec, int priority,
 	int ret;
 	size_t buf_size;
 	gnutls_datum_t data = {bin, bin_size};
+	int log_prio;
 
-	if (priority == LOG_DEBUG && GETPCONFIG(sec)->debug == 0)
+	log_prio = GETPCONFIG(sec)->log_level;
+
+	if (!check_priority(priority, log_prio, NULL))
 		return;
 
 	if (b64) {
@@ -230,4 +251,25 @@ void  seclog_hex(const struct sec_mod_st* sec, int priority,
 	}
 
 	seclog(sec, priority, "%s %s", prefix, buf);
+}
+
+void __attribute__ ((format(printf, 3, 4)))
+    _seclog(const sec_mod_st* sec, int priority, const char *fmt, ...)
+{
+	char buf[512];
+	va_list args;
+	int log_prio = DEFAULT_LOG_LEVEL;
+	int syslog_prio;
+	
+	if (sec)
+		log_prio = GETPCONFIG(sec)->log_level;
+
+	if (!check_priority(priority, log_prio, &syslog_prio))
+		return;
+
+	va_start(args, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, args);
+	va_end(args);
+
+	oc_syslog(syslog_prio, "sec-mod: %s", buf);
 }

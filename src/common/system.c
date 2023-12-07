@@ -27,12 +27,13 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/uio.h>
-#include <sys/syslog.h>
 
 #include <stdlib.h> /* getenv */
 #include <errno.h>
 #include <signal.h>
 #include <string.h>
+#include <defs.h>
+#include "log.h"
 
 void kill_on_parent_kill(int sig)
 {
@@ -46,7 +47,7 @@ void pr_set_undumpable(const char *mod)
 #ifdef __linux__
 	if (prctl(PR_SET_DUMPABLE, 0) == -1) {
 		int e = errno;
-		syslog(LOG_ERR, "%s: prctl(PR_SET_DUMPABLE) failed %s",
+		oc_syslog(LOG_ERR, "%s: prctl(PR_SET_DUMPABLE) failed %s",
 			mod, strerror(e));
 	}
 #endif
@@ -84,13 +85,13 @@ int check_upeer_id(const char *mod, int debug, int cfd, uid_t uid, uid_t gid, ui
 	ret = getsockopt(cfd, SOL_SOCKET, SO_PEERCRED, &cr, &cr_len);
 	if (ret == -1) {
 		e = errno;
-		syslog(LOG_ERR, "%s: getsockopt SO_PEERCRED error: %s",
+		oc_syslog(LOG_ERR, "%s: getsockopt SO_PEERCRED error: %s",
 			mod, strerror(e));
 		return -1;
 	}
 
-	if (debug >= 3)
-		syslog(LOG_DEBUG,
+	if (debug >= OCLOG_DEBUG)
+		oc_syslog(LOG_DEBUG,
 		       "%s: received request from pid %u and uid %u",
 		       mod, (unsigned)cr.pid, (unsigned)cr.uid);
 
@@ -101,7 +102,7 @@ int check_upeer_id(const char *mod, int debug, int cfd, uid_t uid, uid_t gid, ui
 		*pid = cr.pid;
 
 	if (cr.uid != 0 && (cr.uid != uid || cr.gid != gid)) {
-		syslog(LOG_ERR,
+		oc_syslog(LOG_ERR,
 		       "%s: received unauthorized request from pid %u and uid %u",
 		       mod, (unsigned)cr.pid, (unsigned)cr.uid);
 			return -1;
@@ -114,7 +115,7 @@ int check_upeer_id(const char *mod, int debug, int cfd, uid_t uid, uid_t gid, ui
 
 	if (ret == -1) {
 		e = errno;
-		syslog(LOG_DEBUG, "%s: getpeereid error: %s",
+		oc_syslog(LOG_DEBUG, "%s: getpeereid error: %s",
 			mod, strerror(e));
 		return -1;
 	}
@@ -125,13 +126,13 @@ int check_upeer_id(const char *mod, int debug, int cfd, uid_t uid, uid_t gid, ui
 	if (pid)
 		*pid = 0;
 
-	if (debug >= 3)
-		syslog(LOG_DEBUG,
+	if (debug >= OCLOG_DEBUG)
+		oc_syslog(LOG_DEBUG,
 		       "%s: received request from a processes with uid %u",
 		       mod, (unsigned)euid);
 
 	if (euid != 0 && (euid != uid || egid != gid)) {
-		syslog(LOG_ERR,
+		oc_syslog(LOG_ERR,
 		       "%s: received unauthorized request from a process with uid %u",
 			mod, (unsigned)euid);
 			return -1;

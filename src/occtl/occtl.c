@@ -30,6 +30,8 @@
 #include <locale.h>
 #include <occtl/occtl.h>
 
+int syslog_open = 0;
+
 static int handle_reset_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 static int handle_help_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 static int handle_exit_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);

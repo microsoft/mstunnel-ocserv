@@ -35,11 +35,11 @@ CORE_SOURCES = $(HTTP_PARSER_SOURCES) \
 	common/hmac.c common/hmac.h common/snapshot.c common/snapshot.h \
 	common-config.h config.c config-kkdcp.c config-ports.c defs.h gettime.h \
 	icmp-ping.c icmp-ping.h inih/ini.c inih/ini.h ip-lease.c ip-lease.h \
-	ip-util.c ip-util.h isolate.h isolate.c log.c main.h main-ctl.h \
+	ip-util.c ip-util.h isolate.h isolate.c main.h main-ctl.h \
 	script-list.h setproctitle.c setproctitle.h str.c str.h subconfig.c \
 	sup-config/file.c sup-config/file.h sup-config/radius.c \
 	sup-config/radius.h tlslib.c tlslib.h tun.c tun.h valid-hostname.c \
-	vasprintf.c vasprintf.h vhost.h vpn.h namespace.h
+	vasprintf.c vasprintf.h vhost.h vpn.h namespace.h log.c log.h
 
 if ENABLE_COMPRESSION
 CORE_SOURCES += lzs.c lzs.h

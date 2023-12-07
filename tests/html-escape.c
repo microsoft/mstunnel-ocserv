@@ -27,6 +27,8 @@
 #include "../src/html.c"
 #include "../src/common/common.h"
 
+int syslog_open = 0;
+
 static char *strings[] =
 {
 	"hello there",

@@ -45,13 +45,13 @@
 #define MAX_WAIT_SECS 3
 
 /* Debug definitions for logger */
-#define DEBUG_BASIC 1
-#define DEBUG_INFO  2
-#define DEBUG_DEBUG 3
-#define DEBUG_HTTP  4
-#define DEBUG_TRANSFERRED 5
-#define DEBUG_SENSITIVE 8
-#define DEBUG_TLS   9
+#define OCLOG_BASIC 1
+#define OCLOG_INFO  2
+#define OCLOG_DEBUG 3
+#define OCLOG_HTTP  4
+#define OCLOG_TRANSFERRED 5
+#define OCLOG_SENSITIVE 8
+#define OCLOG_TLS   9
 
 /* Authentication states */
 enum {

@@ -28,6 +28,8 @@
 #include "../src/config-ports.c"
 #include "../src/ipc.pb-c.h"
 
+int syslog_open = 0;
+
 #define reset(x,y) { \
 	talloc_free(x); \
 	x = NULL; \

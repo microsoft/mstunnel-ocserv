@@ -41,6 +41,8 @@
 #include "ev.h"
 #include "common/common.h"
 
+#include "log.h"
+
 // Name of environment variable used to pass worker_startup_msg
 // between ocserv-main and ocserv-worker.
 #define OCSERV_ENV_WORKER_STARTUP_MSG "OCSERV_WORKER_STARTUP_MSG"
@@ -361,25 +363,6 @@ int get_dl_handler(worker_st *ws, unsigned http_ver);
 int get_cert_names(worker_st * ws, const gnutls_datum_t * raw);
 
 void set_resume_db_funcs(gnutls_session_t);
-
-
-void __attribute__ ((format(printf, 3, 4)))
-    _oclog(const worker_st * server, int priority, const char *fmt, ...);
-
-#ifdef UNDER_TEST
-# define oclog(...)
-#else
-# ifdef __GNUC__
-#  define oclog(server, prio, fmt, ...) \
-	(prio==LOG_ERR)?_oclog(server, prio, "%s:%d: "fmt, __FILE__, __LINE__, ##__VA_ARGS__): \
-	_oclog(server, prio, fmt, ##__VA_ARGS__)
-# else
-#  define oclog _oclog
-# endif
-#endif
-
-void  oclog_hex(const worker_st* ws, int priority,
-		const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64);
 
 typedef int (*url_handler_fn) (worker_st *, unsigned http_ver);
 int http_url_cb(http_parser * parser, const char *at, size_t length);

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013-2023 Nikos Mavrogiannopoulos
  * Copyright (C) 2014 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -35,6 +36,7 @@
 #include <main.h>
 #include <sec-mod-sup-config.h>
 #include <auth/radius.h>
+#include "log.h"
 
 static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 			  SecmSessionReplyMsg *msg, void *pool)
@@ -67,11 +69,11 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 			for (i=0;i<pctx->routes_size;i++) {
 				msg->config->routes[i] = talloc_strdup(pool, pctx->routes[i]);
 				if (msg->config->routes[i] == NULL) {
-					syslog(LOG_ERR, "Error allocating memory for routes");
+					oc_syslog(LOG_ERR, "Error allocating memory for routes");
 					return -1;
 				}
 				if (ip_route_sanity_check(msg->config->routes, &msg->config->routes[i]) < 0) {
-					syslog(LOG_ERR, "Route '%s' is malformed", msg->config->routes[i]);
+					oc_syslog(LOG_ERR, "Route '%s' is malformed", msg->config->routes[i]);
 					return -1;
 				}
 			}

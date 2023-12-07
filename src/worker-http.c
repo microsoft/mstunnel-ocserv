@@ -310,7 +310,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 	if (req->value.length <= 0)
 		return;
 
-	if (WSPCONFIG(ws)->debug < DEBUG_SENSITIVE && header_is_sensitive(&req->header))
+	if (WSPCONFIG(ws)->log_level < OCLOG_SENSITIVE && header_is_sensitive(&req->header))
 		oclog(ws, LOG_HTTP_DEBUG, "HTTP processing: %.*s: (censored)", (int)req->header.length,
 		      req->header.data);
 	else

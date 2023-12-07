@@ -52,6 +52,8 @@ extern char **saved_argv;
 extern struct ev_loop *main_loop;
 extern ev_timer maintainance_watcher;
 
+#include "log.h"
+
 #define MAIN_MAINTENANCE_TIME (900)
 
 int cmd_parser (void *pool, int argc, char **argv, struct list_head *head, bool worker);
@@ -325,31 +327,6 @@ int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd);
 
 int session_open(sec_mod_instance_st * sec_mod_instance, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size);
 int session_close(sec_mod_instance_st * sec_mod_instance, struct proc_st *proc);
-
-#ifdef UNDER_TEST
-/* for testing */
-# define mslog(...)
-
-#else
-
-void
-__attribute__ ((format(printf, 4, 5)))
-    _mslog(const main_server_st * s, const struct proc_st* proc,
-    	int priority, const char *fmt, ...);
-
-# ifdef __GNUC__
-#  define mslog(s, proc, prio, fmt, ...) \
-	(prio==LOG_ERR)?_mslog(s, proc, prio, "%s:%d: "fmt, __FILE__, __LINE__, ##__VA_ARGS__): \
-	_mslog(s, proc, prio, fmt, ##__VA_ARGS__)
-# else
-#  define mslog _mslog
-# endif
-
-#endif
-
-
-void mslog_hex(const main_server_st * s, const struct proc_st* proc,
-	       int priority, const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64);
 
 int open_tun(main_server_st* s, struct proc_st* proc);
 void close_tun(main_server_st* s, struct proc_st* proc);

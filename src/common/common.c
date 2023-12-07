@@ -35,6 +35,7 @@
 #include "common.h"
 #include "defs.h"
 #include "common/base64-helper.h"
+#include "log.h"
 
 int saved_argc = 0;
 char **saved_argv = NULL;
@@ -324,7 +325,7 @@ void set_non_block(int fd)
 		 * https://patchwork.kernel.org/project/qemu-devel/patch/20200331133536.3328-1-linus.walleij@linaro.org/
 		 */
 		int e = errno;
-		syslog(LOG_ERR, "set_non_block: %s", strerror(e));
+		oc_syslog(LOG_ERR, "set_non_block: %s", strerror(e));
 	}
 }
 
@@ -336,7 +337,7 @@ void set_block(int fd)
 	ret = fcntl(fd, F_SETFL, val & (~O_NONBLOCK));
 	if (ret == -1) {
 		int e = errno;
-		syslog(LOG_ERR, "set_non_block: %s", strerror(e));
+		oc_syslog(LOG_ERR, "set_non_block: %s", strerror(e));
 	}
 }
 
@@ -413,7 +414,7 @@ int forward_msg(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd, unsign
 	ret = recvmsg_timeout(ifd, &hdr, 0, timeout);
 	if (ret == -1) {
 		int e = errno;
-		syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
+		oc_syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
 		       strerror(e));
 		return ERR_BAD_COMMAND;
 	}
@@ -423,7 +424,7 @@ int forward_msg(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd, unsign
 	}
 
 	if (rcmd != icmd) {
-		syslog(LOG_ERR, "%s:%u: expected %d, received %d", __FILE__,
+		oc_syslog(LOG_ERR, "%s:%u: expected %d, received %d", __FILE__,
 		       __LINE__, (int)rcmd, (int)icmd);
 		return ERR_BAD_COMMAND;
 	}
@@ -434,7 +435,7 @@ int forward_msg(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd, unsign
 	/* send headers */
 	ret = force_write(ofd, data, 5);
 	if (ret != 5) {
-		syslog(LOG_ERR, "%s:%u: cannot send headers: %s", __FILE__,
+		oc_syslog(LOG_ERR, "%s:%u: cannot send headers: %s", __FILE__,
 		       __LINE__, strerror(errno));
 		return ERR_BAD_COMMAND;
 	}
@@ -448,14 +449,14 @@ int forward_msg(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd, unsign
 		if (ret == -1 || ret == 0) {
 			if (errno == EAGAIN || errno == EINTR)
 				continue;
-			syslog(LOG_ERR, "%s:%u: cannot send between descriptors: %s", __FILE__,
+			oc_syslog(LOG_ERR, "%s:%u: cannot send between descriptors: %s", __FILE__,
 			       __LINE__, strerror(errno));
 			return ERR_BAD_COMMAND;
 		}
 
 		ret = force_write(ofd, buf, ret);
 		if (ret == -1 || ret == 0) {
-			syslog(LOG_ERR, "%s:%u: cannot send between descriptors: %s", __FILE__,
+			oc_syslog(LOG_ERR, "%s:%u: cannot send between descriptors: %s", __FILE__,
 			       __LINE__, strerror(errno));
 			return ERR_BAD_COMMAND;
 		}
@@ -504,7 +505,7 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 	if (length > 0) {
 		packed = talloc_size(pool, length);
 		if (packed == NULL) {
-			syslog(LOG_ERR, "%s:%u: memory error", __FILE__,
+			oc_syslog(LOG_ERR, "%s:%u: memory error", __FILE__,
 			       __LINE__);
 			return -1;
 		}
@@ -514,7 +515,7 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 
 		ret = pack(msg, packed);
 		if (ret == 0) {
-			syslog(LOG_ERR, "%s:%u: packing error", __FILE__,
+			oc_syslog(LOG_ERR, "%s:%u: packing error", __FILE__,
 			       __LINE__);
 			ret = -1;
 			goto cleanup;
@@ -539,7 +540,7 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 	} while (ret == -1 && errno == EINTR);
 	if (ret < 0) {
 		int e = errno;
-		syslog(LOG_ERR, "%s:%u: %s", __FILE__, __LINE__, strerror(e));
+		oc_syslog(LOG_ERR, "%s:%u: %s", __FILE__, __LINE__, strerror(e));
 	}
 
  cleanup:
@@ -567,7 +568,7 @@ int recv_msg_headers(int fd, uint8_t *cmd, unsigned timeout)
 	ret = recvmsg_timeout(fd, &hdr, 0, timeout);
 	if (ret == -1) {
 		int e = errno;
-		syslog(LOG_WARNING, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
+		oc_syslog(LOG_WARNING, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
 		       strerror(e));
 		return ERR_BAD_COMMAND;
 	}
@@ -611,7 +612,7 @@ int recv_msg_data(int fd, uint8_t *cmd, uint8_t *data, size_t data_size,
 	ret = recvmsg_timeout(fd, &hdr, 0, MAIN_SEC_MOD_TIMEOUT);
 	if (ret == -1) {
 		int e = errno;
-		syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
+		oc_syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
 		       strerror(e));
 		return ERR_BAD_COMMAND;
 	}
@@ -628,7 +629,7 @@ int recv_msg_data(int fd, uint8_t *cmd, uint8_t *data, size_t data_size,
 		    && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
 			if (cmptr->cmsg_level != SOL_SOCKET
 			    || cmptr->cmsg_type != SCM_RIGHTS) {
-				syslog(LOG_ERR,
+				oc_syslog(LOG_ERR,
 				       "%s:%u: recvmsg returned invalid msg type",
 				       __FILE__, __LINE__);
 				return ERR_BAD_COMMAND;
@@ -640,7 +641,7 @@ int recv_msg_data(int fd, uint8_t *cmd, uint8_t *data, size_t data_size,
 	}
 
 	if (l32 > data_size) {
-		syslog(LOG_ERR, "%s:%u: recv_msg_data: received more data than expected", __FILE__,
+		oc_syslog(LOG_ERR, "%s:%u: recv_msg_data: received more data than expected", __FILE__,
 		       __LINE__);
 		ret = ERR_BAD_COMMAND;
 		goto cleanup;
@@ -649,7 +650,7 @@ int recv_msg_data(int fd, uint8_t *cmd, uint8_t *data, size_t data_size,
 	ret = force_read_timeout(fd, data, l32, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < l32) {
 		int e = errno;
-		syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__,
+		oc_syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__,
 		       __LINE__, strerror(e));
 		ret = ERR_BAD_COMMAND;
 		goto cleanup;
@@ -698,7 +699,7 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 	ret = recvmsg_timeout(fd, &hdr, 0, timeout);
 	if (ret == -1) {
 		int e = errno;
-		syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
+		oc_syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
 		       strerror(e));
 		return ERR_BAD_COMMAND;
 	}
@@ -708,7 +709,7 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 	}
 
 	if (rcmd != cmd) {
-		syslog(LOG_ERR, "%s:%u: expected %d, received %d", __FILE__,
+		oc_syslog(LOG_ERR, "%s:%u: expected %d, received %d", __FILE__,
 		       __LINE__, (int)rcmd, (int)cmd);
 		return ERR_BAD_COMMAND;
 	}
@@ -719,7 +720,7 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 		    && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
 			if (cmptr->cmsg_level != SOL_SOCKET
 			    || cmptr->cmsg_type != SCM_RIGHTS) {
-				syslog(LOG_ERR,
+				oc_syslog(LOG_ERR,
 				       "%s:%u: recvmsg returned invalid msg type",
 				       __FILE__, __LINE__);
 				return ERR_BAD_COMMAND;
@@ -744,7 +745,7 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 		ret = force_read_timeout(fd, data, length, timeout);
 		if (ret < length) {
 			int e = errno;
-			syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__,
+			oc_syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__,
 			       __LINE__, strerror(e));
 			ret = ERR_BAD_COMMAND;
 			goto cleanup;
@@ -752,7 +753,7 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 
 		*msg = unpack(&pa, length, data);
 		if (*msg == NULL) {
-			syslog(LOG_ERR, "%s:%u: unpacking error", __FILE__,
+			oc_syslog(LOG_ERR, "%s:%u: unpacking error", __FILE__,
 			       __LINE__);
 			ret = ERR_MEM;
 			goto cleanup;

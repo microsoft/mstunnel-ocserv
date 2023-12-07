@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include "log.h"
 
 #if defined(ENABLE_ADAPTIVE_RATE_LIMIT_SUPPORT)
 
@@ -32,7 +33,6 @@
 #include <linux/sock_diag.h>
 #include <linux/unix_diag.h>
 #include <netinet/tcp.h>
-#include <sys/syslog.h>
 
 static int send_query(int fd, int inode, int states, int show)
 {
@@ -70,7 +70,7 @@ static int send_query(int fd, int inode, int states, int show)
 				continue;
 			err = errno;
 
-			syslog(LOG_ERR, "sendmsg failed %s", strerror(err));
+			oc_syslog(LOG_ERR, "sendmsg failed %s", strerror(err));
 			return -1;
 		}
 
@@ -121,12 +121,12 @@ static int match_name(const struct unix_diag_msg *diag, unsigned int len,
 	}
 
 	if (path_len == 0) {
-		syslog(LOG_ERR, "UNIX_DIAG_NAME not present in response");
+		oc_syslog(LOG_ERR, "UNIX_DIAG_NAME not present in response");
 		return -1;
 	}
 
 	if (rqlen_valid == 0) {
-		syslog(LOG_ERR, "UNIX_DIAG_RQLEN not present in response");
+		oc_syslog(LOG_ERR, "UNIX_DIAG_RQLEN not present in response");
 		return -1;
 	}
 
@@ -165,19 +165,19 @@ static int receive_responses(int fd, process_response process, void *context)
 			if (errno == EINTR)
 				continue;
 			err = errno;
-			syslog(LOG_ERR, "recvmsg failed %s", strerror(err));
+			oc_syslog(LOG_ERR, "recvmsg failed %s", strerror(err));
 			return -1;
 		}
 
 		if (ret == 0) {
-			syslog(LOG_ERR, "recvmsg returned empty response");
+			oc_syslog(LOG_ERR, "recvmsg returned empty response");
 			return -1;
 		}
 
 		const struct nlmsghdr *h = (struct nlmsghdr *)buf;
 
 		if (!NLMSG_OK(h, ret)) {
-			syslog(LOG_ERR, "!NLMSG_OK");
+			oc_syslog(LOG_ERR, "!NLMSG_OK");
 			return -1;
 		}
 
@@ -191,11 +191,11 @@ static int receive_responses(int fd, process_response process, void *context)
 				const struct nlmsgerr *err = NLMSG_DATA(h);
 
 				if (h->nlmsg_len < NLMSG_LENGTH(sizeof(*err))) {
-					syslog(LOG_ERR,
+					oc_syslog(LOG_ERR,
 					       "nlmsg_type NLMSG_ERROR has short nlmsg_len %d",
 					       h->nlmsg_len);
 				} else {
-					syslog(LOG_ERR, "NLM query failed %s",
+					oc_syslog(LOG_ERR, "NLM query failed %s",
 					       strerror(-err->error));
 				}
 
@@ -203,7 +203,7 @@ static int receive_responses(int fd, process_response process, void *context)
 			}
 
 			if (h->nlmsg_type != SOCK_DIAG_BY_FAMILY) {
-				syslog(LOG_ERR, "unexpected nlmsg_type %u\n",
+				oc_syslog(LOG_ERR, "unexpected nlmsg_type %u\n",
 				       (unsigned)h->nlmsg_type);
 				return -1;
 			}
@@ -211,14 +211,14 @@ static int receive_responses(int fd, process_response process, void *context)
 			diag = (const struct unix_diag_msg *)NLMSG_DATA(h);
 
 			if (h->nlmsg_len < NLMSG_LENGTH(sizeof(*diag))) {
-				syslog(LOG_ERR,
+				oc_syslog(LOG_ERR,
 				       "nlmsg_type SOCK_DIAG_BY_FAMILY has short nlmsg_len %d",
 				       h->nlmsg_len);
 				return -1;
 			}
 
 			if (diag->udiag_family != AF_UNIX) {
-				syslog(LOG_ERR, "unexpected family %u\n",
+				oc_syslog(LOG_ERR, "unexpected family %u\n",
 				       diag->udiag_family);
 				return -1;
 			}
@@ -244,7 +244,7 @@ int sockdiag_query_unix_domain_socket_queue_length(const char *socket_name,
 
 	if (fd < 0) {
 		err = errno;
-		syslog(LOG_ERR, "socket failed %s", strerror(err));
+		oc_syslog(LOG_ERR, "socket failed %s", strerror(err));
 		goto cleanup;
 	}
 

@@ -523,6 +523,7 @@ static void apply_default_conf(vhost_cfg_st *vhost, unsigned reload)
 	if (!reload) { /* perm config defaults */
 		tls_vhost_init(vhost);
 		vhost->perm_config.stats_reset_time = 24*60*60*7; /* weekly */
+		vhost->perm_config.log_level = DEFAULT_LOG_LEVEL;
 	}
 
 	vhost->perm_config.config->mobile_idle_timeout = (unsigned)-1;
@@ -828,9 +829,7 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 			if (!PWARN_ON_VHOST(vhost->name, "sec-mod-scale", sec_mod_scale))
 				READ_NUMERIC(vhost->perm_config.sec_mod_scale);
 		} else if (strcmp(name, "log-level") == 0) {
-			if (vhost->perm_config.debug == 0) {
-				READ_NUMERIC(vhost->perm_config.debug);
-			}
+			READ_NUMERIC(vhost->perm_config.log_level);
 		} else {
 			stage1_found = 0;
 		}
@@ -1580,6 +1579,8 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 #define OPT_NO_CHDIR 1
 static const struct option long_options[] = {
 	{"debug", 1, 0, 'd'},
+	{"log-stderr", 0, 0, 'e'},
+	{"syslog", 0, 0, 's'},
 	{"config", 1, 0, 'c'},
 	{"pid-file", 1, 0, 'p'},
 	{"test-config", 0, 0, 't'},
@@ -1608,8 +1609,10 @@ void usage(void)
 	fprintf(stderr, "   -p, --pid-file=file        Specify pid file for the server\n");
 	fprintf(stderr, "   -v, --version              output version information and exit\n");
 	fprintf(stderr, "   -x, --traceable            Allow processes tracing\n");
-    fprintf(stderr, "               - use for debugging purposes only\n");
-	fprintf(stderr, "   -h, --help                 display extended usage information and exit\n\n");
+	fprintf(stderr, "               - use for debugging purposes only\n");
+	fprintf(stderr, "   -e, --log-stderr           Log to stderr\n");
+	fprintf(stderr, "   -s, --syslog               Log to syslog (default)\n");
+	fprintf(stderr, "   -h, --help                 Display extended usage information and exit\n\n");
 
 	fprintf(stderr, "OpenConnect VPN server (ocserv) is a VPN server compatible with the\n");
 	fprintf(stderr, "OpenConnect VPN client.  It follows the TLS and DTLS-based AnyConnect VPN\n");
@@ -1621,6 +1624,7 @@ void usage(void)
 int cmd_parser (void *pool, int argc, char **argv, struct list_head *head, bool worker)
 {
 	unsigned test_only = 0;
+	unsigned debug_asked = 0;
 	int c;
 	vhost_cfg_st *vhost;
 
@@ -1643,10 +1647,17 @@ int cmd_parser (void *pool, int argc, char **argv, struct list_head *head, bool 
 			strlcpy(cfg_file, optarg, sizeof(cfg_file));
 			break;
 		case 'd':
-			vhost->perm_config.debug = atoi(optarg);
+			vhost->perm_config.log_level = atoi(optarg);
+			debug_asked = 1;
 			break;
 		case 't':
 			test_only = 1;
+			break;
+		case 'e':
+			vhost->perm_config.log_stderr = 1;
+			break;
+		case 's':
+			vhost->perm_config.syslog = 1;
 			break;
 		case OPT_NO_CHDIR:
 			vhost->perm_config.no_chdir = 1;
@@ -1666,6 +1677,12 @@ int cmd_parser (void *pool, int argc, char **argv, struct list_head *head, bool 
 	if (optind != argc) {
 		fprintf(stderr, ERRSTR"no additional command line options are allowed\n\n");
 		exit(EXIT_FAILURE);
+	}
+
+	if (vhost->perm_config.log_stderr == 0 && vhost->perm_config.syslog == 0) {
+		vhost->perm_config.syslog = 1; /* default if nothing specified*/
+		if (debug_asked)
+			vhost->perm_config.log_stderr = 1; /* compatible with previous behavior */
 	}
 
 	if (access(cfg_file, R_OK) != 0) {

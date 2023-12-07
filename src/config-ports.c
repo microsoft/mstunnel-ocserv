@@ -23,6 +23,7 @@
 #include <common-config.h>
 #include <ctype.h>
 #include <talloc.h>
+#include "log.h"
 
 #include <vpn.h>
 
@@ -81,7 +82,7 @@ int cfg_parse_ports(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, const 
 		}
 
 		if (bracket_start == 0) {
-			syslog(LOG_ERR, "no bracket following negation at %d '%s'", (int)(ptrdiff_t)(p-str), str);
+			oc_syslog(LOG_ERR, "no bracket following negation at %d '%s'", (int)(ptrdiff_t)(p-str), str);
 			return -1;
 		}
 	}
@@ -110,7 +111,7 @@ int cfg_parse_ports(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, const 
 			proto = PROTO_ESP;
 			p += 3;
 		} else {
-			syslog(LOG_ERR, "unknown protocol on restrict-user-to-ports at %d '%s'", (int)(ptrdiff_t)(p-str), str);
+			oc_syslog(LOG_ERR, "unknown protocol on restrict-user-to-ports at %d '%s'", (int)(ptrdiff_t)(p-str), str);
 			return -1;
 		}
 
@@ -118,7 +119,7 @@ int cfg_parse_ports(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, const 
 			p++;
 
 		if (*p != '(') {
-			syslog(LOG_ERR, "expected parenthesis on restrict-user-to-ports at %d '%s'", (int)(ptrdiff_t)(p-str), str);
+			oc_syslog(LOG_ERR, "expected parenthesis on restrict-user-to-ports at %d '%s'", (int)(ptrdiff_t)(p-str), str);
 			return -1;
 		}
 
@@ -127,13 +128,13 @@ int cfg_parse_ports(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, const 
 
 		ret = append_port(pool, fw_ports, n_fw_ports, port, proto, negate);
 		if (ret < 0) {
-			syslog(LOG_ERR, "memory error");
+			oc_syslog(LOG_ERR, "memory error");
 			return -1;
 		}
 
 		p2 = strchr(p, ')');
 		if (p2 == NULL) {
-			syslog(LOG_ERR, "expected closing parenthesis on restrict-user-to-ports at %d '%s'", (int)(ptrdiff_t)(p-str), str);
+			oc_syslog(LOG_ERR, "expected closing parenthesis on restrict-user-to-ports at %d '%s'", (int)(ptrdiff_t)(p-str), str);
 			return -1;
 		}
 
@@ -144,7 +145,7 @@ int cfg_parse_ports(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, const 
 		if (*p2 == 0 || (negate != 0 && *p2 == ')')) {
 			finish = 1;
 		} else if (*p2 != ',') {
-			syslog(LOG_ERR, "expected comma or end of line on restrict-user-to-ports at %d '%s'", (int)(ptrdiff_t)(p2-str), str);
+			oc_syslog(LOG_ERR, "expected comma or end of line on restrict-user-to-ports at %d '%s'", (int)(ptrdiff_t)(p2-str), str);
 			return -1;
 		}
 		p=p2;

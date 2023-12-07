@@ -22,7 +22,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <syslog.h>
 #include <unistd.h>
 #include <vpn.h>
 #include <ctype.h>
@@ -111,7 +110,7 @@ static int radius_auth_init(void **ctx, void *pool, void *_vctx, const common_au
 	struct radius_vhost_ctx *vctx = _vctx;
 
 	if (info->username == NULL || info->username[0] == 0) {
-		syslog(LOG_NOTICE,
+		oc_syslog(LOG_NOTICE,
 		       "radius-auth: no username present");
 		return ERR_AUTH_FAIL;
 	}
@@ -162,7 +161,7 @@ static int radius_auth_group(void *ctx, const char *suggested, char *groupname, 
 			}
 		}
 
-		syslog(LOG_NOTICE,
+		oc_syslog(LOG_NOTICE,
 		       "radius-auth: user '%s' requested group '%s' but is not a member",
 		       pctx->username, suggested);
 		return -1;
@@ -216,11 +215,11 @@ static void parse_groupnames(struct radius_ctx_st *pctx, const char *full)
 	char *p, *p2;
 
 	if (pctx->groupnames_size >= MAX_GROUPS) {
-		syslog(LOG_WARNING,
+		oc_syslog(LOG_WARNING,
 		       "radius-auth: cannot handle more than %d groups, ignoring group string %s",
 		       MAX_GROUPS, full);
 	} else if (strncmp(full, "OU=", 3) == 0) {
-		syslog(LOG_DEBUG, "radius-auth: found group string %s", full);
+		oc_syslog(LOG_DEBUG, "radius-auth: found group string %s", full);
 		full += 3;
 
 		p = talloc_strdup(pctx, full);
@@ -231,20 +230,20 @@ static void parse_groupnames(struct radius_ctx_st *pctx, const char *full)
 		while (p2 != NULL) {
 			pctx->groupnames[pctx->groupnames_size++] = p2;
 
-			syslog(LOG_DEBUG, "radius-auth: found group %s", p2);
+			oc_syslog(LOG_DEBUG, "radius-auth: found group %s", p2);
 
 			p2 = strsep(&p, ";");
 
 			if (pctx->groupnames_size == MAX_GROUPS) {
 				if (p2)
-					syslog(LOG_WARNING,
+					oc_syslog(LOG_WARNING,
 					       "radius-auth: cannot handle more than %d groups, ignoring trailing group(s) %s",
 					       MAX_GROUPS, p2);
 				break;
 			}
 		}
 	} else {
-		syslog(LOG_DEBUG, "radius-auth: found group string %s", full);
+		oc_syslog(LOG_DEBUG, "radius-auth: found group string %s", full);
 		p = talloc_strdup(pctx, full);
 		if (p == NULL)
 			return;
@@ -265,16 +264,16 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	int ret;
 
 	/* send Access-Request */
-	syslog(LOG_DEBUG, "radius-auth: communicating username (%s) and password", pctx->username);
+	oc_syslog(LOG_DEBUG, "radius-auth: communicating username (%s) and password", pctx->username);
 	if (rc_avpair_add(pctx->vctx->rh, &send, PW_USER_NAME, pctx->username, -1, 0) == NULL) {
-		syslog(LOG_ERR,
+		oc_syslog(LOG_ERR,
 		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 		       pctx->username);
 		return ERR_AUTH_FAIL;
 	}
 
 	if (rc_avpair_add(pctx->vctx->rh, &send, PW_USER_PASSWORD, (char*)pass, -1, 0) == NULL) {
-		syslog(LOG_ERR,
+		oc_syslog(LOG_ERR,
 		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 		       pctx->username);
 		ret = ERR_AUTH_FAIL;
@@ -288,7 +287,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		if (inet_pton(AF_INET, pctx->our_ip, &in) != 0) {
 			in.s_addr = ntohl(in.s_addr);
 			if (rc_avpair_add(pctx->vctx->rh, &send, PW_NAS_IP_ADDRESS, (char*)&in, sizeof(struct in_addr), 0) == NULL) {
-				syslog(LOG_ERR,
+				oc_syslog(LOG_ERR,
 				       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 				       pctx->username);
 				ret = ERR_AUTH_FAIL;
@@ -296,7 +295,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 			}
 		} else if (inet_pton(AF_INET6, pctx->our_ip, &in6) != 0) {
 			if (rc_avpair_add(pctx->vctx->rh, &send, PW_NAS_IPV6_ADDRESS, (char*)&in6, sizeof(struct in6_addr), 0) == NULL) {
-				syslog(LOG_ERR,
+				oc_syslog(LOG_ERR,
 				       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 				       pctx->username);
 				ret = ERR_AUTH_FAIL;
@@ -307,7 +306,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 
 	if (pctx->vctx->nas_identifier[0] != 0) {
 		if (rc_avpair_add(pctx->vctx->rh, &send, PW_NAS_IDENTIFIER, pctx->vctx->nas_identifier, -1, 0) == NULL) {
-			syslog(LOG_ERR,
+			oc_syslog(LOG_ERR,
 			       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 			       pctx->username);
 			ret = ERR_AUTH_FAIL;
@@ -316,7 +315,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	}
 
 	if (rc_avpair_add(pctx->vctx->rh, &send, PW_CALLING_STATION_ID, pctx->remote_ip, -1, 0) == NULL) {
-		syslog(LOG_ERR,
+		oc_syslog(LOG_ERR,
 		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 		       pctx->username);
 		ret = ERR_AUTH_FAIL;
@@ -325,7 +324,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 
 	if (pctx->user_agent[0] != 0) {
 		if (rc_avpair_add(pctx->vctx->rh, &send, PW_CONNECT_INFO, pctx->user_agent, -1, 0) == NULL) {
-			syslog(LOG_ERR,
+			oc_syslog(LOG_ERR,
 			       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 			       pctx->username);
 			ret = ERR_AUTH_FAIL;
@@ -335,7 +334,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 
 	service = PW_AUTHENTICATE_ONLY;
 	if (rc_avpair_add(pctx->vctx->rh, &send, PW_SERVICE_TYPE, &service, -1, 0) == NULL) {
-		syslog(LOG_ERR,
+		oc_syslog(LOG_ERR,
 		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 		       pctx->username);
 		ret = ERR_AUTH_FAIL;
@@ -344,7 +343,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 
 	service = PW_ASYNC;
 	if (rc_avpair_add(pctx->vctx->rh, &send, PW_NAS_PORT_TYPE, &service, -1, 0) == NULL) {
-		syslog(LOG_ERR,
+		oc_syslog(LOG_ERR,
 		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 		       pctx->username);
 		ret = ERR_AUTH_FAIL;
@@ -353,7 +352,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 
 	if (pctx->state != NULL) {
 		if (rc_avpair_add(pctx->vctx->rh, &send, PW_STATE, pctx->state, -1, 0) == NULL) {
-			syslog(LOG_ERR,
+			oc_syslog(LOG_ERR,
 			       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 			       pctx->username);
 			ret = ERR_AUTH_FAIL;
@@ -374,7 +373,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 
 		while (vp != NULL) {
 			if (vp->attribute == PW_SERVICE_TYPE && vp->lvalue != PW_FRAMED) {
-				syslog(LOG_ERR,
+				oc_syslog(LOG_ERR,
 				       "%s:%u: unknown radius service type '%d'", __func__, __LINE__,
 				       (int)vp->lvalue);
 				goto fail;
@@ -415,7 +414,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 				else {
 					char dst[MAX_IP_STR];
 					inet_ntop(AF_INET6, vp->strvalue, dst, sizeof(dst));
-					syslog(LOG_NOTICE, "radius-auth: cannot handle more than 2 DNS servers, ignoring additional DNS server from RADIUS: %s", dst);
+					oc_syslog(LOG_NOTICE, "radius-auth: cannot handle more than 2 DNS servers, ignoring additional DNS server from RADIUS: %s", dst);
 				}
 			} else if (vp->attribute == PW_FRAMED_IP_ADDRESS && vp->type == PW_TYPE_IPADDR) {
 				/* Framed-IP-Address */
@@ -451,7 +450,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 			} else if (vp->attribute == PW_SESSION_TIMEOUT && vp->type == PW_TYPE_INTEGER) {
 				pctx->session_timeout_secs = vp->lvalue;
 			} else {
-				syslog(LOG_DEBUG, "radius-auth: ignoring server's value %u of type %u", (int)vp->attribute, (int)vp->type);
+				oc_syslog(LOG_DEBUG, "radius-auth: ignoring server's value %u of type %u", (int)vp->attribute, (int)vp->type);
 			}
 			vp = vp->next;
 		}
@@ -469,7 +468,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 					pctx->state = talloc_strdup(pctx, vp->strvalue);
 
 				pctx->id++;
-				syslog(LOG_DEBUG, "radius-auth: Access-Challenge response stage %u, State %s", pctx->passwd_counter, vp->strvalue);
+				oc_syslog(LOG_DEBUG, "radius-auth: Access-Challenge response stage %u, State %s", pctx->passwd_counter, vp->strvalue);
 				ret = ERR_AUTH_CONTINUE;
 			}
 			vp = vp->next;
@@ -478,7 +477,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		/* PW_STATE or PW_REPLY_MESSAGE is empty or MAX_CHALLENGES limit exceeded */
 		if ((pctx->pass_msg[0] == 0) || (pctx->state == NULL) || (pctx->passwd_counter >= MAX_CHALLENGES)) {
 			strlcpy(pctx->pass_msg, pass_msg_failed, sizeof(pctx->pass_msg));
-			syslog(LOG_ERR, "radius-auth: Access-Challenge with invalid State or Reply-Message, or max number of password requests exceeded");
+			oc_syslog(LOG_ERR, "radius-auth: Access-Challenge with invalid State or Reply-Message, or max number of password requests exceeded");
 			ret = ERR_AUTH_FAIL;
 		}
 		goto cleanup;
@@ -492,7 +491,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 			goto cleanup;
 		}
 
-		syslog(LOG_NOTICE,
+		oc_syslog(LOG_NOTICE,
 		       "radius-auth: error authenticating user '%s' (code %d)",
 		       pctx->username, ret);
 		ret = ERR_AUTH_FAIL;

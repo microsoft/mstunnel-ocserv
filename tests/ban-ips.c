@@ -30,6 +30,8 @@
 #include "../src/ip-util.h"
 #include "../src/main-ban.c"
 
+int syslog_open = 0;
+
 /* Test the IP banning functionality */
 static
 unsigned check_if_banned_str(main_server_st *s, const char *ip)

@@ -22,7 +22,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <syslog.h>
 #include <unistd.h>
 #include <vpn.h>
 #include <ctype.h>
@@ -39,6 +38,7 @@
    * in unistd.h */
 # include <crypt.h>
 #endif
+#include "log.h"
 
 #define MAX_CPASS_SIZE 128
 #define HOTP_WINDOW 20
@@ -154,7 +154,7 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 
 	fp = fopen(pctx->config->passwd, "r");
 	if (fp == NULL) {
-		syslog(LOG_ERR,
+		oc_syslog(LOG_ERR,
 		       "error in plain authentication; cannot open: %s",
 		       pctx->config->passwd);
 		return -1;
@@ -228,7 +228,7 @@ static int plain_auth_init(void **ctx, void *pool, void *vctx, const common_auth
 	int ret;
 
 	if (info->username == NULL || info->username[0] == 0) {
-		syslog(LOG_ERR,
+		oc_syslog(LOG_ERR,
 		       "plain-auth: no username present");
 		return ERR_AUTH_FAIL;
 	}
@@ -279,7 +279,7 @@ static int plain_auth_group(void *ctx, const char *suggested, char *groupname, i
 		}
 
 		if (found == 0) {
-			syslog(LOG_NOTICE,
+			oc_syslog(LOG_NOTICE,
 			       "user '%s' requested group '%s' but is not a member",
 			       pctx->username, suggested);
 			return -1;
@@ -318,7 +318,7 @@ static int plain_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 			pctx->pass_msg = pass_msg_failed;
 			return ERR_AUTH_CONTINUE;
 		} else {
-			syslog(LOG_NOTICE,
+			oc_syslog(LOG_NOTICE,
 			       "plain-auth: error authenticating user '%s'",
 			       pctx->username);
 			return ERR_AUTH_FAIL;
@@ -326,7 +326,7 @@ static int plain_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	}
 
 	if (pctx->cpass[0] == 0 && pctx->config->otp_file == NULL) {
-		syslog(LOG_NOTICE,
+		oc_syslog(LOG_NOTICE,
 		       "plain-auth: user '%s' has empty password and no OTP file configured",
 		       pctx->username);
 		return ERR_AUTH_FAIL;
@@ -347,7 +347,7 @@ static int plain_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		ret = oath_authenticate_usersfile(pctx->config->otp_file, pctx->username,
 			pass, HOTP_WINDOW, NULL, &last);
 		if (ret != OATH_OK) {
-			syslog(LOG_NOTICE,
+			oc_syslog(LOG_NOTICE,
 			       "plain-auth: OTP auth failed for '%s': %s",
 			       pctx->username, oath_strerror(ret));
 			return ERR_AUTH_FAIL;
@@ -412,7 +412,7 @@ static void plain_group_list(void *pool, void *additional, char ***groupname, un
 	pool = talloc_init("plain");
 	fp = fopen(config->passwd, "r");
 	if (fp == NULL) {
-		syslog(LOG_NOTICE,
+		oc_syslog(LOG_NOTICE,
 		       "error in plain authentication; cannot open: %s",
 		       (char*)config->passwd);
 		return;

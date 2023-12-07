@@ -22,12 +22,12 @@
 #include <stddef.h>
 #include <string.h>
 #include <unistd.h>
-#include <syslog.h>
 #include <common.h>
 #include <ctype.h>
 #include <wchar.h>
 
 #include "html.h"
+#include "log.h"
 
 char *unescape_html(void *pool, const char *html, unsigned len, unsigned *out_len)
 {
@@ -132,7 +132,7 @@ char *unescape_url(void *pool, const char *url, unsigned len, unsigned *out_len)
 
 			if (sscanf(b, "%02x", &u) <= 0) {
 				talloc_free(msg);
-				syslog(LOG_ERR, "%s: error parsing URL: %s", __func__, url);
+				oc_syslog(LOG_ERR, "%s: error parsing URL: %s", __func__, url);
 				return NULL;
 			}
 

@@ -26,12 +26,12 @@
 #include <stddef.h>
 /* for inet_ntop */
 #include <arpa/inet.h>
-#include <syslog.h>
 
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include "log.h"
 
 int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2)
 {
@@ -273,7 +273,7 @@ void set_mtu_disc(int fd, int family, int val)
 #if defined(IPV6_DONTFRAG)
 		if (setsockopt(fd, IPPROTO_IPV6, IPV6_DONTFRAG,
 			       (const void *) &y, sizeof(y)) < 0)
-			syslog(LOG_INFO, "setsockopt(IPV6_DF) failed");
+			oc_syslog(LOG_INFO, "setsockopt(IPV6_DF) failed");
 #elif defined(IPV6_MTU_DISCOVER)
 		if (val)
 			y = IP_PMTUDISC_DO;
@@ -281,14 +281,14 @@ void set_mtu_disc(int fd, int family, int val)
 			y = IP_PMTUDISC_DONT;
 		if (setsockopt(fd, IPPROTO_IPV6, IPV6_MTU_DISCOVER,
 		       (const void *) &y, sizeof(y)) < 0)
-			syslog(LOG_INFO, "setsockopt(IPV6_MTU_DISCOVER) failed");
+			oc_syslog(LOG_INFO, "setsockopt(IPV6_MTU_DISCOVER) failed");
 #endif
 	} else {
 		y = val;
 #if defined(IP_DONTFRAG)
 		if (setsockopt(fd, IPPROTO_IP, IP_DONTFRAG,
 			       (const void *) &y, sizeof(y)) < 0)
-			syslog(LOG_INFO, "setsockopt(IP_DF) failed");
+			oc_syslog(LOG_INFO, "setsockopt(IP_DF) failed");
 #elif defined(IP_MTU_DISCOVER)
 		if (val)
 			y = IP_PMTUDISC_DO;
@@ -296,7 +296,7 @@ void set_mtu_disc(int fd, int family, int val)
 			y = IP_PMTUDISC_DONT;
 		if (setsockopt(fd, IPPROTO_IP, IP_MTU_DISCOVER,
 		       (const void *) &y, sizeof(y)) < 0)
-			syslog(LOG_INFO, "setsockopt(IP_MTU_DISCOVER) failed");
+			oc_syslog(LOG_INFO, "setsockopt(IP_MTU_DISCOVER) failed");
 #endif
 	}
 }

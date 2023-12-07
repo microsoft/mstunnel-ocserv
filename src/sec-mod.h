@@ -29,6 +29,7 @@
 #include "common/common.h"
 
 #include "vhost.h"
+#include "log.h"
 
 #define SESSION_STR "(session: %.6s)"
 #define MAX_GROUPS 128
@@ -140,21 +141,6 @@ client_entry_st * find_client_entry(sec_mod_st *sec, uint8_t sid[SID_SIZE]);
 void del_client_entry(sec_mod_st *sec, client_entry_st * e);
 void expire_client_entry(sec_mod_st *sec, client_entry_st * e);
 void cleanup_client_entries(sec_mod_st *sec);
-
-#ifdef __GNUC__
-# define seclog(sec, prio, fmt, ...) { \
-	if (prio != LOG_DEBUG || GETPCONFIG(sec)->debug >= 3) { \
-		syslog(prio, "sec-mod: "fmt, ##__VA_ARGS__); \
-	}}
-#else
-# define seclog(sec,prio,...) { \
-	if (prio != LOG_DEBUG || GETPCONFIG(sec)->debug >= 3) { \
-		 syslog(prio, __VA_ARGS__); \
-	}}
-#endif
-
-void  seclog_hex(const struct sec_mod_st* sec, int priority,
-		const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64);
 
 void sec_auth_init(struct vhost_cfg_st *vhost);
 

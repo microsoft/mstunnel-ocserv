@@ -68,10 +68,6 @@ size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac
 
 #define GNUTLS_FATAL_ERR DTLS_FATAL_ERR
 
-#ifdef UNDER_TEST
-# define syslog_open 0
-#endif
-
 #define GNUTLS_ALERT_PRINT(ws, session, err) { \
 	if (err == GNUTLS_E_FATAL_ALERT_RECEIVED || err == GNUTLS_E_WARNING_ALERT_RECEIVED) { \
 		oclog(ws, LOG_NOTICE, "TLS alert (at %s:%d): %s", __FILE__, __LINE__, gnutls_alert_get_name(gnutls_alert_get(session))); \

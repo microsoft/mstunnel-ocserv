@@ -1451,13 +1451,16 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 
-	flags = LOG_PID|LOG_NDELAY;
+	if (GETPCONFIG(s)->syslog) {
+		flags = LOG_PID|LOG_NDELAY;
 #ifdef LOG_PERROR
-	if (GETPCONFIG(s)->debug != 0)
-		flags |= LOG_PERROR;
+		if (GETPCONFIG(s)->log_stderr && GETPCONFIG(s)->syslog)
+			flags |= LOG_PERROR;
 #endif
-	openlog("ocserv", flags, LOG_DAEMON);
-	syslog_open = 1;
+		openlog("ocserv", flags, LOG_DAEMON);
+		syslog_open = 1;
+	}
+
 #ifdef HAVE_LIBWRAP
 	allow_severity = LOG_DAEMON|LOG_INFO;
 	deny_severity = LOG_DAEMON|LOG_WARNING;

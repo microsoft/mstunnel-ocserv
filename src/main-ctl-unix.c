@@ -911,7 +911,7 @@ static void ctl_handle_commands(main_server_st * s)
 		goto fail;
 	}
 
-	ret = check_upeer_id("ctl", GETPCONFIG(s)->debug, cfd, 0, 0, NULL, NULL);
+	ret = check_upeer_id("ctl", GETPCONFIG(s)->log_level, cfd, 0, 0, NULL, NULL);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_ERR, "ctl: unauthorized connection");
 		goto fail;

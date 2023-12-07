@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2023 Nikos Mavrogiannopoulos
  * Copyright (C) 2014, 2015 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -32,6 +32,7 @@
 #include <ctype.h>
 
 #include "inih/ini.h"
+#include "log.h"
 
 #include <vpn.h>
 #include <main.h>
@@ -92,7 +93,7 @@ static int group_cfg_ini_handler(void *_ctx, const char *section, const char *na
 	char *value;
 
 	if (section != NULL && section[0] != 0) {
-		syslog(LOG_INFO, "skipping unknown section '%s' in %s", section, file);
+		oc_syslog(LOG_INFO, "skipping unknown section '%s' in %s", section, file);
 		return 1;
 	}
 
@@ -145,7 +146,7 @@ static int group_cfg_ini_handler(void *_ctx, const char *section, const char *na
 		prefix = extract_prefix(msg->config->ipv6_net);
 		if (prefix != 0) {
 			if (valid_ipv6_prefix(prefix) == 0) {
-				syslog(LOG_ERR, "unknown ipv6-prefix '%u' in %s", msg->config->ipv6_prefix, file);
+				oc_syslog(LOG_ERR, "unknown ipv6-prefix '%u' in %s", msg->config->ipv6_prefix, file);
 			}
 			msg->config->ipv6_prefix = prefix;
 			msg->config->has_ipv6_prefix = 1;
@@ -197,7 +198,7 @@ static int group_cfg_ini_handler(void *_ctx, const char *section, const char *na
 			return 0;
 		}
 	} else {
-		syslog(LOG_INFO, "skipping unknown option '%s' in %s", name, file);
+		oc_syslog(LOG_INFO, "skipping unknown option '%s' in %s", name, file);
 	}
 
 	talloc_free(value);
@@ -224,9 +225,9 @@ int parse_group_cfg_file(struct cfg_st *global_config,
 	ret = ini_parse(file, group_cfg_ini_handler, &ctx);
 	if (ret != 0) {
 		if (ret > 0)
-			syslog(LOG_ERR, "error in line %d of config file %s", ret, file);
+			oc_syslog(LOG_ERR, "error in line %d of config file %s", ret, file);
 		else
-			syslog(LOG_ERR, "cannot load config file %s", file);
+			oc_syslog(LOG_ERR, "cannot load config file %s", file);
 		return 0;
 	}
 
@@ -264,7 +265,7 @@ static int read_sup_config_file(struct cfg_st *global_config,
 	int ret;
 
 	if (access(file, R_OK) == 0) {
-		syslog(LOG_DEBUG, "Loading %s configuration '%s'", type,
+		oc_syslog(LOG_DEBUG, "Loading %s configuration '%s'", type,
 		      file);
 
 		ret = parse_group_cfg_file(global_config, msg, pool, file);
@@ -272,7 +273,7 @@ static int read_sup_config_file(struct cfg_st *global_config,
 			return ERR_READ_CONFIG;
 	} else {
 		if (fallback != NULL) {
-			syslog(LOG_DEBUG, "Loading default %s configuration '%s'", type, fallback);
+			oc_syslog(LOG_DEBUG, "Loading default %s configuration '%s'", type, fallback);
 
 			ret = parse_group_cfg_file(global_config, msg, pool, fallback);
 			if (ret < 0)

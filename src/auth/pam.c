@@ -21,13 +21,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <syslog.h>
 #include <vpn.h>
 #include "pam.h"
 #include "common-config.h"
 #include "auth-unix.h"
 #include <sec-mod-auth.h>
 #include <ccan/hash/hash.h>
+#include "log.h"
 
 #ifdef HAVE_PAM
 
@@ -78,7 +78,7 @@ static int ocserv_conv(int msg_size, const struct pam_message **msg,
 		switch (msg[i]->msg_style) {
 		case PAM_ERROR_MSG:
 		case PAM_TEXT_INFO:
-			syslog(LOG_DEBUG, "PAM-auth conv info: %s", msg[i]->msg);
+			oc_syslog(LOG_DEBUG, "PAM-auth conv info: %s", msg[i]->msg);
 
 			// That should never happen, but also not a big deal if we fail to add message here.
 			// coverity[check_return : FALSE]
@@ -87,7 +87,7 @@ static int ocserv_conv(int msg_size, const struct pam_message **msg,
 				ret = str_append_data(&pctx->msg, " ", 1);
 
 			if (ret < 0) {
-				syslog(LOG_ERR, "Error in memory allocation in PAM");
+				oc_syslog(LOG_ERR, "Error in memory allocation in PAM");
 				return PAM_BUF_ERR;
 			}
 
@@ -105,12 +105,12 @@ static int ocserv_conv(int msg_size, const struct pam_message **msg,
 			if (msg[i]->msg) {
 				ret = str_append_str(&pctx->msg, msg[i]->msg);
 				if (ret < 0) {
-					syslog(LOG_ERR, "Error in memory allocation in PAM");
+					oc_syslog(LOG_ERR, "Error in memory allocation in PAM");
 					return PAM_BUF_ERR;
 				}
 			}
 
-			syslog(LOG_DEBUG, "PAM-auth conv: echo-%s, msg: '%s'", (msg[i]->msg_style==PAM_PROMPT_ECHO_ON)?"on":"off", msg[i]->msg!=NULL?msg[i]->msg:"");
+			oc_syslog(LOG_DEBUG, "PAM-auth conv: echo-%s, msg: '%s'", (msg[i]->msg_style==PAM_PROMPT_ECHO_ON)?"on":"off", msg[i]->msg!=NULL?msg[i]->msg:"");
 
 			pctx->state = PAM_S_WAIT_FOR_PASS;
 			pctx->cr_ret = PAM_SUCCESS;
@@ -120,7 +120,7 @@ static int ocserv_conv(int msg_size, const struct pam_message **msg,
 			if (pctx->password[0] != 0) {
 				pctx->replies[i].resp = strdup(pctx->password);
 				if (pctx->replies[i].resp == NULL) {
-					syslog(LOG_ERR, "Error in memory allocation in PAM");
+					oc_syslog(LOG_ERR, "Error in memory allocation in PAM");
 					return PAM_BUF_ERR;
 				}
 			}
@@ -143,7 +143,7 @@ int pret;
 
 	pret = pam_authenticate(pctx->ph, 0);
 	if (pret != PAM_SUCCESS) {
-		syslog(LOG_INFO, "PAM authenticate error for '%s': %s", pctx->username, pam_strerror(pctx->ph, pret));
+		oc_syslog(LOG_INFO, "PAM authenticate error for '%s': %s", pctx->username, pam_strerror(pctx->ph, pret));
 		pctx->cr_ret = pret;
 		goto wait;
 	}
@@ -151,14 +151,14 @@ int pret;
 	pret = pam_acct_mgmt(pctx->ph, 0);
 	if (pret == PAM_NEW_AUTHTOK_REQD) {
 		/* change password */
-		syslog(LOG_INFO, "Password for user '%s' is expired. Attempting to update...", pctx->username);
+		oc_syslog(LOG_INFO, "Password for user '%s' is expired. Attempting to update...", pctx->username);
 
 		pctx->changing = 1;
 		pret = pam_chauthtok(pctx->ph, PAM_CHANGE_EXPIRED_AUTHTOK);
 	}
 
 	if (pret != PAM_SUCCESS) {
-		syslog(LOG_INFO, "PAM acct-mgmt error for '%s': %s", pctx->username, pam_strerror(pctx->ph, pret));
+		oc_syslog(LOG_INFO, "PAM acct-mgmt error for '%s': %s", pctx->username, pam_strerror(pctx->ph, pret));
 		pctx->cr_ret = pret;
 		goto wait;
 	}
@@ -179,7 +179,7 @@ int pret;
 struct pam_ctx_st * pctx;
 
 	if (info->username == NULL || info->username[0] == 0) {
-		syslog(LOG_NOTICE,
+		oc_syslog(LOG_NOTICE,
 		       "pam-auth: no username present");
 		return ERR_AUTH_FAIL;
 	}
@@ -194,7 +194,7 @@ struct pam_ctx_st * pctx;
 	pctx->dc.appdata_ptr = pctx;
 	pret = pam_start(PACKAGE, info->username, &pctx->dc, &pctx->ph);
 	if (pret != PAM_SUCCESS) {
-		syslog(LOG_NOTICE, "PAM-auth init: %s", pam_strerror(pctx->ph, pret));
+		oc_syslog(LOG_NOTICE, "PAM-auth init: %s", pam_strerror(pctx->ph, pret));
 		goto fail1;
 	}
 
@@ -233,7 +233,7 @@ size_t prompt_hash = 0;
 		co_call(pctx->cr);
 
 		if (pctx->cr_ret != PAM_SUCCESS) {
-			syslog(LOG_NOTICE, "PAM-auth pam_auth_msg: %s", pam_strerror(pctx->ph, pctx->cr_ret));
+			oc_syslog(LOG_NOTICE, "PAM-auth pam_auth_msg: %s", pam_strerror(pctx->ph, pctx->cr_ret));
 			return ERR_AUTH_FAIL;
 		}
 	}
@@ -273,7 +273,7 @@ struct pam_ctx_st * pctx = ctx;
 		return -1;
 
 	if (pctx->state != PAM_S_WAIT_FOR_PASS) {
-		syslog(LOG_NOTICE, "PAM auth: conversation left in wrong state (%d/expecting %d)", pctx->state, PAM_S_WAIT_FOR_PASS);
+		oc_syslog(LOG_NOTICE, "PAM auth: conversation left in wrong state (%d/expecting %d)", pctx->state, PAM_S_WAIT_FOR_PASS);
 		return ERR_AUTH_FAIL;
 	}
 
@@ -284,7 +284,7 @@ struct pam_ctx_st * pctx = ctx;
 	co_call(pctx->cr);
 
 	if (pctx->cr_ret != PAM_SUCCESS) {
-		syslog(LOG_NOTICE, "PAM-auth pam_auth_pass: %s", pam_strerror(pctx->ph, pctx->cr_ret));
+		oc_syslog(LOG_NOTICE, "PAM-auth pam_auth_pass: %s", pam_strerror(pctx->ph, pctx->cr_ret));
 		return ERR_AUTH_FAIL;
 	}
 
@@ -313,7 +313,7 @@ int pret;
 
 	pret = pam_get_item(pctx->ph, PAM_USER, (const void **)&user);
 	if (pret != PAM_SUCCESS) {
-		/*syslog(LOG_NOTICE, "PAM-auth: pam_get_item(PAM_USER): %s", pam_strerror(pctx->ph, pret));*/
+		/*oc_syslog(LOG_NOTICE, "PAM-auth: pam_get_item(PAM_USER): %s", pam_strerror(pctx->ph, pret));*/
 		return -1;
 	}
 

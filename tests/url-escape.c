@@ -26,6 +26,8 @@
 #include "../src/html.h"
 #include "../src/html.c"
 
+int syslog_open = 0;
+
 static char *strings[] =
 {
 	"Laguna+Beach",

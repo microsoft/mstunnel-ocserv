@@ -25,7 +25,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <syslog.h>
 #include <unistd.h>
 #include <vpn.h>
 #include <ctype.h>
@@ -37,6 +36,8 @@
 #include <gssapi/gssapi_krb5.h>
 #include <base64-helper.h>
 #include "common-config.h"
+
+#include "log.h"
 
 struct gssapi_vhost_ctx_st {
 	gss_cred_id_t creds;
@@ -68,7 +69,7 @@ static void print_gss_err(const char *where,
 					   mech, &msg_ctx, &status);
 		if (GSS_ERROR(major))
 			break;
-		syslog(LOG_ERR, "gssapi: %s[maj]: %s\n", where, (char *)status.value);
+		oc_syslog(LOG_ERR, "gssapi: %s[maj]: %s\n", where, (char *)status.value);
 		gss_release_buffer(&minor, &status);
 	} while (msg_ctx);
 
@@ -78,7 +79,7 @@ static void print_gss_err(const char *where,
 					   mech, &msg_ctx, &status);
 		if (GSS_ERROR(major))
 			break;
-		syslog(LOG_ERR, "gssapi: %s[min]: %s\n", where, (char *)status.value);
+		oc_syslog(LOG_ERR, "gssapi: %s[min]: %s\n", where, (char *)status.value);
 		gss_release_buffer(&minor, &status);
 	} while (msg_ctx);
 }
@@ -167,20 +168,20 @@ static int get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech_
 		pctx->username[name.length] = 0;
 	}
 
-	syslog(LOG_DEBUG, "gssapi: authenticated GSSAPI user: %.*s", (unsigned)name.length, (char*)name.value);
+	oc_syslog(LOG_DEBUG, "gssapi: authenticated GSSAPI user: %.*s", (unsigned)name.length, (char*)name.value);
 	gss_release_buffer(&minor, &name);
 
 	if (pctx->vctx->no_local_map == 0) {
 		ret = gss_localname(&minor, client, mech_type, &name);
 		if (GSS_ERROR(ret) || name.length >= MAX_USERNAME_SIZE) {
 			print_gss_err("gss_localname", mech_type, ret, minor);
-			syslog(LOG_INFO, "gssapi: authenticated user doesn't map to a local user");
+			oc_syslog(LOG_INFO, "gssapi: authenticated user doesn't map to a local user");
 			return -1;
 		}
 
 		memcpy(pctx->username, name.value, name.length);
 		pctx->username[name.length] = 0;
-		syslog(LOG_INFO, "gssapi: authenticated local user: %s", pctx->username);
+		oc_syslog(LOG_INFO, "gssapi: authenticated local user: %s", pctx->username);
 
 		gss_release_buffer(&minor, &name);
 	}
@@ -211,7 +212,7 @@ static int verify_krb5_constraints(struct gssapi_ctx_st *pctx, gss_OID mech_type
 	}
 
 	if (time(NULL) > authtime + pctx->vctx->ticket_freshness_secs) {
-		syslog(LOG_INFO, "gssapi: the presented kerberos ticket for %s is too old", pctx->username);
+		oc_syslog(LOG_INFO, "gssapi: the presented kerberos ticket for %s is too old", pctx->username);
 		return -1;
 	}
 
@@ -232,7 +233,7 @@ static int gssapi_auth_init(void **ctx, void *pool, void *_vctx, const common_au
 	struct gssapi_vhost_ctx_st *vctx = _vctx;
 
 	if (spnego == NULL || spnego[0] == 0) {
-		syslog(LOG_ERR, "gssapi: error in spnego data %s", __func__);
+		oc_syslog(LOG_ERR, "gssapi: error in spnego data %s", __func__);
 		return ERR_AUTH_FAIL;
 	}
 
@@ -244,7 +245,7 @@ static int gssapi_auth_init(void **ctx, void *pool, void *_vctx, const common_au
 
 	ret = oc_base64_decode_alloc(pctx, spnego, strlen(spnego), &raw, &raw_len);
 	if (ret == 0) {
-		syslog(LOG_ERR, "gssapi: error in base64 decoding %s", __func__);
+		oc_syslog(LOG_ERR, "gssapi: error in base64 decoding %s", __func__);
 		return ERR_AUTH_FAIL;
 	}
 
@@ -307,7 +308,7 @@ static int gssapi_auth_pass(void *ctx, const char *spnego, unsigned spnego_len)
 	/* nothing to be done */
 	ret = oc_base64_decode_alloc(pctx, spnego, spnego_len, &raw, &raw_len);
 	if (ret == 0) {
-		syslog(LOG_ERR, "gssapi: error in base64 decoding %s", __func__);
+		oc_syslog(LOG_ERR, "gssapi: error in base64 decoding %s", __func__);
 		return ERR_AUTH_FAIL;
 	}
 

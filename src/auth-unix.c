@@ -25,6 +25,7 @@
 #include <grp.h>
 #include <sec-mod-auth.h>
 #include "auth-unix.h"
+#include "log.h"
 
 #ifdef HAVE_GET_USER_AUTH_GROUP
 /* Fills-in groupname, if the user is in a unix group, via getpwnam().
@@ -64,7 +65,7 @@ unsigned found;
 			}
 
 			if (found == 0) {
-				syslog(LOG_NOTICE,
+				oc_syslog(LOG_NOTICE,
 				       "user '%s' requested group '%s' but is not a member",
 				       username, suggested);
 				return -1;

@@ -34,13 +34,13 @@ static void ip_from_seed(uint8_t *seed, unsigned seed_size,
 	int ret;
 
 	if (ip_size > sizeof(digest)) {
-		syslog(LOG_ERR, "too large IP!");
+		oc_syslog(LOG_ERR, "too large IP!");
 		abort();
 	}
 
 	ret = gnutls_hash_fast(GNUTLS_DIG_SHA1, seed, seed_size, digest);
 	if (ret < 0) {
-		syslog(LOG_ERR, "cannot hash: %s", strerror(ret));
+		oc_syslog(LOG_ERR, "cannot hash: %s", strerror(ret));
 		abort();
 	}
 

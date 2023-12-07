@@ -47,6 +47,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <ctype.h>
+#include "log.h"
 
 #ifndef UNDER_TEST
 static void tls_reload_ocsp(main_server_st* s, struct vhost_cfg_st *vhost);
@@ -435,7 +436,7 @@ void tls_cache_deinit(tls_sess_db_st* db)
 #ifndef UNDER_TEST
 static void tls_log_func(int level, const char *str)
 {
-	syslog(LOG_DEBUG, "TLS[<%d>]: %s", level, str);
+	oc_syslog(LOG_DEBUG, "TLS[<%d>]: %s", level, str);
 }
 #endif /* UNDER_TEST */
 
@@ -445,9 +446,9 @@ static void tls_audit_log_func(gnutls_session_t session, const char *str)
 
 	(void)(ws);
 
-	if (session == NULL)
-		syslog(LOG_NOTICE, "warning: %s", str);
-	else {
+	if (session == NULL) {
+		oc_syslog(LOG_NOTICE, "warning: %s", str);
+	} else {
 		ws = gnutls_session_get_ptr(session);
 
 		oclog(ws, LOG_NOTICE, "warning: %s", str);
@@ -463,7 +464,7 @@ static int verify_certificate_cb(gnutls_session_t session)
 
 	ws = gnutls_session_get_ptr(session);
 	if (ws == NULL) {
-		syslog(LOG_ERR, "%s:%d: could not obtain worker state", __func__, __LINE__);
+		oc_syslog(LOG_ERR, "%s:%d: could not obtain worker state", __func__, __LINE__);
 		return -1;
 	}
 
@@ -690,14 +691,14 @@ int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum
 	sd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sd == -1) {
 		e = errno;
-		syslog(LOG_ERR, "error opening socket: %s", strerror(e));
+		oc_syslog(LOG_ERR, "error opening socket: %s", strerror(e));
 		return GNUTLS_E_INTERNAL_ERROR;
 	}
 
 	ret = connect(sd, (struct sockaddr *)&cdata->sa, cdata->sa_len);
 	if (ret == -1) {
 		e = errno;
-		syslog(LOG_ERR, "error connecting to sec-mod socket '%s': %s",
+		oc_syslog(LOG_ERR, "error connecting to sec-mod socket '%s': %s",
 			cdata->sa.sun_path, strerror(e));
 		goto error;
 	}
@@ -721,7 +722,7 @@ int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum
 		       DEFAULT_SOCKET_TIMEOUT);
 	if (ret < 0) {
 		e = errno;
-		syslog(LOG_ERR, "error receiving sec-mod reply: %s",
+		oc_syslog(LOG_ERR, "error receiving sec-mod reply: %s",
 				strerror(e));
 		goto error;
 	}
@@ -731,7 +732,7 @@ int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum
 	output->size = reply->data.len;
 	output->data = gnutls_malloc(reply->data.len);
 	if (output->data == NULL) {
-		syslog(LOG_ERR, "error allocating memory");
+		oc_syslog(LOG_ERR, "error allocating memory");
 		goto error;
 	}
 
@@ -915,7 +916,7 @@ unsigned need_file_reload(const char *file, time_t last_access)
 	ret = stat(file, &st);
 	if (ret == -1) {
 		e = errno;
-		syslog(LOG_INFO, "file %s (to be reloaded) was not found: %s",
+		oc_syslog(LOG_INFO, "file %s (to be reloaded) was not found: %s",
 		      file, strerror(e));
 		return 0;
 	}
@@ -955,7 +956,7 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
 		mslog(s, NULL, LOG_INFO, "reloading server certificates");
 	}
 
-	if (vhost->perm_config.debug >= DEBUG_TLS) {
+	if (vhost->perm_config.log_level >= OCLOG_TLS) {
 		gnutls_global_set_log_function(tls_log_func);
 		gnutls_global_set_log_level(9);
 	}

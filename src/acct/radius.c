@@ -21,13 +21,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <syslog.h>
 #include <unistd.h>
 #include <vpn.h>
 #include <ctype.h>
 #include <arpa/inet.h> /* inet_ntop */
 #include "radius.h"
 #include "auth/common.h"
+
+#include "log.h"
 
 #ifdef HAVE_RADIUS
 
@@ -172,7 +173,7 @@ static void radius_acct_session_stats(void *_vctx, unsigned auth_method, const c
 
 	status_type = PW_STATUS_ALIVE;
 
-	syslog(LOG_DEBUG, "radius-auth: sending session interim update");
+	oc_syslog(LOG_DEBUG, "radius-auth: sending session interim update");
 
 	if (rc_avpair_add(vctx->rh, &send, PW_ACCT_STATUS_TYPE, &status_type, -1, 0) == NULL) {
 		goto cleanup;
@@ -187,7 +188,7 @@ static void radius_acct_session_stats(void *_vctx, unsigned auth_method, const c
 		rc_avpair_free(recvd);
 
 	if (ret != OK_RC) {
-		syslog(LOG_NOTICE, "radius-auth: radius_open_session: %d", ret);
+		oc_syslog(LOG_NOTICE, "radius-auth: radius_open_session: %d", ret);
 		goto cleanup;
 	}
 
@@ -205,11 +206,11 @@ static int radius_acct_open_session(void *_vctx, unsigned auth_method, const com
 	status_type = PW_STATUS_START;
 
 	if (sid_size != SID_SIZE) {
-		syslog(LOG_DEBUG, "radius-auth: incorrect sid size");
+		oc_syslog(LOG_DEBUG, "radius-auth: incorrect sid size");
 		return -1;
 	}
 
-	syslog(LOG_DEBUG, "radius-auth: opening session %s", ai->safe_id);
+	oc_syslog(LOG_DEBUG, "radius-auth: opening session %s", ai->safe_id);
 
 	if (rc_avpair_add(vctx->rh, &send, PW_ACCT_STATUS_TYPE, &status_type, -1, 0) == NULL) {
 		ret = -1;
@@ -228,7 +229,7 @@ static int radius_acct_open_session(void *_vctx, unsigned auth_method, const com
 		rc_avpair_free(recvd);
 
 	if (ret != OK_RC) {
-		syslog(LOG_NOTICE, "radius-auth: radius_open_session: %d", ret);
+		oc_syslog(LOG_NOTICE, "radius-auth: radius_open_session: %d", ret);
 		ret = -1;
 		goto cleanup;
 	}
@@ -248,7 +249,7 @@ static void radius_acct_close_session(void *_vctx, unsigned auth_method, const c
 
 	status_type = PW_STATUS_STOP;
 
-	syslog(LOG_DEBUG, "radius-auth: closing session");
+	oc_syslog(LOG_DEBUG, "radius-auth: closing session");
 	if (rc_avpair_add(vctx->rh, &send, PW_ACCT_STATUS_TYPE, &status_type, -1, 0) == NULL)
 		return;
 
@@ -276,7 +277,7 @@ static void radius_acct_close_session(void *_vctx, unsigned auth_method, const c
 		rc_avpair_free(recvd);
 
 	if (ret != OK_RC) {
-		syslog(LOG_INFO, "radius-auth: radius_close_session: %d", ret);
+		oc_syslog(LOG_INFO, "radius-auth: radius_close_session: %d", ret);
 		goto cleanup;
 	}
 

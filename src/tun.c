@@ -48,6 +48,7 @@
 #include <main.h>
 #include <ccan/list/list.h>
 #include "vhost.h"
+#include "log.h"
 
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
 # include <net/if_var.h>
@@ -853,7 +854,7 @@ ssize_t tun_write(int sockfd, const void *buf, size_t len)
 	else {
 		if (!complained) {
 			complained = 1;
-			syslog(LOG_ERR, "tun_write: Unknown packet (len %d) received %02x %02x %02x %02x...\n",
+			oc_syslog(LOG_ERR, "tun_write: Unknown packet (len %d) received %02x %02x %02x %02x...\n",
 				(int)len, data[0], data[1], data[2], data[3]);
 		}
 		return -1;

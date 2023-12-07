@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2023 Nikos Mavrogiannopoulos
  *
  * Author: Nikos Mavrogiannopoulos
  *
@@ -91,6 +91,8 @@ inline static const char *proto_to_str(fw_proto_t proto)
 	return proto2str[proto];
 }
 
+#define DEFAULT_LOG_LEVEL 2
+
 /* Banning works with a point system. A wrong password
  * attempt gives you PASSWORD_POINTS, and you are banned
  * when the maximum ban score is reached.
@@ -110,7 +112,6 @@ inline static const char *proto_to_str(fw_proto_t proto)
 
 /* The time after a disconnection the cookie is valid */
 #define DEFAULT_COOKIE_RECON_TIMEOUT 120
-
 
 #define DEFAULT_DPD_TIME 600
 
@@ -396,7 +397,10 @@ struct perm_cfg_st {
 	unsigned int stats_reset_time;
 	unsigned foreground;
 	unsigned no_chdir;
-	unsigned debug;
+	unsigned log_level;
+	unsigned log_stderr;
+	unsigned syslog;
+
 	unsigned pr_dumpable;
 
 	char *ca;
