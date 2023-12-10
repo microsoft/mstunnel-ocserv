@@ -19,6 +19,7 @@
 
 #include <config.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -177,7 +178,7 @@ static int receive_responses(int fd, process_response process, void *context)
 				if (h->nlmsg_len < NLMSG_LENGTH(sizeof(*err))) {
 					oc_syslog(
 						LOG_ERR,
-						"nlmsg_type NLMSG_ERROR has short nlmsg_len %d",
+						"nlmsg_type NLMSG_ERROR has short nlmsg_len %" PRIu32,
 						h->nlmsg_len);
 				} else {
 					oc_syslog(LOG_ERR,
@@ -189,8 +190,9 @@ static int receive_responses(int fd, process_response process, void *context)
 			}
 
 			if (h->nlmsg_type != SOCK_DIAG_BY_FAMILY) {
-				oc_syslog(LOG_ERR, "unexpected nlmsg_type %u\n",
-					  (unsigned int)h->nlmsg_type);
+				oc_syslog(LOG_ERR,
+					  "unexpected nlmsg_type %" PRIu16 "\n",
+					  h->nlmsg_type);
 				return -1;
 			}
 
@@ -199,13 +201,14 @@ static int receive_responses(int fd, process_response process, void *context)
 			if (h->nlmsg_len < NLMSG_LENGTH(sizeof(*diag))) {
 				oc_syslog(
 					LOG_ERR,
-					"nlmsg_type SOCK_DIAG_BY_FAMILY has short nlmsg_len %d",
+					"nlmsg_type SOCK_DIAG_BY_FAMILY has short nlmsg_len %" PRIu32,
 					h->nlmsg_len);
 				return -1;
 			}
 
 			if (diag->udiag_family != AF_UNIX) {
-				oc_syslog(LOG_ERR, "unexpected family %u\n",
+				oc_syslog(LOG_ERR,
+					  "unexpected family %" PRIu8 "\n",
 					  diag->udiag_family);
 				return -1;
 			}

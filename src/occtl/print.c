@@ -20,6 +20,7 @@
  */
 
 #include <config.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -80,7 +81,7 @@ int print_fwport_entries(FILE *out, cmd_params_st *params, const char *name,
 		fprintf(out, "    \"%s\":\t[", name);
 		for (i = 0; i < vsize; i++) {
 			if (val[i]->port)
-				snprintf(tmp, sizeof(tmp), "%s%s(%d)",
+				snprintf(tmp, sizeof(tmp), "%s%s(%" PRIu32 ")",
 					 val[i]->negate ? "!" : "",
 					 proto_to_str(val[i]->proto),
 					 val[i]->port);
@@ -98,7 +99,7 @@ int print_fwport_entries(FILE *out, cmd_params_st *params, const char *name,
 	} else {
 		for (i = 0; i < vsize; i++) {
 			if (val[i]->port)
-				snprintf(tmp, sizeof(tmp), "%s%s(%d)",
+				snprintf(tmp, sizeof(tmp), "%s%s(%" PRIu32 ")",
 					 val[i]->negate ? "!" : "",
 					 proto_to_str(val[i]->proto),
 					 val[i]->port);
