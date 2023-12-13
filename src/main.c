@@ -876,20 +876,28 @@ static void worker_child_watcher_cb(struct ev_loop *loop, ev_child *w, int reven
 	ev_child_stop(loop, w);
 }
 
-static void kill_children(main_server_st* s)
+/* Returns the number of processes to wait */
+static unsigned kill_children(main_server_st* s)
 {
 	struct proc_st *ctmp = NULL, *cpos;
 	int i;
-	/* kill the security module server */
+	unsigned nproc = 0;
+
+	/* Kill the worker processes first */
 	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp->pid != -1) {
 			remove_proc(s, ctmp, RPROC_KILL|RPROC_QUIT);
+			nproc++;
 		}
 	}
 
+	/* kill the security module server */
 	for (i = 0; i < s->sec_mod_instance_count; i ++) {
 		kill(s->sec_mod_instances[i].sec_mod_pid, SIGTERM);
+		nproc++;
 	}
+
+	return nproc;
 }
 
 static void kill_children_auth_timeout(main_server_st* s)
@@ -910,18 +918,26 @@ static void kill_children_auth_timeout(main_server_st* s)
 
 static void terminate_server(main_server_st * s)
 {
-	unsigned total = 10;
+	unsigned remain;
+	int ret;
+	struct timespec start;
+	struct timespec now;
 
-	mslog(s, NULL, LOG_INFO, "termination request received; waiting for sessions to die");
-	kill_children(s);
+	mslog(s, NULL, LOG_INFO, "termination request received; waiting for sessions to terminate");
+	remain = kill_children(s);
 
-	while (waitpid(-1, NULL, WNOHANG) >= 0) {
-		if (total == 0) {
-			mslog(s, NULL, LOG_INFO, "not all sessions died; forcing kill");
+	gettime(&start);
+	while ((ret=waitpid(-1, NULL, WNOHANG)) >= 0 && remain > 0) {
+		if (ret > 0 && remain > 0)
+			remain--;
+
+		gettime(&now);
+		if (timespec_sub_ms(&now, &start) > 5000) {
+			mslog(s, NULL, LOG_INFO, "not all sessions were terminated (%u remain); forcing termination", remain);
 			kill(0, SIGKILL);
+			break;
 		}
-		ms_sleep(500);
-		total--;
+		ms_sleep(1);
 	}
 
 	ev_break (main_loop, EVBREAK_ALL);
