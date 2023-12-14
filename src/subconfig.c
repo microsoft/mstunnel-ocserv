@@ -217,8 +217,6 @@ void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config, const c
 	}
 
 	if (str && str[0] == '[' && (str[1] == '/' || str[1] == '.')) { /* legacy format */
-		fprintf(stderr, "Parsing radius auth method subconfig using legacy format\n");
-
 		additional->config = get_brackets_string1(pool, str);
 
 		p = get_brackets_string2(config, str);
@@ -303,7 +301,6 @@ void *plain_get_brackets_string(void *pool, struct perm_cfg_st *config, const ch
 	}
 
 	if (str && str[0] == '[' && (str[1] == '/' || str[1] == '.')) { /* legacy format */
-		fprintf(stderr, "Parsing plain auth method subconfig using legacy format\n");
 		additional->passwd = get_brackets_string1(pool, str);
 	} else {
 		vals_size = expand_brackets_string(pool, str, vals);
