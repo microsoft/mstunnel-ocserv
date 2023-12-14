@@ -2114,24 +2114,25 @@ static int connect_handler(worker_st * ws)
 		}
 	}
 
-	/* While anyconnect clients can handle the assignment
-	 * of an IPv6 address, they cannot handle routes or DNS
-	 * in IPv6. So we disable IPv6 after an IP is assigned. */
 	if (ws->full_ipv6 == 0) {
 		req->no_ipv6 = 1;
 		oclog(ws, LOG_INFO, "IPv6 routes/DNS disabled because IPv6 support was not requested.");
 	} else {
 		switch (req->user_agent_type) {
+		case AGENT_OPENCONNECT_V3:
+			req->no_ipv6 = 1;
+			oclog(ws, LOG_INFO, "IPv6 routes/DNS disabled because the agent is known not to support them.");
+			break;
 		case AGENT_OPENCONNECT:
 		case AGENT_ANYCONNECT:
 		case AGENT_OPENCONNECT_CLAVISTER:
 		case AGENT_ANYLINK:
+			oclog(ws, LOG_DEBUG, "Enabling IPv6 routes/DNS because the agent is known to support them.");
 			break;
-		case AGENT_OPENCONNECT_V3:
 		case AGENT_UNKNOWN:
 		default:
-			req->no_ipv6 = 1;
-			oclog(ws, LOG_INFO, "IPv6 routes/DNS disabled because the agent is not known.");
+			oclog(ws, LOG_NOTICE, "Enabling IPv6 routes/DNS although the agent is unknown.");
+			break;
 		}
 	}
 

@@ -65,7 +65,8 @@ dist_check_SCRIPTS += haproxy-connect test-iroute test-multi-cookie test-pass-sc
 	multiple-routes json test-udp-listen-host test-max-same-1 test-script-multi-user \
 	apple-ios ipv6-iface test-namespace-listen disconnect-user disconnect-user2 \
 	ping-leases test-ban-local test-client-bypass-protocol ipv6-small-net test-camouflage \
-	test-camouflage-norealm vhost-traffic defvhost-traffic session-timeout test-occtl
+	test-camouflage-norealm vhost-traffic defvhost-traffic session-timeout test-occtl \
+	no-ipv6-ocv3
 
 if RADIUS_ENABLED
 dist_check_SCRIPTS += radius-group radius-multi-group radius-otp

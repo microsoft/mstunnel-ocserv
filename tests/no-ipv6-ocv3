@@ -1,0 +1,88 @@
+#!/bin/bash
+#
+# Copyright (C) 2023 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+IP=$(which ip)
+TMPFILE=$(mktemp)
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+
+if test -z "${IP}";then
+	echo "no IP tool is present"
+	exit 77
+fi
+
+if test "$(id -u)" != "0";then
+	echo "This test must be run as root"
+	exit 77
+fi
+
+
+echo "Testing that ocserv doesn't assign IPv6 address on unknown clients... "
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
+  test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
+  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+}
+trap finish EXIT
+
+ADDRESS=172.23.236.0
+CLI_ADDRESS=10.119.255.0
+VPNNET6=fd50:efcf:d5e5:636d:ffb2:edad:dfe8:5a5c/127
+VPNADDR6=fd50:efcf:d5e5:636d:ffb2:edad:dfe8:5a5d
+OCCTL_SOCKET=./ipv6-no-$$.socket
+USERNAME=test
+
+. `dirname $0`/ns.sh
+
+update_config ipv6-iface.config
+if test "$VERBOSE" = 1;then
+DEBUG="-d 3"
+fi
+
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+wait_server $PID
+
+echo -n "Connecting to setup interface... "
+echo "test" | ${CMDNS1} timeout 15s $OPENCONNECT -v $ADDRESS:$PORT --useragent="Open AnyConnect VPN Agent v3" --passwd-on-stdin -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s /bin/true >${TMPFILE} 2>&1
+
+echo ok
+
+cat ${TMPFILE}|grep X-CSTP-Split-Include|grep 'fd63:' >/dev/null
+if test $? = 0;then
+	cat ${TMPFILE}|grep X-CSTP-Split
+	echo "Found route that shouldn't be there"
+	exit 1
+fi
+
+kill $PID
+wait
+
+exit 0
