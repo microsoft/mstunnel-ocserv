@@ -98,7 +98,7 @@ int ip_route_sanity_check(void *pool, char **_route)
 
 	p = strchr(p, '/');
 	if (p == NULL) {
-		fprintf(stderr, "route '%s' in wrong format, use xxx.xxx.xxx.xxx/xxx.xxx.xxx.xxx\n", route);
+		oc_syslog(LOG_ERR, "route '%s' in wrong format, use xxx.xxx.xxx.xxx/xxx.xxx.xxx.xxx\n", route);
 		return -1;
 	}
 	slash_ptr = p;
@@ -113,7 +113,7 @@ int ip_route_sanity_check(void *pool, char **_route)
 
 	pstr = ipv4_prefix_to_strmask(pool, prefix);
 	if (pstr == NULL) {
-		fprintf(stderr, "cannot figure format of route '%s'\n", route);
+		oc_syslog(LOG_ERR, "cannot figure format of route '%s'\n", route);
 		return -1;
 	}
 
@@ -121,7 +121,7 @@ int ip_route_sanity_check(void *pool, char **_route)
 
 	n = talloc_asprintf(pool, "%s/%s", route, pstr);
 	if (n == NULL) {
-		fprintf(stderr, "memory error\n");
+		oc_syslog(LOG_ERR, "memory error\n");
 		return -1;
 	}
 	*_route = n;

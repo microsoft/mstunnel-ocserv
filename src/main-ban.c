@@ -71,7 +71,7 @@ void *main_ban_db_init(main_server_st *s)
 {
 	struct htable *db = talloc(s, struct htable);
 	if (db == NULL) {
-		fprintf(stderr, "error initializing ban DB\n");
+		oc_syslog(LOG_ERR, "error initializing ban DB\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -344,7 +344,7 @@ int if_address_init(main_server_st *s)
 
 	if (getifaddrs(&ifaddr) < 0) {
 		int err = errno;
-		fprintf(stderr, "Failed to read local if address list: %s", strerror(err));
+		oc_syslog(LOG_ERR, "Failed to read local if address list: %s", strerror(err));
 		goto cleanup;
 	}
 
@@ -357,7 +357,7 @@ int if_address_init(main_server_st *s)
 
 	local_if_addresses = talloc_array(s, if_address_st, count);
 	if (local_if_addresses == NULL) {
-		fprintf(stderr, "Failed to allocate");
+		oc_syslog(LOG_ERR, "Failed to allocate");
 		goto cleanup;
 	}
 

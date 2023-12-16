@@ -24,30 +24,41 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <syslog.h>
+#include "defs.h"
 
 extern int syslog_open;
+extern int global_log_prio;
 
-#ifdef __GNUC__
-# define oc_syslog(prio, fmt, ...) do { \
-	if (syslog_open) { \
-		syslog(prio, "sec-mod: "fmt, ##__VA_ARGS__); \
-	} else { \
-		fprintf(stderr, "sec-mod: "fmt, ##__VA_ARGS__); \
-	}} while(0)
-#else
-# define oc_syslog(prio, ...) do { \
+/* For logging in the main process or sec-mod use the following:
+ * mslog(const struct main_server_st * s, const struct proc_st* proc,
+ *  	 int priority, const char *fmt, ...);
+ * seclog(const struct sec_mod_st* sec, int priority, const char *fmt, ...);
+ *   	  int priority, const char *fmt, ...);
+ *
+ * For logging in the worker process:
+ * oclog(const struct worker_st * server, int priority, const char *fmt, ...);
+ *
+ * Each ensures that the log gets the necessary information to distinguish
+ * between sessions and users. On low-level functions or on startup use:
+ * oc_syslog(int priority, const char *fmt, ...);
+ *
+ * All the logging functions respect the configured log-level and
+ * send the logging to stderr or syslog, as requested.
+ */
+
+#define _oc_syslog(prio, ...) do { \
 	if (syslog_open) { \
 		syslog(prio, __VA_ARGS__); \
 	} else { \
 		fprintf(stderr, __VA_ARGS__); \
 	}} while(0)
-#endif
 
 #ifdef UNDER_TEST
 /* for testing */
 # define mslog(...)
 # define oclog(...)
 # define seclog(...)
+# define oc_syslog _oc_syslog
 
 #else
 
@@ -66,6 +77,10 @@ void __attribute__ ((format(printf, 3, 4)))
 
 void __attribute__ ((format(printf, 3, 4)))
     _seclog(const struct sec_mod_st* sec, int priority, const char *fmt, ...);
+
+void __attribute__ ((format(printf, 2, 3)))
+    oc_syslog(int priority, const char *fmt, ...);
+
 
 # ifdef __GNUC__
 #  define mslog(s, proc, prio, fmt, ...) \
@@ -95,5 +110,62 @@ void seclog_hex(const struct sec_mod_st* sec, int priority,
 		const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64);
 
 #endif
+
+/* Returns zero when the given priority is not sufficient
+ * for logging. Updates the priority with */
+inline static
+unsigned log_check_priority(int oc_priority, int log_prio, int *syslog_prio)
+{
+	switch (oc_priority) {
+	case LOG_ERR:
+	case LOG_WARNING:
+	case LOG_NOTICE:
+		if (syslog_prio)
+			*syslog_prio = oc_priority;
+		break;
+	case LOG_DEBUG:
+		if (log_prio < OCLOG_DEBUG)
+			return 0;
+		if (syslog_prio)
+			*syslog_prio = oc_priority;
+		break;
+	case LOG_INFO:
+		if (log_prio < OCLOG_INFO)
+			return 0;
+
+		if (syslog_prio)
+			*syslog_prio = oc_priority;
+		break;
+	case LOG_HTTP_DEBUG:
+		if (log_prio < OCLOG_HTTP)
+			return 0;
+
+		if (syslog_prio)
+			*syslog_prio = LOG_DEBUG;
+		break;
+	case LOG_TRANSFER_DEBUG:
+		if (log_prio < OCLOG_TRANSFERRED)
+			return 0;
+
+
+		if (syslog_prio)
+			*syslog_prio = LOG_DEBUG;
+		break;
+	case LOG_SENSITIVE:
+		if (log_prio < OCLOG_SENSITIVE)
+			return 0;
+
+		if (syslog_prio)
+			*syslog_prio = LOG_DEBUG;
+		break;
+	default:
+		syslog(LOG_DEBUG, "unknown log level %d", oc_priority);
+
+		if (syslog_prio)
+			*syslog_prio = LOG_DEBUG;
+        }
+
+        return 1;
+}
 
 #endif /* OC_LOG_H */

@@ -34,12 +34,12 @@ endif
 CORE_SOURCES = $(HTTP_PARSER_SOURCES) \
 	common/hmac.c common/hmac.h common/snapshot.c common/snapshot.h \
 	common-config.h config.c config-kkdcp.c config-ports.c defs.h gettime.h \
-	icmp-ping.c icmp-ping.h inih/ini.c inih/ini.h ip-lease.c ip-lease.h \
-	ip-util.c ip-util.h isolate.h isolate.c main.h main-ctl.h \
+	inih/ini.c inih/ini.h \
+	ip-util.c ip-util.h main.h main-ctl.h \
 	script-list.h setproctitle.c setproctitle.h str.c str.h subconfig.c \
 	sup-config/file.c sup-config/file.h sup-config/radius.c \
-	sup-config/radius.h tlslib.c tlslib.h tun.c tun.h valid-hostname.c \
-	vasprintf.c vasprintf.h vhost.h vpn.h namespace.h log.c log.h
+	sup-config/radius.h tlslib.c tlslib.h valid-hostname.c \
+	vasprintf.c vasprintf.h vhost.h vpn.h namespace.h worker-log.c
 
 if ENABLE_COMPRESSION
 CORE_SOURCES += lzs.c lzs.h
@@ -66,7 +66,9 @@ ocserv_SOURCES = $(CORE_SOURCES) $(AUTH_SOURCES) $(ACCT_SOURCES) \
 	proc-search.h route-add.c route-add.h sec-mod.c sec-mod.h sec-mod-acct.h \
 	sec-mod-auth.c sec-mod-auth.h sec-mod-cookies.c sec-mod-db.c \
 	sec-mod-resume.c sec-mod-resume.h sec-mod-sup-config.c sec-mod-sup-config.h \
-	common/sockdiag.h common/sockdiag.c namespace.c
+	common/sockdiag.h common/sockdiag.c namespace.c main-log.c \
+	icmp-ping.c icmp-ping.h ip-lease.c ip-lease.h tun.c tun.h \
+	main-limits.c main-limits.h
 
 ocserv_LDADD = $(CORE_LDADD)
 
@@ -75,8 +77,8 @@ ocserv_worker_SOURCES = $(CORE_SOURCES) \
 	html.c html.h http-heads.h worker.c worker.h worker-auth.c \
 	worker-bandwidth.c worker-bandwidth.h worker-http.c worker-http-handlers.c \
 	worker-kkdcp.c worker-misc.c worker-privs.c worker-proxyproto.c \
-	worker-resume.c worker-vpn.c worker-svc.c
-
+	worker-resume.c worker-vpn.c worker-svc.c worker-tun.c isolate.c \
+	isolate.h
 ocserv_worker_LDADD = $(CORE_LDADD)
 
 noinst_LIBRARIES = libipc.a
@@ -154,7 +156,8 @@ ocpasswd_ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT) $(CODE_COVERAGE_LDFLAGS
 # Files common to ocserv and occtl.
 libcommon_a_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/common
 libcommon_a_SOURCES=common/common.c common/common.h common/system.c common/system.h \
-	common/cloexec.c common/cloexec.h common/base64-helper.c common/base64-helper.h
+	common/cloexec.c common/cloexec.h common/base64-helper.c common/base64-helper.h \
+	log.c log.h
 libcommon_a_LIBS = $(NEEDED_LIBPROTOBUF_LIBS)
 noinst_LIBRARIES += libcommon.a
 

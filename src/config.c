@@ -830,6 +830,7 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 				READ_NUMERIC(vhost->perm_config.sec_mod_scale);
 		} else if (strcmp(name, "log-level") == 0) {
 			READ_NUMERIC(vhost->perm_config.log_level);
+			global_log_prio = vhost->perm_config.log_level;
 		} else {
 			stage1_found = 0;
 		}
@@ -1648,6 +1649,7 @@ int cmd_parser (void *pool, int argc, char **argv, struct list_head *head, bool 
 			break;
 		case 'd':
 			vhost->perm_config.log_level = atoi(optarg);
+			global_log_prio = vhost->perm_config.log_level;
 			debug_asked = 1;
 			break;
 		case 't':

@@ -66,7 +66,7 @@
 #include <hmac.h>
 #include <base64-helper.h>
 #include <snapshot.h>
-#include <isolate.h>
+#include <main-limits.h>
 #include <sockdiag.h>
 #include <namespace.h>
 
@@ -1566,7 +1566,7 @@ int main(int argc, char** argv)
 	init_fd_limits_default(s);
 
 	/* increase the number of our allowed file descriptors */
-	update_fd_limits(s, 1);
+	set_main_fd_limits(s);
 
 	ev_set_userdata (main_loop, s);
 	ev_set_syserr_cb(syserr_cb);

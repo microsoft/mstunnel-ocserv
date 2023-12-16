@@ -610,7 +610,7 @@ static void certificate_check(main_server_st *s, const char *vhostname, gnutls_p
 	ret = gnutls_x509_crt_get_key_usage(crt, &usage, NULL);
 	if (ret >= 0) {
 		if (!(usage & GNUTLS_KEY_KEY_ENCIPHERMENT)) {
-			mslog(s, NULL, LOG_WARNING, "%s certificate key usage prevents key encipherment; unable to support the RSA ciphersuites; "
+			oc_syslog(LOG_WARNING, "%s certificate key usage prevents key encipherment; unable to support the RSA ciphersuites; "
 				"if that is not intentional, regenerate the server certificate with the key usage flag 'key encipherment' set.",
 				cert_name);
 		}
@@ -619,19 +619,19 @@ static void certificate_check(main_server_st *s, const char *vhostname, gnutls_p
 	if (vhostname) {
 		/* check whether the hostname matches our vhost */
 		if (!gnutls_x509_crt_check_hostname(crt, vhostname)) {
-			mslog(s, NULL, LOG_WARNING, "The %s certificate's name doesn't match for vhost %s",
+			oc_syslog(LOG_WARNING, "The %s certificate's name doesn't match for vhost %s",
 			      cert_name, vhostname);
 		}
 	}
 
 	t = gnutls_x509_crt_get_expiration_time(crt);
 	if (t < time(NULL)) {
-		mslog(s, NULL, LOG_WARNING, "The %s certificate set is expired!", cert_name);
+		oc_syslog(LOG_WARNING, "The %s certificate set is expired!", cert_name);
 	}
 
 	t = gnutls_x509_crt_get_activation_time(crt);
 	if (t > time(NULL)) {
-		mslog(s, NULL, LOG_WARNING, "The %s certificate set is not yet active!", cert_name);
+		oc_syslog(LOG_WARNING, "The %s certificate set is not yet active!", cert_name);
 	}
 
 cleanup:
@@ -827,19 +827,19 @@ int load_cert_files(main_server_st *s, struct vhost_cfg_st *vhost)
 		/* load the certificate */
 
 		if (gnutls_url_is_supported(vhost->perm_config.cert[i]) != 0) {
-			mslog(s, NULL, LOG_ERR, "Loading a certificate from '%s' is unsupported", vhost->perm_config.cert[i]);
+			oc_syslog(LOG_ERR, "Loading a certificate from '%s' is unsupported", vhost->perm_config.cert[i]);
 			return -1;
 		} else {
 			ret = gnutls_load_file(vhost->perm_config.cert[i], &data);
 			if (ret < 0) {
-				mslog(s, NULL, LOG_ERR, "error loading file[%d] '%s'", i, vhost->perm_config.cert[i]);
+				oc_syslog(LOG_ERR, "error loading file[%d] '%s'", i, vhost->perm_config.cert[i]);
 				return -1;
 			}
 
 			pcert_list_size = 8;
 			pcert_list = talloc_size(vhost->pool, sizeof(pcert_list[0])*pcert_list_size);
 			if (pcert_list == NULL) {
-				mslog(s, NULL, LOG_ERR, "error allocating memory");
+				oc_syslog(LOG_ERR, "error allocating memory");
 				return -1;
 			}
 
@@ -866,7 +866,7 @@ int load_cert_files(main_server_st *s, struct vhost_cfg_st *vhost)
 		 */
 		cdata = talloc_zero(vhost->pool, struct key_cb_data);
 		if (cdata == NULL) {
-			mslog(s, NULL, LOG_ERR, "error allocating memory");
+			oc_syslog(LOG_ERR, "error allocating memory");
 			return -1;
 		}
 
@@ -953,7 +953,7 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
 		if (need_reload == 0)
 			return;
 
-		mslog(s, NULL, LOG_INFO, "reloading server certificates");
+		oc_syslog(LOG_INFO, "reloading server certificates");
 	}
 
 	if (vhost->perm_config.log_level >= OCLOG_TLS) {
@@ -974,7 +974,7 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
 	set_dh_params(s, vhost);
 
 	if (vhost->perm_config.key_size == 0 || vhost->perm_config.cert_size == 0) {
-		mslog(s, NULL, LOG_ERR, "no certificate or key files were specified");
+		oc_syslog(LOG_ERR, "no certificate or key files were specified");
 		exit(EXIT_FAILURE);
 	}
 
@@ -987,7 +987,7 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
 
 	ret = load_cert_files(s, vhost);
 	if (ret < 0) {
-		mslog(s, NULL, LOG_ERR, "error loading the certificate or key file");
+		oc_syslog(LOG_ERR, "error loading the certificate or key file");
 		exit(EXIT_FAILURE);
 	}
 
@@ -998,12 +998,12 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
 								   vhost->perm_config.ca,
 								   GNUTLS_X509_FMT_PEM);
 			if (ret < 0) {
-				mslog(s, NULL, LOG_ERR, "error setting the CA (%s) file",
+				oc_syslog(LOG_ERR, "error setting the CA (%s) file",
 					vhost->perm_config.ca);
 				exit(EXIT_FAILURE);
 			}
 
-			mslog(s, NULL, LOG_INFO, "processed %d CA certificate(s)", ret);
+			oc_syslog(LOG_INFO, "processed %d CA certificate(s)", ret);
 		}
 
 		tls_reload_crl(s, vhost, 1);
@@ -1064,7 +1064,7 @@ void tls_load_prio(main_server_st *s, struct vhost_cfg_st *vhost)
 
 	ret = gnutls_priority_init(&vhost->creds.cprio, vhost->perm_config.config->priorities, &perr);
 	if (ret == GNUTLS_E_PARSING_ERROR)
-		mslog(s, NULL, LOG_ERR, "error in TLS priority string: %s", perr);
+		oc_syslog(LOG_ERR, "error in TLS priority string: %s", perr);
 	GNUTLS_FATAL_ERR(ret);
 }
 
@@ -1081,7 +1081,7 @@ void tls_reload_crl(main_server_st* s, struct vhost_cfg_st *vhost, unsigned forc
 
 	if (vhost->perm_config.config->cert_req != GNUTLS_CERT_IGNORE && vhost->perm_config.config->crl != NULL) {
 		if (need_file_reload(vhost->perm_config.config->crl, vhost->crl_last_access) == 0) {
-			mslog(s, NULL, LOG_DEBUG, "skipping already loaded CRL: %s", vhost->perm_config.config->crl);
+			oc_syslog(LOG_DEBUG, "skipping already loaded CRL: %s", vhost->perm_config.config->crl);
 			return;
 		}
 
@@ -1103,11 +1103,11 @@ void tls_reload_crl(main_server_st* s, struct vhost_cfg_st *vhost, unsigned forc
 		}
 		if (ret < 0) {
 			/* ignore the CRL file when empty */
-			mslog(s, NULL, LOG_ERR, "error reading the CRL (%s) file: %s",
+			oc_syslog(LOG_ERR, "error reading the CRL (%s) file: %s",
 				vhost->perm_config.config->crl, gnutls_strerror(ret));
 			exit(EXIT_FAILURE);
 		}
-		mslog(s, NULL, LOG_INFO, "loaded CRL: %s", vhost->perm_config.config->crl);
+		oc_syslog(LOG_INFO, "loaded CRL: %s", vhost->perm_config.config->crl);
 	}
 }
 #endif /* UNDER_TEST */
@@ -1156,14 +1156,14 @@ void *calc_sha1_hash(void *pool, char* file, unsigned cert)
 	gnutls_free(data.data);
 
 	if (ret < 0) {
-		fprintf(stderr, "error calculating hash of '%s': %s", file, gnutls_strerror(ret));
+		oc_syslog(LOG_ERR, "error calculating hash of '%s': %s", file, gnutls_strerror(ret));
 		exit(EXIT_FAILURE);
 	}
 
 	size_t ret_size = sizeof(digest)*2+1;
 	retval = talloc_size(pool, ret_size);
 	if (retval == NULL) {
-		fprintf(stderr, "memory error");
+		oc_syslog(LOG_ERR, "memory error");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1171,7 +1171,7 @@ void *calc_sha1_hash(void *pool, char* file, unsigned cert)
 	data.size = sizeof(digest);
 	ret = gnutls_hex_encode(&data, retval, &ret_size);
 	if (ret < 0) {
-		fprintf(stderr, "error in hex encode: %s", gnutls_strerror(ret));
+		oc_syslog(LOG_ERR, "error in hex encode: %s", gnutls_strerror(ret));
 		exit(EXIT_FAILURE);
 	}
 	if (retval[ret_size-1] == 0) ret_size--; /* remove the null terminator */

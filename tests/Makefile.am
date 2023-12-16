@@ -141,12 +141,15 @@ cstp_recv_LDADD = $(LDADD) $(LIBGNUTLS_LIBS)
 json_escape_SOURCES = json-escape.c
 json_escape_LDADD = $(LDADD)
 
+url_escape_CPPFLAGS = $(AM_CPPFLAGS) -DUNDER_TEST
 url_escape_SOURCES = url-escape.c
 url_escape_LDADD = $(LDADD)
 
+html_escape_CPPFLAGS = $(AM_CPPFLAGS) -DUNDER_TEST
 html_escape_SOURCES = html-escape.c
 html_escape_LDADD = $(LDADD)
 
+ipv4_prefix_CPPFLAGS = $(AM_CPPFLAGS) -DUNDER_TEST
 ipv4_prefix_SOURCES = ipv4-prefix.c
 ipv4_prefix_LDADD = $(LDADD)
 
@@ -160,16 +163,18 @@ str_test_LDADD = $(LDADD)
 str_test2_SOURCES = str-test2.c
 str_test2_LDADD = $(LDADD)
 
+ipv6_prefix_CPPFLAGS = $(AM_CPPFLAGS) -DUNDER_TEST
 ipv6_prefix_SOURCES = ipv6-prefix.c
 ipv6_prefix_LDADD = $(LDADD)
 
-human_addr_CPPFLAGS = $(AM_CPPFLAGS)
+human_addr_CPPFLAGS = $(AM_CPPFLAGS) -DUNDER_TEST
 human_addr_SOURCES = human_addr.c
 human_addr_LDADD = $(LDADD)
 
 
 valid_hostname_LDADD = $(LDADD)
 
+port_parsing_CPPFLAGS = $(AM_CPPFLAGS) -DUNDER_TEST
 port_parsing_LDADD = $(LDADD)
 
 check_PROGRAMS = str-test str-test2 ipv4-prefix ipv6-prefix kkdcp-parsing json-escape ban-ips \

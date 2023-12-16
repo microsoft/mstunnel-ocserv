@@ -21,105 +21,36 @@
 #include <fcntl.h>
 #include <sys/resource.h>
 #include <grp.h>
-
-
 #include <main.h>
 #include <limits.h>
 
-void init_fd_limits_default(main_server_st * s)
+/* Adjusts the file descriptor limits for the worker processes
+ */
+void set_worker_fd_limits(struct worker_st *ws)
 {
 #ifdef RLIMIT_NOFILE
-	int ret = getrlimit(RLIMIT_NOFILE, &s->fd_limits_default_set);
-	if (ret < 0) {
-		fprintf(stderr, "error in getrlimit: %s\n", strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-#endif
-}
-
-/* (Maximum clients) + (small buffer) + (sec mod fds)
- * The (small buffer) is to allow unknown fds used by backends (e.g.,
- * gnutls) as well as to allow running up to that many scripts (due to dup2)
- * when close to the maximum limit.
- */
-#define MAX_FD_LIMIT(clients) (clients + 128 + s->sec_mod_instance_count * 2)
-
-/* Adjusts the file descriptor limits for the main or worker processes
- */
-void update_fd_limits(main_server_st * s, unsigned main)
-{
-#ifdef RLIMIT_NOFILE
-	struct rlimit new_set;
-	unsigned max;
+	struct rlimit def_set;
 	int ret;
 
-	if (main) {
-		if (GETCONFIG(s)->max_clients > 0)
-			max = MAX_FD_LIMIT(GETCONFIG(s)->max_clients);
-		else
-			// If the admin doesn't specify max_clients,
-			// then we are limiting it to around 8K.
-			max = MAX_FD_LIMIT(8 * 1024);
+	ret = getrlimit(RLIMIT_NOFILE, &def_set);
+	if (ret < 0) {
+		int e = errno;
+		oclog(ws, LOG_ERR,
+		      "error in getrlimit: %s\n", strerror(e));
+		exit(EXIT_FAILURE);
+	}
 
-		if (max > s->fd_limits_default_set.rlim_cur) {
-			new_set.rlim_cur = max;
-			new_set.rlim_max = s->fd_limits_default_set.rlim_max;
-			ret = setrlimit(RLIMIT_NOFILE, &new_set);
-			if (ret < 0) {
-				fprintf(stderr,
-					"error in setrlimit(%u): %s (cur: %u)\n",
-					max, strerror(errno),
-					(unsigned)s->fd_limits_default_set.
-					rlim_cur);
-			}
-		}
-	} else {
-		/* set limits for worker processes */
-		ret = setrlimit(RLIMIT_NOFILE, &s->fd_limits_default_set);
-		if (ret < 0) {
-			mslog(s, NULL, LOG_INFO,
-			      "cannot update file limit(%u): %s\n",
-			      (unsigned)s->fd_limits_default_set.rlim_cur,
-			      strerror(errno));
-		}
+	ret = setrlimit(RLIMIT_NOFILE, &def_set);
+	if (ret < 0) {
+		oclog(ws, LOG_INFO,
+		      "cannot update file limit(%u): %s\n",
+		      (unsigned)def_set.rlim_cur,
+		      strerror(errno));
 	}
 #endif
 }
 
-void set_self_oom_score_adj(main_server_st * s)
-{
-#ifdef __linux__
-	static const char proc_self_oom_adj_score_path[] = "/proc/self/oom_score_adj";
-	static const char oom_adj_score_value[] = "1000";
-	size_t written = 0;
-	int fd;
-
-	fd = open(proc_self_oom_adj_score_path, O_WRONLY,
-		  S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-	if (fd == -1) {
-		int e = errno;
-		mslog(s, NULL, LOG_ERR, "cannot open %s: %s",
-		      proc_self_oom_adj_score_path, strerror(e));
-		goto cleanup;
-	}
-
-	written = write(fd, oom_adj_score_value, sizeof(oom_adj_score_value));
-	if (written != sizeof(oom_adj_score_value)) {
-		int e = errno;
-		mslog(s, NULL, LOG_ERR, "cannot write %s: %s",
-		      proc_self_oom_adj_score_path, strerror(e));
-		goto cleanup;
-	}
-
- cleanup:
-	if (fd >= 0) {
-		close(fd);
-	}
-#endif
-}
-
-
-void drop_privileges(main_server_st * s)
+void drop_privileges(struct worker_st *ws, main_server_st *s)
 {
 	int ret, e;
 	struct rlimit rl;
@@ -128,7 +59,7 @@ void drop_privileges(main_server_st * s)
 		ret = chdir(GETPCONFIG(s)->chroot_dir);
 		if (ret != 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "cannot chdir to %s: %s",
+			oclog(ws, LOG_ERR, "cannot chdir to %s: %s",
 			      GETPCONFIG(s)->chroot_dir, strerror(e));
 			exit(EXIT_FAILURE);
 		}
@@ -136,7 +67,7 @@ void drop_privileges(main_server_st * s)
 		ret = chroot(GETPCONFIG(s)->chroot_dir);
 		if (ret != 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "cannot chroot to %s: %s",
+			oclog(ws, LOG_ERR, "cannot chroot to %s: %s",
 			      GETPCONFIG(s)->chroot_dir, strerror(e));
 			exit(EXIT_FAILURE);
 		}
@@ -146,7 +77,7 @@ void drop_privileges(main_server_st * s)
 		ret = setgid(GETPCONFIG(s)->gid);
 		if (ret < 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "cannot set gid to %d: %s\n",
+			oclog(ws, LOG_ERR, "cannot set gid to %d: %s\n",
 			      (int)GETPCONFIG(s)->gid, strerror(e));
 			exit(EXIT_FAILURE);
 		}
@@ -154,7 +85,7 @@ void drop_privileges(main_server_st * s)
 		ret = setgroups(1, &GETPCONFIG(s)->gid);
 		if (ret < 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "cannot set groups to %d: %s\n",
+			oclog(ws, LOG_ERR, "cannot set groups to %d: %s\n",
 			      (int)GETPCONFIG(s)->gid, strerror(e));
 			exit(EXIT_FAILURE);
 		}
@@ -164,21 +95,19 @@ void drop_privileges(main_server_st * s)
 		ret = setuid(GETPCONFIG(s)->uid);
 		if (ret < 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "cannot set uid to %d: %s\n",
+			oclog(ws, LOG_ERR, "cannot set uid to %d: %s\n",
 			      (int)GETPCONFIG(s)->uid, strerror(e));
 			exit(EXIT_FAILURE);
 
 		}
 	}
 
-	update_fd_limits(s, 0);
-
 	rl.rlim_cur = 0;
 	rl.rlim_max = 0;
 	ret = setrlimit(RLIMIT_NPROC, &rl);
 	if (ret < 0) {
 		e = errno;
-		mslog(s, NULL, LOG_ERR, "cannot enforce NPROC limit: %s\n",
+		oclog(ws, LOG_ERR, "cannot enforce NPROC limit: %s\n",
 		      strerror(e));
 	}
 }

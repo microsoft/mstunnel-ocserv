@@ -174,13 +174,10 @@ int main(int argc, char **argv)
 	/* Initialize kkdcp structures */
 	ret = asn1_array2tree(kkdcp_asn1_tab, &_kkdcp_pkix1_asn, NULL);
 	if (ret != ASN1_SUCCESS) {
-		mslog(s, NULL, LOG_ERR, "KKDCP ASN.1 initialization error");
+		oc_syslog(LOG_ERR, "KKDCP ASN.1 initialization error");
 		exit(EXIT_FAILURE);
 	}
 #endif
-
-	init_fd_limits_default(s);
-
 	sigprocmask(SIG_SETMASK, &sig_default_set, NULL);
 
 	setproctitle(PACKAGE_NAME "-worker");
@@ -193,8 +190,10 @@ int main(int argc, char **argv)
 	DTLS_ACTIVE(ws)->dtls_tptr.fd = -1;
 	DTLS_INACTIVE(ws)->dtls_tptr.fd = -1;
 
+	set_worker_fd_limits(ws);
+
 	/* Drop privileges after this point */
-	drop_privileges(s);
+	drop_privileges(ws, s);
 
 	vpn_server(ws);
 
