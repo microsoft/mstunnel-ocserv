@@ -5,6 +5,7 @@
   integration with logging on containers or under systemd. The default remains
   syslog.
 - Warn when more than 2 DNS server IPv6 addresses are sent by Radius.
+- Improved server shutdown (#563)
 - Modified "Camouflage" functionality to allow AnyConnect clients (#544)
 - ocserv-fw: Move under libexec.
 - ocserv-fw: Fixed clean_all_rules logic on multiple similar devices (!384)
