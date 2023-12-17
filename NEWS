@@ -1,4 +1,4 @@
-* Version 1.2.3 (unreleased)
+* Version 1.2.3 (released 2023-12-17)
 - Treat unknown clients as capable of IPv6 routes and DNS servers
 - Introduced new ocserv options --log-stderr and --syslog that redirect
   logging to stderr or syslog explicitly. The stderr option allows for better
