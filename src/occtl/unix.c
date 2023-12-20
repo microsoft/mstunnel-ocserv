@@ -1157,15 +1157,15 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 			char buf2[32];
 
 			if (args->user[i]->rx_per_sec > 0 && args->user[i]->tx_per_sec > 0) {
-				bytes2human(args->user[i]->rx_per_sec, buf1, sizeof(buf1), "/sec");
-				bytes2human(args->user[i]->tx_per_sec, buf2, sizeof(buf2), "/sec");
+				bytes2human(args->user[i]->rx_per_sec, buf1, sizeof(buf1), "/s");
+				bytes2human(args->user[i]->tx_per_sec, buf2, sizeof(buf2), "/s");
 
 				print_pair_value(out, params, "Limit RX", buf1, "Limit TX", buf2, 1);
 			} else if (args->user[i]->tx_per_sec > 0) {
-				bytes2human(args->user[i]->tx_per_sec, buf1, sizeof(buf1), "/sec");
+				bytes2human(args->user[i]->tx_per_sec, buf1, sizeof(buf1), "/s");
 				print_single_value(out, params, "Limit TX", buf1, 1);
 			} else if (args->user[i]->rx_per_sec > 0) {
-				bytes2human(args->user[i]->rx_per_sec, buf1, sizeof(buf1), "/sec");
+				bytes2human(args->user[i]->rx_per_sec, buf1, sizeof(buf1), "/s");
 				print_single_value(out, params, "Limit RX", buf1, 1);
 			}
 		}
