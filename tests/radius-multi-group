@@ -100,7 +100,7 @@ sleep 4
 USERNAME=test-multi-class
 GROUP=unknown
 echo " * Testing whether the unknown group is accepted... "
-echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} -authgroup ${GROUP} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly
+echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} --authgroup ${GROUP} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly
 if test $? = 0;then
 	echo "Connected to server although we shouldn't with this group"
 	exit 1
@@ -109,7 +109,7 @@ fi
 USERNAME=test-multi-class
 GROUP=nonexistent
 echo " * Testing whether a non existent group is accepted... "
-echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} -authgroup ${GROUP} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly
+echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} --authgroup ${GROUP} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly
 if test $? = 0;then
 	echo "Connected to server although we shouldn't with this group"
 	exit 1
