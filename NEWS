@@ -1,3 +1,7 @@
+* Version 1.2.4 (unreleased)
+- Fixed compatibility with AnyConnect clients on Linux (#544)
+
+
 * Version 1.2.3 (released 2023-12-17)
 - Treat unknown clients as capable of IPv6 routes and DNS servers
 - Introduced new ocserv options --log-stderr and --syslog that redirect
