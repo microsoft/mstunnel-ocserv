@@ -46,12 +46,22 @@ extern int global_log_prio;
  * send the logging to stderr or syslog, as requested.
  */
 
-#define _oc_syslog(prio, ...) do { \
+#ifdef __GNUC__
+# define _oc_syslog(prio, fmt, ...) do { \
+	if (syslog_open) { \
+		syslog(prio, fmt, ## __VA_ARGS__); \
+	} else { \
+		fprintf(stderr, fmt "\n", ## __VA_ARGS__); \
+	}} while(0)
+#else
+# define _oc_syslog(prio, ...) do { \
 	if (syslog_open) { \
 		syslog(prio, __VA_ARGS__); \
 	} else { \
 		fprintf(stderr, __VA_ARGS__); \
+		fputc('\n', stderr); \
 	}} while(0)
+#endif
 
 #ifdef UNDER_TEST
 /* for testing */
