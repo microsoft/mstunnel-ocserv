@@ -12,7 +12,6 @@ AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC
 AC_PROG_RANLIB
 AM_PROG_AR
-AM_PROG_CC_C_O
 AC_PROG_SED
 
 if test "$GCC" = "yes" && ! expr "$CC" : clang >/dev/null 2>&1;then
