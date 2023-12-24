@@ -726,7 +726,7 @@ url_handler_fn http_get_url_handler(const char *url)
 	return NULL;
 }
 
-url_handler_fn http_post_url_handler(struct worker_st *ws, const char *url)
+url_handler_fn http_post_known_service_check(struct worker_st *ws, const char *url)
 {
 	const struct known_urls_st *p;
 	unsigned len = strlen(url);
@@ -749,6 +749,18 @@ url_handler_fn http_post_url_handler(struct worker_st *ws, const char *url)
 	}
 
 	return NULL;
+}
+
+url_handler_fn http_post_url_handler(struct worker_st *ws, const char *url)
+{
+	url_handler_fn h;
+
+	h = http_post_known_service_check(ws, url);
+	if (h == NULL && ws->auth_state == S_AUTH_INACTIVE) {
+	    return post_auth_handler;
+	}
+
+	return h;
 }
 
 int http_url_cb(http_parser * parser, const char *at, size_t length)

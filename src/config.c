@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2023 Nikos Mavrogiannopoulos
  * Copyright (C) 2014, 2015 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1099,6 +1099,8 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 		READ_MULTI_LINE(config->network.no_routes, config->network.no_routes_size);
 	} else if (strcmp(name, "default-select-group") == 0) {
 		READ_STRING(config->default_select_group);
+	} else if (strcmp(name, "select-group-by-url") == 0) {
+		READ_TF(config->select_group_by_url);
 	} else if (strcmp(name, "auto-select-group") == 0) {
 		READ_TF(vhost->auto_select_group);
 	} else if (strcmp(name, "select-group") == 0) {
@@ -1528,6 +1530,11 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 			fprintf(stderr, NOTESTR"%sthe cisco-client-compat option implies dtls-legacy = true; enabling\n", PREFIX_VHOST(vhost));
 		}
 		config->dtls_legacy = 1;
+
+		if (!config->select_group_by_url && !silent) {
+			fprintf(stderr, NOTESTR"%sthe cisco-client-compat option implies select-group-by-url = true; enabling\n", PREFIX_VHOST(vhost));
+		}
+		config->select_group_by_url = 1;
 	}
 
 	if (config->match_dtls_and_tls) {

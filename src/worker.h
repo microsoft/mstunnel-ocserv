@@ -379,6 +379,7 @@ unsigned valid_hostname(const char *host);
 
 url_handler_fn http_get_url_handler(const char *url);
 url_handler_fn http_post_url_handler(worker_st * ws, const char *url);
+url_handler_fn http_post_known_service_check(worker_st * ws, const char *url);
 
 int complete_vpn_info(worker_st * ws,
                     struct vpn_st* vinfo);
