@@ -695,10 +695,12 @@ int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum
 		return GNUTLS_E_INTERNAL_ERROR;
 	}
 
+	/* This can be called early during server load when sec-mod is not
+	 * yet available. Thus it is only a debug message. */
 	ret = connect(sd, (struct sockaddr *)&cdata->sa, cdata->sa_len);
 	if (ret == -1) {
 		e = errno;
-		oc_syslog(LOG_ERR, "error connecting to sec-mod socket '%s': %s",
+		oc_syslog(LOG_DEBUG, "error connecting to sec-mod socket '%s': %s",
 			cdata->sa.sun_path, strerror(e));
 		goto error;
 	}
