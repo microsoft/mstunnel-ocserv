@@ -1,4 +1,5 @@
 * Version 1.2.4 (unreleased)
+- Fix logging to stderr: add missing newline.
 - Fixed compatibility with AnyConnect clients on Linux (#544)
 
 
