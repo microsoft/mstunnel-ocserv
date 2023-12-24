@@ -362,7 +362,8 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 				}
 			}
 
-			if (WSCONFIG(ws)->default_select_group) {
+			/* we send a list of possible groups only if user is not forcing group e.g. by url to disable dialog on client side */
+			if (ws->groupname[0] == 0 && WSCONFIG(ws)->default_select_group) {
 				ret = str_append_printf(&str, "<option>%s</option>\n", WSCONFIG(ws)->default_select_group);
 				if (ret < 0) {
 					ret = -1;
@@ -397,15 +398,17 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 				}
 			}
 
+			/* we send a list of possible groups only if user is not forcing group e.g. by url to disable dialog on client side */
+			if (ws->groupname[0] == 0) {
+				for (i=0;i<WSCONFIG(ws)->group_list_size;i++) {
+					if (ws->groupname[0] != 0 && strcmp(ws->groupname, WSCONFIG(ws)->group_list[i]) == 0)
+						continue;
 
-			for (i=0;i<WSCONFIG(ws)->group_list_size;i++) {
-				if (ws->groupname[0] != 0 && strcmp(ws->groupname, WSCONFIG(ws)->group_list[i]) == 0)
-					continue;
-
-				ret = append_group_idx(ws, &str, i);
-				if (ret < 0) {
-					ret = -1;
-					goto cleanup;
+					ret = append_group_idx(ws, &str, i);
+					if (ret < 0) {
+						ret = -1;
+						goto cleanup;
+					}
 				}
 			}
 			ret = str_append_str(&str, "</select>\n");
@@ -1467,15 +1470,26 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	if (ws->auth_state == S_AUTH_INACTIVE) {
 		SecAuthInitMsg ireq = SEC_AUTH_INIT_MSG__INIT;
 
-		ret = parse_reply(ws, req->body, req->body_length,
-				GROUPNAME_FIELD, sizeof(GROUPNAME_FIELD)-1,
-				GROUPNAME_FIELD_XML, sizeof(GROUPNAME_FIELD_XML)-1,
-				&groupname);
+		/* If the URL is not a known one and more than a character, we parse it as a group indicator */
+		if (WSCONFIG(ws)->select_group_by_url != 0 &&
+		    http_post_known_service_check(ws, req->url) == NULL && strlen(req->url) > 1) {
+			groupname = talloc_strdup(ws->req.body, req->url+1);
+			ret = 0;
+
+		}
+
 		if (ret < 0) {
 			ret = parse_reply(ws, req->body, req->body_length,
-					GROUPNAME_FIELD2, sizeof(GROUPNAME_FIELD2)-1,
+					GROUPNAME_FIELD, sizeof(GROUPNAME_FIELD)-1,
 					GROUPNAME_FIELD_XML, sizeof(GROUPNAME_FIELD_XML)-1,
 					&groupname);
+
+			if (ret < 0) {
+				ret = parse_reply(ws, req->body, req->body_length,
+						GROUPNAME_FIELD2, sizeof(GROUPNAME_FIELD2)-1,
+						GROUPNAME_FIELD_XML, sizeof(GROUPNAME_FIELD_XML)-1,
+						&groupname);
+			}
 		}
 
 		if (ret < 0) {
