@@ -73,11 +73,7 @@ trap finish EXIT
 rm -f proxyproto-connect-ok
 
 # server address
-ADDRESS=10.214.2.1
-CLI_ADDRESS=10.214.1.1
-VPNNET=192.168.1.0/24
-VPNADDR=192.168.1.1
-
+. `dirname $0`/random-net.sh
 . `dirname $0`/ns.sh
 
 # Run servers

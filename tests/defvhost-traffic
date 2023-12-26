@@ -58,19 +58,14 @@ function finish {
 trap finish EXIT
 
 # server address
-ADDRESS=10.223.22.1
-CLI_ADDRESS=10.223.21.1
-VPNNET=192.168.1.0/24
-VPNADDR=192.168.1.1
-#VPNNET6=fd91:6d87:7341:dc6a::/112
-#VPNADDR6=fd91:6d87:7341:dc6a::1
 OCCTL_SOCKET=./occtl-defvhost-$$.socket
 USERNAME=vhost
 
+. `dirname $0`/random-net.sh
 . `dirname $0`/ns.sh
 
 # Run servers
-update_config test-vhost-pass-cert.config
+update_config defvhost-traffic.config
 if test "$VERBOSE" = 1;then
 DEBUG="-d 3"
 fi
