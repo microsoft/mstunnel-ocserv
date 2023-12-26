@@ -52,13 +52,10 @@ function finish {
 }
 trap finish EXIT
 
-ADDRESS=10.227.208.0
-CLI_ADDRESS=10.227.209.0
-VPNNET6=fcea:78de:9bb7:e4cd:3841:4827:3349:0/112
-VPNADDR6=fcea:78de:9bb7:e4cd:3841:4827:3349:1
 OCCTL_SOCKET=./ipv6-iface-$$.socket
 USERNAME=test
 
+. `dirname $0`/random-net.sh
 . `dirname $0`/ns.sh
 
 update_config ipv6-iface.config

@@ -94,8 +94,7 @@ function wait_file_contents {
 }
 
 # server address
-ADDRESS=10.102.246.1
-CLI_ADDRESS=10.102.247.1
+. `dirname $0`/random-net.sh
 
 # These addresses must match the radius sent ranges
 VPNNET=192.168.66.0/24

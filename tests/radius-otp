@@ -79,8 +79,7 @@ function finish {
 trap finish EXIT
 
 # server address
-ADDRESS=10.173.78.1
-CLI_ADDRESS=10.173.79.1
+. `dirname $0`/random-net.sh
 
 # These must match the data/raddb/users:test-class user
 VPNNET=192.168.55.0/24
