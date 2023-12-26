@@ -1102,7 +1102,7 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 	} else if (strcmp(name, "select-group-by-url") == 0) {
 		READ_TF(config->select_group_by_url);
 	} else if (strcmp(name, "auto-select-group") == 0) {
-		READ_TF(vhost->auto_select_group);
+		READ_TF(config->auto_select_group);
 	} else if (strcmp(name, "select-group") == 0) {
 		READ_MULTI_BRACKET_LINE(config->group_list,
 					config->friendly_group_list,
@@ -1306,7 +1306,7 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 			vhost->auth_init = 1;
 		}
 
-		if (vhost->auto_select_group != 0 && vhost->perm_config.auth[0].amod != NULL && vhost->perm_config.auth[0].amod->group_list != NULL) {
+		if (config->auto_select_group != 0 && vhost->perm_config.auth[0].amod != NULL && vhost->perm_config.auth[0].amod->group_list != NULL) {
 			vhost->perm_config.auth[0].amod->group_list(config, vhost->perm_config.auth[0].additional, &config->group_list, &config->group_list_size);
 			switch (vhost->perm_config.auth[0].amod->type) {
 			case AUTH_TYPE_PAM|AUTH_TYPE_USERNAME_PASS:

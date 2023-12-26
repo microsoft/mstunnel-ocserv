@@ -62,7 +62,6 @@ typedef struct vhost_cfg_st {
 	char **eauth;
 	size_t eauth_size;
 	unsigned expose_iroutes;
-	unsigned auto_select_group;
 #ifdef HAVE_GSSAPI
 	char **urlfw;
 	size_t urlfw_size;
