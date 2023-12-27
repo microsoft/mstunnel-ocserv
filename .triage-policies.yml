@@ -27,7 +27,7 @@ resource_rules:
             attribute: updated_at
             condition: older_than
             interval_type: months
-            interval: 4
+            interval: 3
           state: opened
           labels:
             - No Label
@@ -36,18 +36,18 @@ resource_rules:
         actions:
           status: close
           comment: |
-            {{author}} This merge request is marked as work in progress with no update for very long time. We are now closing it, but please re-open if you are still interested in finishing this merge request. This is an automated message.
+            {{author}} This merge request is marked as work in progress with no update for a long time. We are now closing it, but please re-open if you are still interested in finishing this merge request. This is an automated message.
       - name: Close old policy
         conditions:
           date:
             attribute: updated_at
             condition: older_than
             interval_type: months
-            interval: 12
+            interval: 5
           state: opened
         limits:
           most_recent: 50
         actions:
           status: close
           comment: |
-            {{author}} This merge request is open for very long time without an update. We are now closing it, but please re-open if you are still interested in finishing this merge request. This is an automated message.
+            {{author}} This merge request is open for a long time without an update. We are now closing it, but please re-open if you are still interested in finishing this merge request. This is an automated message.
