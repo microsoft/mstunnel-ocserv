@@ -133,7 +133,7 @@ static unsigned int try(const char *src, unsigned int src_port, const char *dst,
 	return 1;
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
 	assert(try("127.0.0.1", 99, "127.0.0.1", 100) == 1);
 	assert(try("192.168.5.1", 1099, "172.52.3.1", 3100) == 1);

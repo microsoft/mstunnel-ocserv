@@ -1458,7 +1458,7 @@ static void syserr_cb(const char *msg)
 
 extern char secmod_socket_file_name_socket_file[_POSIX_PATH_MAX];
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
 	int e;
 	struct listener_st *ltmp = NULL;

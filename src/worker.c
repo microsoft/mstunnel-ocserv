@@ -53,7 +53,7 @@ static int set_ws_from_env(worker_st *ws);
 
 extern char secmod_socket_file_name_socket_file[_POSIX_PATH_MAX];
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
 	int ret, flags;
 	void *worker_pool;

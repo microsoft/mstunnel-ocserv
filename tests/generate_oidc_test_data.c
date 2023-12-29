@@ -261,7 +261,7 @@ void generate_config_files(const char *output_folder, cjose_jwk_t *key,
 	json_decref(keys);
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
 	char working_directory[1024];
 	static const char audience[] = "SomeAudience";

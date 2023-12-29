@@ -91,7 +91,7 @@ void receiver(int fd)
 	}
 }
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
 	int sockets[2];
 	pid_t child;
