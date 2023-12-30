@@ -250,6 +250,9 @@ file at _/etc/ocserv/ocserv.conf_. An example configuration file follows.
 
 @CONFIGFILE@
 
+## REPORTING BUGS
+Issue tracker: https://gitlab.com/openconnect/ocserv/-/issues
+
 ## SEE ALSO
 
 occtl(8), ocpasswd(8), openconnect(8)

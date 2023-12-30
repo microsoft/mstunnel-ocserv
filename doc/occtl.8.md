@@ -61,6 +61,9 @@ below.
     The operation failed or the command syntax was not valid.
 
 
+## REPORTING BUGS
+Issue tracker: https://gitlab.com/openconnect/ocserv/-/issues
+
 ## SEE ALSO
 
 ocserv(8), ocpasswd(8)

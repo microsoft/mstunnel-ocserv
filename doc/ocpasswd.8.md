@@ -62,6 +62,9 @@ The crypt(3) encoding is used for the encoded-password.
   * **1**:
     The operation failed or the command syntax was not valid.
 
+## REPORTING BUGS
+Issue tracker: https://gitlab.com/openconnect/ocserv/-/issues
+
 ## SEE ALSO
 
 ocserv(8), occtl(8)
