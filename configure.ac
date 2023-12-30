@@ -1,5 +1,8 @@
 AC_PREREQ(2.61)
-AC_INIT([ocserv], [1.2.3], [https://gitlab.com/openconnect/ocserv/-/issues])
+AC_INIT([OpenConnect VPN Server], [1.2.3],
+        [https://gitlab.com/openconnect/ocserv/-/issues],
+	[ocserv],
+	[https://ocserv.gitlab.io/www/])
 PKG_PROG_PKG_CONFIG
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
