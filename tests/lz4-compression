@@ -58,15 +58,10 @@ function finish {
 trap finish EXIT
 
 # server address
-ADDRESS=10.201.2.1
-CLI_ADDRESS=10.201.1.1
-VPNNET=192.168.2.0/24
-VPNADDR=192.168.2.1
-VPNNET6=fd91:6d87:7341:dc6a::/112
-VPNADDR6=fd91:6d87:7341:dc6a::1
 OCCTL_SOCKET=./occtl-comp-$$.socket
 USERNAME=test
 
+. `dirname $0`/random-net.sh
 . `dirname $0`/ns.sh
 
 # Run servers

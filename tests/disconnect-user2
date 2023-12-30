@@ -54,13 +54,7 @@ function finish {
 trap finish EXIT
 
 # server address
-ADDRESS=10.32.81.0
-CLI_ADDRESS=10.32.80.1
-VPNNET=192.168.1.0/24
-VPNADDR=192.168.1.1
-VPNNET6=fcbe:735c:407a:3fc2:164d:fa21:1495:0/112
-VPNADDR6=fcbe:735c:407a:3fc2:164d:fa21:1495:1
-
+. `dirname $0`/random-net.sh
 . `dirname $0`/ns.sh
 
 # Run servers
