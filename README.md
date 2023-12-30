@@ -40,6 +40,8 @@ apt-get install -y libpam0g-dev liblz4-dev libseccomp-dev \
 	gperf iperf3 lcov libuid-wrapper libpam-wrapper libnss-wrapper \
 	libsocket-wrapper gss-ntlmssp haproxy iputils-ping freeradius \
 	gawk gnutls-bin iproute2 yajl-tools tcpdump
+# For manpages
+yum install -y ronn
 ```
 
 ## Fedora/RHEL:
@@ -53,6 +55,8 @@ yum install -y pam-devel lz4-devel libseccomp-devel readline-devel \
 	http-parser-devel protobuf-c gperf iperf3 lcov uid_wrapper \
 	pam_wrapper nss_wrapper socket_wrapper gssntlmssp haproxy iputils \
 	freeradius gawk gnutls-utils iproute yajl tcpdump
+# For manpages
+yum install -y rubygem-ronn-ng
 ```
 
 See [README-radius](doc/README-radius.md) for more information on Radius
