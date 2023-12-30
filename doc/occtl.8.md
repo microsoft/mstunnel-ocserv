@@ -37,9 +37,16 @@ the command.
   * **-v, --version**:
     Output version of program and exit.
 
+## EXIT STATUS
+
+  * **0**:
+    Successful program execution.
+
+  * **1**:
+    The operation failed or the command syntax was not valid.
+
 ## IMPLEMENTATION NOTES
 This tool uses unix domain sockets to connect to ocserv.
-
 
 ## EXAMPLES
 The tool can be run interactively when run with no arguments. When arguments are given they are
@@ -52,27 +59,17 @@ below.
 
     $ occtl --json show users
 
-## Exit status
+## AUTHORS
 
-  * **0**:
-    Successful program execution.
-
-  * **1**:
-    The operation failed or the command syntax was not valid.
-
+Written by Nikos Mavrogiannopoulos. Many people have contributed to it.
 
 ## REPORTING BUGS
 Issue tracker: https://gitlab.com/openconnect/ocserv/-/issues
-
-## SEE ALSO
-
-ocserv(8), ocpasswd(8)
 
 ## COPYRIGHT
 Copyright (C) 2013-2017 Nikos Mavrogiannopoulos and others, all rights reserved.
 This program is released under the terms of the GNU General Public License, version 2.
 
-## AUTHORS
+## SEE ALSO
 
-Written by Nikos Mavrogiannopoulos. Many people have
-contributed to it.
+ocserv(8), ocpasswd(8)
