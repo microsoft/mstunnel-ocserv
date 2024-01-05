@@ -1,5 +1,7 @@
 * Version 1.2.4 (unreleased)
-- Document that bug reports should be file against GitLab in console help.
+- Use "OpenConnect VPN server" as the long package name. Keep "ocserv" as a
+  short name.
+- usage: open issues on GitLab to report bugs.
 - Print bit rates as kb/s.
 - Fix logging to stderr: add missing newline.
 - Fixed compatibility with AnyConnect clients on Linux (#544)

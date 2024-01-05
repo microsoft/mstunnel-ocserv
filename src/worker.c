@@ -180,7 +180,7 @@ int main(int argc, char **argv)
 #endif
 	sigprocmask(SIG_SETMASK, &sig_default_set, NULL);
 
-	setproctitle(PACKAGE_NAME "-worker");
+	setproctitle(PACKAGE "-worker");
 	kill_on_parent_kill(SIGTERM);
 
 	ws->main_pool = s->main_pool;
