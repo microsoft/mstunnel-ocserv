@@ -1,5 +1,5 @@
 AC_PREREQ(2.61)
-AC_INIT([OpenConnect VPN Server], [1.2.3],
+AC_INIT([ocserv], [1.2.3],
         [https://gitlab.com/openconnect/ocserv/-/issues],
 	[ocserv],
 	[https://ocserv.gitlab.io/www/])

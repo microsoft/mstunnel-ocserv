@@ -13,7 +13,8 @@ CODE_COVERAGE_LCOV_RMOPTS_DEFAULT = --ignore-errors unused
 CODE_COVERAGE_GENHTML_OPTIONS_DEFAULT = --ignore-errors unmapped
 
 local-code-coverage-output: code-coverage-capture
-	cat $(CODE_COVERAGE_OUTPUT_DIRECTORY)/index.html|grep headerCovTableEntry|grep "%"|head -1|sed 's/&nbsp;//g'|sed 's/^.*>\([0-9\.\ %]*\)<.*$$/coverage lines: \1/'
+	test -f "$(CODE_COVERAGE_OUTPUT_DIRECTORY)/index.html" || exit 1
+	cat "$(CODE_COVERAGE_OUTPUT_DIRECTORY)/index.html"|grep headerCovTableEntry|grep "%"|head -1|sed 's/&nbsp;//g'|sed 's/^.*>\([0-9\.\ %]*\)<.*$$/coverage lines: \1/'
 
 clang:
 	make clean
