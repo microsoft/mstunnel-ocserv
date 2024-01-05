@@ -9,7 +9,7 @@ protocol between them.
 
 # VPN overview
 
-See https://ocserv.gitlab.io/www/technical.html
+See https://ocserv.openconnect-vpn.net/technical.html
 
 
 ## The main process
