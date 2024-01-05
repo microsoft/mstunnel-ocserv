@@ -1634,7 +1634,7 @@ void usage(void)
 	fprintf(stderr, "OpenConnect VPN client.  It follows the TLS and DTLS-based AnyConnect VPN\n");
 	fprintf(stderr, "protocol which is used by several CISCO routers.\n\n");
 
-	fprintf(stderr, "Please send bug reports to:  "PACKAGE_BUGREPORT"\n");
+	fprintf(stderr, "Please file bug reports at:  "PACKAGE_BUGREPORT"\n");
 }
 
 int cmd_parser (void *pool, int argc, char **argv, struct list_head *head, bool worker)
