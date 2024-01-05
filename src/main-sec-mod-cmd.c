@@ -801,7 +801,7 @@ void run_sec_mod(sec_mod_instance_st * sec_mod_instance, unsigned int instance_i
 		 * the operating system. */
 		malloc_trim(0);
 #endif
-		setproctitle(PACKAGE_NAME "-sm");
+		setproctitle(PACKAGE "-sm");
 		close(fd[1]);
 		close(sfd[1]);
 		set_cloexec_flag (fd[0], 1);

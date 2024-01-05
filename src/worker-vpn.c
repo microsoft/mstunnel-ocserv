@@ -1998,7 +1998,7 @@ static int connect_handler(worker_st * ws)
 	ret = cstp_puts(ws, "X-CSTP-Version: 1\r\n");
 	SEND_ERR(ret);
 
-	ret = cstp_puts(ws, "X-CSTP-Server-Name: "PACKAGE_STRING"\r\n");
+	ret = cstp_puts(ws, "X-CSTP-Server-Name: "PACKAGE_NAME"\r\n");
 	SEND_ERR(ret);
 
 	if (req->is_mobile) {
