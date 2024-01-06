@@ -3,6 +3,7 @@
 - Print bit rates as kb/s.
 - Fix logging to stderr: add missing newline.
 - Fixed compatibility with AnyConnect clients on Linux (#544)
+- Detect the new AnyConnect-compatible identifier of OpenConnect clients
 
 
 * Version 1.2.3 (released 2023-12-17)

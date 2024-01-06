@@ -439,6 +439,9 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		} else if (strncasecmp(req->user_agent, "Cisco AnyConnect", 16) == 0) {
 			oclog(ws, LOG_DEBUG, "Detected Cisco AnyConnect");
 			req->user_agent_type = AGENT_ANYCONNECT;
+		} else if (strncasecmp(req->user_agent, "AnyConnect-compatible OpenConnect", 33) == 0) {
+			oclog(ws, LOG_DEBUG, "Detected OpenConnect v9 or newer");
+			req->user_agent_type = AGENT_OPENCONNECT;
 		} else if (strncasecmp(req->user_agent, "AnyConnect", 10) == 0) {
 			oclog(ws, LOG_DEBUG, "Detected Cisco AnyConnect");
 			req->user_agent_type = AGENT_ANYCONNECT;
