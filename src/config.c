@@ -1611,7 +1611,7 @@ static const struct option long_options[] = {
 static
 void usage(void)
 {
-	fprintf(stderr, "ocserv - OpenConnect VPN server\n");
+	fprintf(stderr, PACKAGE" - "PACKAGE_NAME"\n");
 	fprintf(stderr, "Usage:  ocserv [ -<flag> [<val>] | --<name>[{=| }<val>] ]...\n\n");
 
 	fprintf(stderr, "   -f, --foreground           Do not fork into background\n");
@@ -1630,7 +1630,7 @@ void usage(void)
 	fprintf(stderr, "   -s, --syslog               Log to syslog (default)\n");
 	fprintf(stderr, "   -h, --help                 Display extended usage information and exit\n\n");
 
-	fprintf(stderr, "OpenConnect VPN server (ocserv) is a VPN server compatible with the\n");
+	fprintf(stderr, PACKAGE_NAME" ("PACKAGE") is a VPN server compatible with the\n");
 	fprintf(stderr, "OpenConnect VPN client.  It follows the TLS and DTLS-based AnyConnect VPN\n");
 	fprintf(stderr, "protocol which is used by several CISCO routers.\n\n");
 
