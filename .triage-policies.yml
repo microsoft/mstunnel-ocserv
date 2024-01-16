@@ -11,8 +11,6 @@ resource_rules:
           state: opened
           labels:
             - needinfo
-        limits:
-          most_recent: 50
         actions:
           status: close
           comment: |
@@ -31,12 +29,25 @@ resource_rules:
           state: opened
           labels:
             - No Label
-        limits:
-          most_recent: 50
         actions:
           status: close
           comment: |
             {{author}} This merge request is marked as work in progress with no update for a long time. We are now closing it, but please re-open if you are still interested in finishing this merge request. This is an automated message.
+      - name: Close old Draft policy
+        conditions:
+          title: Draft
+          date:
+            attribute: updated_at
+            condition: older_than
+            interval_type: months
+            interval: 3
+          state: opened
+          labels:
+            - No Label
+        actions:
+          status: close
+          comment: |
+            {{author}} This merge request is marked as Draft with no update for a long time. We are now closing it, but please re-open if you are still interested in finishing this merge request. This is an automated message.
       - name: Close old policy
         conditions:
           date:
@@ -45,9 +56,20 @@ resource_rules:
             interval_type: months
             interval: 5
           state: opened
-        limits:
-          most_recent: 50
         actions:
           status: close
           comment: |
             {{author}} This merge request is open for a long time without an update. We are now closing it, but please re-open if you are still interested in finishing this merge request. This is an automated message.
+
+  branches:
+    rules:
+      - name: tmp branch deletion policy
+        conditions:
+          date:
+            attribute: committed_date
+            condition: older_than
+            interval_type: months
+            interval: 6
+          name: ^tmp
+        actions:
+          delete: true
