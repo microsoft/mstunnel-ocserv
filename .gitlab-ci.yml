@@ -488,7 +488,7 @@ triage:
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:
   - gem install gitlab-triage
-  - gitlab-triage --source-id openconnect/ocserv --token "$API_TOKEN"
+  - gitlab-triage --source-id $CI_PROJECT_ID --token "$API_TOKEN"
   tags:
   - shared
   - linux
