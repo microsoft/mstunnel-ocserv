@@ -41,9 +41,22 @@
 # include <radcli/radcli.h>
 #endif
 
+#ifndef VENDOR_BIT_SIZE
+# define VENDOR_BIT_SIZE 16
+# define VENDOR_MASK 0xffff
+#else
+# define VENDOR_MASK 0xffffffff
+#endif
+
+#define VATTRID_SET(a,v) ((a)|((uint64_t)((v)&VENDOR_MASK)) << VENDOR_BIT_SIZE)
+
 #define RAD_GROUP_NAME PW_CLASS
-#define RAD_MS_PRIMARY_DNS_SERVER   ((311<<16)|(28)) /* RFC 2548 */
-#define RAD_MS_SECONDARY_DNS_SERVER ((311<<16)|(29)) /* RFC 2548 */
+/* Microsoft - RFC 2548 */
+#define MS_PRIMARY_DNS_SERVER VATTRID_SET(28, 311)
+#define MS_SECONDARY_DNS_SERVER VATTRID_SET(29, 311)
+/* Roaring Penguin */
+#define RP_UPSTREAM_SPEED_LIMIT  VATTRID_SET(1, 10055)
+#define RP_DOWNSTREAM_SPEED_LIMIT VATTRID_SET(2, 10055)
 
 #if defined(LEGACY_RADIUS)
 # ifndef PW_DELEGATED_IPV6_PREFIX
@@ -431,11 +444,11 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 				/* Framed-IP-Netmask */
 				ipv4 = htonl(vp->lvalue);
 				inet_ntop(AF_INET, &ipv4, pctx->ipv4_mask, sizeof(pctx->ipv4_mask));
-			} else if (vp->attribute == RAD_MS_PRIMARY_DNS_SERVER && vp->type == PW_TYPE_IPADDR) {
+			} else if (vp->attribute == MS_PRIMARY_DNS_SERVER && vp->type == PW_TYPE_IPADDR) {
 				/* MS-Primary-DNS-Server */
 				ipv4 = htonl(vp->lvalue);
 				inet_ntop(AF_INET, &ipv4, pctx->ipv4_dns1, sizeof(pctx->ipv4_dns1));
-			} else if (vp->attribute == RAD_MS_SECONDARY_DNS_SERVER && vp->type == PW_TYPE_IPADDR) {
+			} else if (vp->attribute == MS_SECONDARY_DNS_SERVER && vp->type == PW_TYPE_IPADDR) {
 				/* MS-Secondary-DNS-Server */
 				ipv4 = htonl(vp->lvalue);
 				inet_ntop(AF_INET, &ipv4, pctx->ipv4_dns2, sizeof(pctx->ipv4_dns2));
@@ -449,8 +462,13 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 				pctx->interim_interval_secs = vp->lvalue;
 			} else if (vp->attribute == PW_SESSION_TIMEOUT && vp->type == PW_TYPE_INTEGER) {
 				pctx->session_timeout_secs = vp->lvalue;
+			} else if (vp->attribute == RP_UPSTREAM_SPEED_LIMIT && vp->type == PW_TYPE_INTEGER) {
+				pctx->rx_per_sec = vp->lvalue;
+			} else if (vp->attribute == RP_DOWNSTREAM_SPEED_LIMIT && vp->type == PW_TYPE_INTEGER) {
+				pctx->tx_per_sec = vp->lvalue;
 			} else {
-				oc_syslog(LOG_DEBUG, "radius-auth: ignoring server's value %u of type %u", (int)vp->attribute, (int)vp->type);
+				oc_syslog(LOG_DEBUG, "radius-auth: ignoring server's attribute (%u,%u) of type %u",
+					(unsigned)ATTRID(vp->attribute), (unsigned)VENDOR(vp->attribute), (unsigned)vp->type);
 			}
 			vp = vp->next;
 		}
