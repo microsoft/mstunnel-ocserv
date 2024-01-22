@@ -1,12 +1,9 @@
-* Version 1.2.4 (unreleased)
+* Version 1.2.4 (released 2024-01-22)
 - Get connection speed limits (traffic shaping) from RADIUS (#554)
-- Use "OpenConnect VPN server" as the long package name. Keep "ocserv" as a
-  short name.
-- usage: open issues on GitLab to report bugs.
-- Print bit rates as kb/s.
 - Fix logging to stderr: add missing newline.
 - Fixed compatibility with AnyConnect clients on Linux (#544)
 - Detect the new AnyConnect-compatible identifier of OpenConnect clients
+- occtl: Print bit rates as kb/s.
 
 
 * Version 1.2.3 (released 2023-12-17)
