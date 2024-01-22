@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "This script will send the tarballs to infradead and create tags and release at gitlab"
-echo "It will use your ssh keys and gitlab token as placed in .gitlab-token"
+echo "It will use your ssh keys and gitlab token as placed in ~/.gitlab-token"
 echo "Press enter to continue..."
 read
 
@@ -11,13 +11,13 @@ if test -z "$1";then
 	exit 1
 fi
 
-if ! test -f ".gitlab-token";then
+if ! test -f "$(expr ~/.gitlab-token)";then
 	echo "Cannot find .gitlab-token"
 	exit 1
 fi
 
 PROJECT=473862
-TOKEN=$(cat .gitlab-token)
+TOKEN=$(cat ~/.gitlab-token)
 version=$1
 file=ocserv-${version}.tar.xz
 
