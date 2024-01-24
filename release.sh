@@ -70,7 +70,7 @@ if test "$s" != "s" && test "$s" != "skip";then
 
 	set -e
 	curl -s --header 'Content-Type: application/json' --header "PRIVATE-TOKEN: ${TOKEN}" \
-	     --data '{ "name": "'${version}'", "tag_name": "'${version}'", "description": "'"${msg}"'", '"${milestones}"' "assets": { "links": [{ "name": "PGP signature", "url": "https://www.infradead.org/ocserv/download/ocserv-'${version}'.tar.xz.sig", "link_type":"other" }, { "name": "Tarball", "url": "https://www.infradead.org/ocserv/download/ocserv-'${version}'.tar.xz", "link_type":"other" }] } }' \
+	     --data '{ "name": "'${version}'", "tag_name": "'${version}'", "description": "'"${msg}"'", '"${milestones}"' "assets": { "links": [{ "name": "PGP signature", "url": "https://www.infradead.org/ocserv/download/ocserv-'${version}'.tar.xz.sig", "link_type":"other" }, { "name": "Tarball", "url": "https://www.infradead.org/ocserv/download/ocserv-'${version}'.tar.xz", "link_type":"package" }] } }' \
 	     --request POST "https://gitlab.com/api/v4/projects/${PROJECT}/releases" | jq
 fi
 
