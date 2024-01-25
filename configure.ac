@@ -22,6 +22,15 @@ if test "$GCC" = "yes" && ! expr "$CC" : clang >/dev/null 2>&1;then
 	CFLAGS="$CFLAGS -Wall -Wno-strict-aliasing -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-missing-field-initializers -Wno-implicit-fallthrough -Wno-stringop-truncation"
 fi
 
+AC_CHECK_PROGS([IPCALC], [ipcalc ipcalc-ng], [:])
+
+if test x"$IPCALC" = "x:"; then
+	AC_MSG_ERROR([[
+***
+*** ipcalc (ipcalc-ng in debian) was not found. It is needed for the test suite
+*** ]])
+fi
+
 AC_PATH_PROG(CTAGS, ctags, [:])
 AC_PATH_PROG(CSCOPE, cscope, [:])
 AC_CHECK_PROG([RONN], [ronn], [ronn], [:])
