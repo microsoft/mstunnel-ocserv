@@ -1,3 +1,6 @@
+* Version 1.2.5 (unreleased)
+- 
+
 * Version 1.2.4 (released 2024-01-22)
 - Get connection speed limits (traffic shaping) from RADIUS (#554)
 - Fix logging to stderr: add missing newline.
