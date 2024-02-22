@@ -137,7 +137,7 @@ container registry. The compilation/test phase is on every commit to project.
 
 # How the VPN works
 
-Please see the [technical description page](http://ocserv.gitlab.io/www/technical.html).
+Please see the [technical description page](http://ocserv.openconnect-vpn.net/technical.html).
 
 # License
 
