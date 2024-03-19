@@ -32,7 +32,7 @@
 #include "log.h"
 
 #define SESSION_STR "(session: %.6s)"
-#define MAX_GROUPS 128
+#define MAX_GROUPS 512
 
 typedef struct sec_mod_st {
 	struct list_head *vconfig;
