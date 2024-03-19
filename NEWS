@@ -1,5 +1,6 @@
 * Version 1.2.5 (unreleased)
-- 
+- Bump the number of groups per account from 128 to 512 (#219)
+
 
 * Version 1.2.4 (released 2024-01-22)
 - Get connection speed limits (traffic shaping) from RADIUS (#554)
