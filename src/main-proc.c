@@ -50,10 +50,6 @@
 #include <inttypes.h>
 #include <ev.h>
 
-#ifdef HAVE_MALLOC_TRIM
-# include <malloc.h>
-#endif
-
 #include <vpn.h>
 #include <tun.h>
 #include <main.h>
