@@ -35,9 +35,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <cloexec.h>
-#ifdef HAVE_MALLOC_TRIM
-# include <malloc.h> /* for malloc_trim() */
-#endif
 #include <script-list.h>
 
 #include <gnutls/x509.h>
