@@ -167,6 +167,10 @@ delete_user(const char *fpasswd, const char *username)
 
 	tmp_passwd_len = fpasswd_len + 5;
 	tmp_passwd = malloc(tmp_passwd_len);
+	if (tmp_passwd == NULL) {
+		fprintf(stderr, "memory error\n");
+		exit(EXIT_FAILURE);
+	}
 
 	snprintf(tmp_passwd, tmp_passwd_len, "%s.tmp", fpasswd);
 	if (stat(tmp_passwd, &st) != -1) {
@@ -228,6 +232,10 @@ lock_user(const char *fpasswd, const char *username)
 
 	tmp_passwd_len = fpasswd_len + 5;
 	tmp_passwd = malloc(tmp_passwd_len);
+	if (tmp_passwd == NULL) {
+		fprintf(stderr, "memory error\n");
+		exit(EXIT_FAILURE);
+	}
 
 	snprintf(tmp_passwd, tmp_passwd_len, "%s.tmp", fpasswd);
 	if (stat(tmp_passwd, &st) != -1) {
@@ -301,6 +309,10 @@ unlock_user(const char *fpasswd, const char *username)
 
 	tmp_passwd_len = fpasswd_len + 5;
 	tmp_passwd = malloc(tmp_passwd_len);
+	if (tmp_passwd == NULL) {
+		fprintf(stderr, "memory error\n");
+		exit(EXIT_FAILURE);
+	}
 
 	snprintf(tmp_passwd, tmp_passwd_len, "%s.tmp", fpasswd);
 	if (stat(tmp_passwd, &st) != -1) {
