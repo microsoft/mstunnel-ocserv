@@ -69,7 +69,7 @@ Written by Nikos Mavrogiannopoulos. Many people have contributed to it.
 Issue tracker: https://gitlab.com/openconnect/ocserv/-/issues
 
 ## COPYRIGHT
-Copyright (C) 2013-2017 Nikos Mavrogiannopoulos and others, all rights reserved.
+Copyright (C) 2013-2024 Nikos Mavrogiannopoulos and others, all rights reserved.
 This program is released under the terms of the GNU General Public License, version 2.
 
 ## SEE ALSO

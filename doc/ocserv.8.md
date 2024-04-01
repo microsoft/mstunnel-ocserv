@@ -240,9 +240,10 @@ file at _/etc/ocserv/ocserv.conf_. An example configuration file follows.
 
 ## IMPLEMENTATION NOTES
 Note that while this server utilizes privilege separation and all
-authentication occurs on the security module, this does not apply for TLS client
-certificate authentication. That is due to TLS protocol limitation.
-
+authentication occurs on the security module, due to a TLS protocol
+limitation this does not apply for TLS client certificate authentication.
+To take advantage of privilege separation combine certificate and password
+authentication.
 
 ## NETWORKING CONSIDERATIONS
 In certain setups, where a firewall may be blocking ICMP responses, setting the
@@ -257,7 +258,7 @@ Written by Nikos Mavrogiannopoulos. Many people have contributed to it.
 Issue tracker: https://gitlab.com/openconnect/ocserv/-/issues
 
 ## COPYRIGHT
-Copyright (C) 2013-2018 Nikos Mavrogiannopoulos and others, all rights reserved.
+Copyright (C) 2013-2024 Nikos Mavrogiannopoulos and others, all rights reserved.
 This program is released under the terms of the GNU General Public License, version 2.
 
 ## SEE ALSO
