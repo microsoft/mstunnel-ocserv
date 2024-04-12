@@ -16,7 +16,7 @@ variables:
   CENTOS9_BUILD: buildenv-centos9
   CENTOS7_BUILD: buildenv-centos7
   CENTOS6_BUILD: buildenv-centos6
-  MINIMALCONFIG: "--without-protobuf --without-libtalloc-prefix --without-libnl --without-maxmind --without-geoip --without-libreadline-prefix --without-liboath --without-libc-prefix --without-pam --without-radius --without-libcrypt-prefix --without-utmp --without-libutil-prefix --without-libwrap --without-libwrap-prefix --without-libseccomp-prefix --without-libsystemd-prefix --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --disable-rpath --disable-seccomp --disable-anyconnect-compat --disable-compression"
+  MINIMALCONFIG: "--without-protobuf --without-libtalloc-prefix --without-libnl --without-maxmind --without-geoip --without-libreadline-prefix --without-liboath --without-libc-prefix --without-pam --without-radius --without-libcrypt-prefix --without-utmp --without-libutil-prefix --without-libwrap --without-libwrap-prefix --without-libseccomp-prefix --without-libsystemd-prefix --without-llhttp --without-lz4 --without-gssapi --without-pcl-lib --disable-rpath --disable-seccomp --disable-anyconnect-compat --disable-compression"
   JOBS: 2
 
 Signoff:
