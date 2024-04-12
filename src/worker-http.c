@@ -763,7 +763,7 @@ url_handler_fn http_post_url_handler(struct worker_st *ws, const char *url)
 	return h;
 }
 
-int http_url_cb(http_parser * parser, const char *at, size_t length)
+int http_url_cb(llhttp_t * parser, const char *at, size_t length)
 {
 	struct worker_st *ws = parser->data;
 	struct http_req_st *req = &ws->req;
@@ -779,7 +779,7 @@ int http_url_cb(http_parser * parser, const char *at, size_t length)
 	return 0;
 }
 
-int http_header_field_cb(http_parser * parser, const char *at, size_t length)
+int http_header_field_cb(llhttp_t * parser, const char *at, size_t length)
 {
 	struct worker_st *ws = parser->data;
 	struct http_req_st *req = &ws->req;
@@ -815,7 +815,7 @@ static void header_check(struct http_req_st *req)
 	req->next_header = 0;
 }
 
-int http_header_value_cb(http_parser * parser, const char *at, size_t length)
+int http_header_value_cb(llhttp_t * parser, const char *at, size_t length)
 {
 	struct worker_st *ws = parser->data;
 	struct http_req_st *req = &ws->req;
@@ -835,7 +835,7 @@ int http_header_value_cb(http_parser * parser, const char *at, size_t length)
 	return 0;
 }
 
-int http_header_complete_cb(http_parser * parser)
+int http_header_complete_cb(llhttp_t * parser)
 {
 	struct worker_st *ws = parser->data;
 	struct http_req_st *req = &ws->req;
@@ -855,7 +855,7 @@ int http_header_complete_cb(http_parser * parser)
 	return 0;
 }
 
-int http_message_complete_cb(http_parser * parser)
+int http_message_complete_cb(llhttp_t * parser)
 {
 	struct worker_st *ws = parser->data;
 	struct http_req_st *req = &ws->req;
@@ -864,7 +864,7 @@ int http_message_complete_cb(http_parser * parser)
 	return 0;
 }
 
-int http_body_cb(http_parser * parser, const char *at, size_t length)
+int http_body_cb(llhttp_t * parser, const char *at, size_t length)
 {
 	struct worker_st *ws = parser->data;
 	struct http_req_st *req = &ws->req;

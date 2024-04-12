@@ -4,11 +4,11 @@ if LOCAL_TALLOC
 AM_CPPFLAGS += -I$(top_srcdir)/src/ccan/talloc
 endif
 
-if LOCAL_HTTP_PARSER
-AM_CPPFLAGS += -I$(top_srcdir)/src/http-parser/
-NEEDED_HTTP_PARSER_LIBS =
+if LOCAL_LLHTTP
+AM_CPPFLAGS += -I$(top_srcdir)/src/llhttp/
+NEEDED_LLHTTP_LIBS =
 else
-NEEDED_HTTP_PARSER_LIBS = $(HTTP_PARSER_LIBS)
+NEEDED_LLHTTP_LIBS = $(LLHTTP_LIBS)
 endif
 
 if LOCAL_PROTOBUF_C
