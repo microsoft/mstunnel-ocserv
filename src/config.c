@@ -1185,7 +1185,7 @@ static void replace_file_with_snapshot(char ** file_name)
 static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 			   unsigned flags)
 {
-	int ret;
+	int ret, silent = 0;
 	struct cfg_st *config;
 	struct ini_ctx_st ctx;
 	vhost_cfg_st *vhost = NULL;
@@ -1334,7 +1334,9 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 			defvhost = NULL;
 
 		/* this check copies mandatory fields from default vhost if needed */
-		check_cfg(vhost, defvhost, ctx.reload);
+		if (ctx.reload || ctx.is_worker)
+			silent = 1;
+		check_cfg(vhost, defvhost, silent);
 
 		/* the following are only useful in main process */
 		if (!(flags & CFG_FLAG_SECMOD)) {
