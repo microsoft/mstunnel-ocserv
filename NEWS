@@ -3,6 +3,8 @@
 - Allow connecting users to select an authgroup by appending the
   group name to the URL, as in https://vpn.example.com/groupname;
   this introduces the select-group-by-url config option.
+- Informational messages due to configuration loading are not printed
+  during worker initialization.
 
 
 * Version 1.2.4 (released 2024-01-22)
