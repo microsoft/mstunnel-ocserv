@@ -251,6 +251,8 @@ struct cfg_st {
 
 	char **friendly_group_list; /* the same size as group_list_size */
 
+	unsigned select_group_by_url;
+	unsigned auto_select_group;
 	char *default_select_group;
 
 	char **custom_header;

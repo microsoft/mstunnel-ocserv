@@ -29,7 +29,8 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem ns.sh common.sh certs/server-cert.pem
 	data/haproxy-connect.cfg data/test-haproxy-connect.config scripts/vpnc-script \
 	data/test-traffic.config data/test-compression-lzs.config data/test-compression-lz4.config \
 	certs/crl.pem server-cert-rsa-pss data/test-gssapi-opt-cert.config data/test-ciphers.config \
-	cipher-common.sh data/config-per-group.config data/group-config/tost \
+	cipher-common.sh data/config-per-group.config data/config-per-group-url-cert.config \
+	data/config-per-group-url-pass.config data/group-config/tost \
 	data/raddb/access_reject data/raddb/accounting_response data/raddb/access_challenge data/raddb/acct_users \
 	data/raddb/clients.conf data/raddb/radiusd.conf.in data/raddb/users \
 	data/radiusclient/dictionary data/radiusclient/radiusclient.conf \
@@ -40,7 +41,7 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem ns.sh common.sh certs/server-cert.pem
 	connect-ios-script data/apple-ios.config certs/kerberos-cert.pem \
 	data/kdc.conf data/krb5.conf data/k5.KERBEROS.TEST data/kadm5.acl \
 	data/ipv6-iface.config data/no-route-default.config data/no-route-group.config \
-	data/group-config/group1 data/test-namespace-listen.config data/disconnect-user.config \
+	data/group-config/group1 data/group-config/group2 data/test-namespace-listen.config data/disconnect-user.config \
 	data/disconnect-user2.config data/ping-leases.config data/haproxy-proxyproto.config \
 	data/haproxy-proxyproto.cfg scripts/proxy-connectscript data/haproxy-proxyproto-v1.config \
 	data/haproxy-proxyproto-v1.cfg scripts/proxy-connectscript-v1 data/test-multiple-client-ip.config \
@@ -76,7 +77,9 @@ endif
 dist_check_SCRIPTS += traffic lz4-compression lzs-compression \
 	aes256-cipher aes128-cipher oc-aes256-gcm-cipher oc-aes128-gcm-cipher \
 	test-config-per-group ac-aes128-gcm-cipher ac-aes256-gcm-cipher \
-	no-dtls-cipher psk-negotiate psk-negotiate-match test-multiple-client-ip
+	no-dtls-cipher psk-negotiate psk-negotiate-match test-multiple-client-ip \
+	test-config-per-group-url-pass test-config-per-group-url-cert
+
 if RADIUS_ENABLED
 dist_check_SCRIPTS += radius
 endif
