@@ -932,7 +932,7 @@ unsigned need_file_reload(const char *file, time_t last_access)
 /* reload key files etc.
  * @s may be %NULL, and should be used for mslog() purposes only.
  */
-void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
+void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost, unsigned silent)
 {
 	int ret;
 	unsigned i;
@@ -955,7 +955,8 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
 		if (need_reload == 0)
 			return;
 
-		oc_syslog(LOG_INFO, "reloading server certificates");
+		if (!silent)
+			oc_syslog(LOG_INFO, "reloading server certificates");
 	}
 
 	if (vhost->perm_config.log_level >= OCLOG_TLS) {
@@ -1005,7 +1006,8 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
 				exit(EXIT_FAILURE);
 			}
 
-			oc_syslog(LOG_INFO, "processed %d CA certificate(s)", ret);
+			if (!silent)
+				oc_syslog(LOG_INFO, "processed %d CA certificate(s)", ret);
 		}
 
 		tls_reload_crl(s, vhost, 1);

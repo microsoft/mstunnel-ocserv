@@ -61,7 +61,7 @@ void tls_reload_crl(struct main_server_st* s, struct vhost_cfg_st *vhost, unsign
 void tls_global_init(void);
 void tls_vhost_init(struct vhost_cfg_st *vhost);
 void tls_vhost_deinit(struct vhost_cfg_st *vhost);
-void tls_load_files(struct main_server_st* s, struct vhost_cfg_st *vhost);
+void tls_load_files(struct main_server_st* s, struct vhost_cfg_st *vhost, unsigned silent);
 void tls_load_prio(struct main_server_st *s, struct vhost_cfg_st *vhost);
 
 size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac_algorithm_t);
