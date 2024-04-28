@@ -1340,7 +1340,7 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 
 		/* the following are only useful in main process */
 		if (!(flags & CFG_FLAG_SECMOD)) {
-			tls_load_files(NULL, vhost);
+			tls_load_files(NULL, vhost, silent);
 			tls_load_prio(NULL, vhost);
 			tls_reload_crl(NULL, vhost, 1);
 		}
