@@ -1,4 +1,6 @@
 * Version 1.2.5 (unreleased)
+- Switch to https://github.com/nodejs/llhttp from http-parser.
+  http-parser was a liability as an unmaintained project (#598)
 - Bump the number of groups per account from 128 to 512 (#219)
 - Allow connecting users to select an authgroup by appending the
   group name to the URL, as in https://vpn.example.com/groupname;

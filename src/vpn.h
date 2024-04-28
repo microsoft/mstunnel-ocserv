@@ -23,7 +23,7 @@
 
 #include <config.h>
 #include <gnutls/gnutls.h>
-#include <http_parser.h>
+#include <llhttp.h>
 #include <ccan/htable/htable.h>
 #include <ccan/list/list.h>
 #include <sys/types.h>

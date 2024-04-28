@@ -20,18 +20,18 @@ EXTRA_DIST = version.inc.in version.inc \
 
 CORE_LDADD = libccan.a libcommon.a
 CORE_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
-	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
+	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_LLHTTP_LIBS) \
 	$(NEEDED_LIBPROTOBUF_LIBS) $(LIBSYSTEMD) $(LIBTALLOC_LIBS) \
 	$(RADCLI_LIBS) $(LIBLZ4_LIBS) $(LIBKRB5_LIBS) \
 	$(LIBTASN1_LIBS) $(LIBOATH_LIBS) $(LIBNETTLE_LIBS) \
 	$(LIBEV_LIBS) libipc.a $(NEEDED_LIBPROTOBUF_LIBS) \
 	$(CODE_COVERAGE_LDFLAGS)
 
-if LOCAL_HTTP_PARSER
-HTTP_PARSER_SOURCES = http-parser/http_parser.c http-parser/http_parser.h
+if LOCAL_LLHTTP
+LLHTTP_SOURCES = llhttp/llhttp.c llhttp/llhttp.h llhttp/api.c llhttp/http.c
 endif
 
-CORE_SOURCES = $(HTTP_PARSER_SOURCES) \
+CORE_SOURCES = $(LLHTTP_SOURCES) \
 	common/hmac.c common/hmac.h common/snapshot.c common/snapshot.h \
 	common-config.h config.c config-kkdcp.c config-ports.c defs.h gettime.h \
 	inih/ini.c inih/ini.h \
