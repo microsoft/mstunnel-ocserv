@@ -4,7 +4,7 @@
 - Bump the number of groups per account from 128 to 512 (#219)
 - Allow connecting users to select an authgroup by appending the
   group name to the URL, as in https://vpn.example.com/groupname;
-  this introduces the select-group-by-url config option.
+  this introduces the select-group-by-url config option (#597).
 - Informational messages due to configuration loading are not printed
   during worker initialization.
 
