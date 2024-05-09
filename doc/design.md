@@ -9,8 +9,27 @@ protocol between them.
 
 # VPN overview
 
-See https://ocserv.openconnect-vpn.net/technical.html
+```mermaid
+flowchart LR
+    ms((main server))
+    wp((worker process))
+    sm((security module))
+    user[user]
+    subgraph root privileges
+    ms --> sm
+    sm --> ms
+    end
+    subgraph Non privileged/seccomp isolation
+    ms --> wp
+    wp --> ms
+    wp --> sm
+    sm --> wp
+    end
+    user --> wp
+    wp --> user
+```
 
+See also https://ocserv.openconnect-vpn.net/technical.html
 
 ## The main process
 
