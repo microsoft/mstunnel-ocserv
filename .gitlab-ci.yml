@@ -40,8 +40,7 @@ Debian:
   - export OCSERV_ALLOW_BROKEN_CLIENTS=1
   - make check -j$JOBS
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   except:
   - tags
   - schedules
@@ -63,8 +62,7 @@ i386/Debian:
   - make -j$JOBS
   - make check -j$JOBS VERBOSE=1
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   except:
   - tags
   - schedules
@@ -86,8 +84,7 @@ Ubuntu20.04:
   - export MALLOC_CHECK_=3
   - make check -j$JOBS
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   except:
   - tags
   - schedules
@@ -112,8 +109,7 @@ Ubuntu22.04:
 # md4. See https://bugs.launchpad.net/ubuntu/+source/gss-ntlmssp/+bug/1995915
   - make check -j$JOBS XFAIL_TESTS="test-gssapi"
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   except:
   - tags
   - schedules
@@ -136,8 +132,7 @@ Centos8:
   - make -j$JOBS
   - make check VERBOSE=1 -j$JOBS
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   except:
   - tags
   - schedules
@@ -160,8 +155,7 @@ Centos9:
   - make -j$JOBS
   - make check VERBOSE=1 -j$JOBS
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   except:
   - tags
   - schedules
@@ -182,8 +176,7 @@ Centos7:
   - make -j$JOBS
   - make check -j$JOBS
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   except:
   - tags
   - schedules
@@ -213,8 +206,7 @@ Coverity:
     --form file=@cov-int.tar.gz --form version="`git describe --tags`"
     --form description="CI build"
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   artifacts:
     expire_in: 1 week
     when: on_failure
@@ -230,8 +222,7 @@ musl/Alpine:
   - ./configure --disable-maintainer-mode --with-werror
   - make -j$JOBS
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   except:
   - tags
   - schedules
@@ -255,8 +246,7 @@ Fedora:
   - make local-code-coverage-output
   coverage: '/coverage lines: \d+\.\d+/'
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   except:
   - tags
   artifacts:
@@ -275,8 +265,7 @@ noprocfs/distcheck/Fedora:
   - make -j$JOBS
   - make distcheck VERBOSE=1 DISTCHECK_CONFIGURE_FLAGS="--disable-maintainer-mode" TESTS=""
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   except:
   - tags
   - schedules
@@ -296,8 +285,7 @@ clang/Fedora:
   - make -j$JOBS
   - make check -j$JOBS
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   except:
   - tags
   - schedules
@@ -318,8 +306,7 @@ seccomp/Fedora:
   - make -j$JOBS
   - make check -j$JOBS
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   except:
   - tags
   - schedules
@@ -338,8 +325,7 @@ minimal:
   - make -j$JOBS
   - make check -j$JOBS XFAIL_TESTS="lz4-compression lzs-compression"
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   except:
   - tags
   - schedules
@@ -361,8 +347,7 @@ minimal/Ubuntu20.04:
   - make -j$JOBS
   - make check -j$JOBS XFAIL_TESTS="lz4-compression lzs-compression"
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   except:
   - tags
   - schedules
@@ -386,8 +371,7 @@ asan/clang/Fedora:
   - make -j$JOBS
   - make check -j$JOBS
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   except:
   - tags
   - schedules
@@ -410,8 +394,7 @@ ubsan/Fedora:
   - make -j$JOBS
   - make check -j$JOBS CFLAGS="$UBCFLAGS -Wno-unused-function -Wno-unused-parameter"
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   except:
   - tags
   - schedules
@@ -430,8 +413,7 @@ static-analyzer/Fedora:
   - scan-build ./configure --enable-oidc-auth --enable-latency-stats --without-protobuf
   - scan-build --status-bugs -o scan-build-src make -j$JOBS
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   except:
   - tags
   - schedules
@@ -473,8 +455,7 @@ pages:
   - make V=1 CODE_COVERAGE_OUTPUT_DIRECTORY=public/coverage CODE_COVERAGE_BRANCH_COVERAGE=1 code-coverage-capture
   - make CODE_COVERAGE_OUTPUT_DIRECTORY=public/coverage local-code-coverage-output
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   dependencies:
   - Fedora
   only:
@@ -490,8 +471,7 @@ triage:
   - gem install gitlab-triage
   - gitlab-triage --source-id $CI_PROJECT_ID --token "$API_TOKEN"
   tags:
-  - shared
-  - linux
+  - saas-linux-small-amd64
   only:
   - schedules
 
