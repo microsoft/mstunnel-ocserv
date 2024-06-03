@@ -22,6 +22,10 @@ OpenID Connect (OIDC) is an identity layer build on top of the OAuth 2.0 protoco
 
 For as more detailed explanation see the OpenID Connect protocol (<https://openid.net/connect/)>
 
+## Supported clients
+
+As of now only the microsoft intunes VPN client supports OIDC.
+
 ## Deploying OIDC authentication
 
 An administrator wanting to deploy OIDC as an authentication scheme must do the following:
