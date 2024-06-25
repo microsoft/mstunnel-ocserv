@@ -131,7 +131,12 @@ int ctl_handler_init(main_server_st * s)
 	memset(&sa, 0, sizeof(sa));
 	sa.sun_family = AF_UNIX;
 	strlcpy(sa.sun_path, GETPCONFIG(s)->occtl_socket_file, sizeof(sa.sun_path));
-	remove(GETPCONFIG(s)->occtl_socket_file);
+	ret = remove(GETPCONFIG(s)->occtl_socket_file);
+	if (ret != 0) {
+		e = errno;
+		mslog(s, NULL, LOG_DEBUG, "could not delete socket: '%s': %s",
+		      GETPCONFIG(s)->occtl_socket_file, strerror(e));
+	}
 
 	sd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sd == -1) {
