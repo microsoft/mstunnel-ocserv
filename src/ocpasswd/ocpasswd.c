@@ -491,8 +491,16 @@ int main(int argc, char **argv)
 
 	if (!groupname)
 		groupname = strdup("*");
+	if (!groupname) {
+		fprintf(stderr, "memory error\n");
+		exit(EXIT_FAILURE);
+	}
 	if (!fpasswd)
 		fpasswd = strdup(DEFAULT_OCPASSWD);
+	if (!fpasswd) {
+		fprintf(stderr, "memory error\n");
+		exit(EXIT_FAILURE);
+	}
 
 	if (flags & FLAG_LOCK) {
 		lock_user(fpasswd, username);
