@@ -30,6 +30,8 @@ configuration while ocserv-main will use the previous configuration.
 
 ## Debian/Ubuntu:
 ```
+# Basic build tools
+apt-get install -y build-essential pkg-config
 # Required
 apt-get install -y libgnutls28-dev libev-dev
 # Optional functionality and testing
@@ -46,6 +48,8 @@ yum install -y ronn
 
 ## Fedora/RHEL:
 ```
+# Basic build tools
+yum install -y install make automake gcc pkgconf-pkg-config
 # Required
 yum install -y gnutls-devel libev-devel
 # Optional functionality and testing
