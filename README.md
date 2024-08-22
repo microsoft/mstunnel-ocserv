@@ -43,7 +43,7 @@ apt-get install -y libpam0g-dev liblz4-dev libseccomp-dev \
 	libsocket-wrapper gss-ntlmssp haproxy iputils-ping freeradius \
 	gawk gnutls-bin iproute2 yajl-tools tcpdump
 # For manpages
-yum install -y ronn
+apt-get install -y ronn
 ```
 
 ## Fedora/RHEL:
