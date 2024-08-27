@@ -24,13 +24,6 @@ srcdir=${srcdir:-.}
 OUTFILE=ss.$$.tmp
 SS=$(which ss)
 
-ADDRESS=10.213.2.1
-ADDRESS2=10.213.2.2
-CLI_ADDRESS=10.213.1.1
-CLI_ADDRESS2=10.213.1.2
-VPNNET=172.17.215.0/24
-VPNADDR=172.17.215.1
-
 function finish {
   set +e
   echo " * Cleaning up..."
@@ -43,6 +36,8 @@ function finish {
 }
 trap finish EXIT
 
+. `dirname $0`/random-net.sh
+. `dirname $0`/random-net2.sh
 . `dirname $0`/common.sh
 . `dirname $0`/ns.sh
 LISTEN_NS=$NSNAME2

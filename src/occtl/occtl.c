@@ -227,7 +227,7 @@ double data;
 
 	if (bytes > 1000 && bytes < 1000 * 1000) {
 		data = ((double) bytes) / 1000;
-		snprintf(output, output_size, "%.1f KB%s", data, suffix);
+		snprintf(output, output_size, "%.1f kB%s", data, suffix);
 	} else if (bytes >= 1000 * 1000 && bytes < 1000 * 1000 * 1000) {
 		data = ((double) bytes) / (1000 * 1000);
 		snprintf(output, output_size, "%.1f MB%s", data, suffix);

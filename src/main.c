@@ -35,9 +35,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <cloexec.h>
-#ifdef HAVE_MALLOC_TRIM
-# include <malloc.h> /* for malloc_trim() */
-#endif
 #include <script-list.h>
 
 #include <gnutls/x509.h>
@@ -713,8 +710,9 @@ int sfd = -1;
 		}
 
 		if (session_id_size <= 0 || session_id_size > GNUTLS_MAX_SESSION_ID) {
-			mslog(s, NULL, LOG_INFO, "%s: invalid session ID size",
-			      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)));
+			mslog(s, NULL, LOG_INFO, "%s: invalid session ID size (%d)",
+			      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)),
+			      session_id_size);
 			goto fail;
 		}
 	}
@@ -804,7 +802,7 @@ static int check_tcp_wrapper(int fd)
 {
 	struct request_info req;
 
-	if (request_init(&req, RQ_FILE, fd, RQ_DAEMON, PACKAGE_NAME, 0) == NULL)
+	if (request_init(&req, RQ_FILE, fd, RQ_DAEMON, PACKAGE, 0) == NULL)
 		return -1;
 
 	sock_host(&req);
@@ -1106,7 +1104,7 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 				close(s->sec_mod_instances[i].sec_mod_fd_sync);
 			}
 
-			setproctitle(PACKAGE_NAME"-worker");
+			setproctitle(PACKAGE"-worker");
 			kill_on_parent_kill(SIGTERM);
 
 			set_self_oom_score_adj(s);
@@ -1433,7 +1431,7 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 
-	setproctitle(PACKAGE_NAME"-main");
+	setproctitle(PACKAGE"-main");
 
 	if (getuid() != 0) {
 		fprintf(stderr, "This server requires root access to operate.\n");

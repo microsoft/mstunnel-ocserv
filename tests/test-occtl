@@ -28,15 +28,10 @@ CPIDFILE=oc-pid.$$.tmp
 PATH=${PATH}:/usr/sbin
 OUTFILE=occtl.$$.tmp
 
-ADDRESS=10.49.186.1
-CLI_ADDRESS=10.49.187.1
-VPNNET=192.168.163.0/24
-VPNADDR=192.168.163.1
-VPNNET6=fd4c:2018:1224:8944:e319:3890:a139::/112
-VPNADDR6=fd4c:2018:1224:8944:e319:3890:a139::1
 OCCTL_SOCKET=./occtl-comp-$$.socket
 USERNAME=test
 
+. `dirname $0`/random-net.sh
 . `dirname $0`/common.sh
 . `dirname $0`/ns.sh
 

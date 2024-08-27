@@ -57,7 +57,7 @@
 #include "ipc.pb-c.h"
 #include <worker.h>
 #include <tlslib.h>
-#include <http_parser.h>
+#include <llhttp.h>
 
 #if defined(CAPTURE_LATENCY_SUPPORT)
 #include <linux/net_tstamp.h>
@@ -790,12 +790,13 @@ static void check_camouflage_url(struct worker_st *ws)
 void vpn_server(struct worker_st *ws)
 {
 	int ret;
-	ssize_t nparsed, nrecvd;
+	ssize_t nrecvd;
 	gnutls_session_t session = NULL;
-	http_parser parser;
-	http_parser_settings settings;
+	llhttp_t parser;
+	llhttp_settings_t settings;
 	url_handler_fn fn;
 	int requests_left = MAX_HTTP_REQUESTS;
+	enum llhttp_errno lerr;
 
 	ocsigaltstack(ws);
 
@@ -898,7 +899,7 @@ void vpn_server(struct worker_st *ws)
 
 	session_info_send(ws);
 
-	memset(&settings, 0, sizeof(settings));
+	llhttp_settings_init(&settings);
 
 	ws->selected_auth = &WSPCONFIG(ws)->auth[0];
 	if (ws->cert_auth_ok)
@@ -924,7 +925,7 @@ void vpn_server(struct worker_st *ws)
 		exit_worker(ws);
 	}
 
-	http_parser_init(&parser, HTTP_REQUEST);
+	llhttp_init(&parser, HTTP_REQUEST, &settings);
 	parser.data = ws;
 	http_req_reset(ws);
 	/* parse as we go */
@@ -939,11 +940,12 @@ void vpn_server(struct worker_st *ws)
 			exit_worker(ws);
 		}
 
-		nparsed =
-		    http_parser_execute(&parser, &settings, (void *)ws->buffer,
-					nrecvd);
-		if (nparsed == 0) {
-			oclog(ws, LOG_INFO, "error parsing HTTP request");
+		lerr = llhttp_execute(&parser, (void *)ws->buffer, nrecvd);
+		if (lerr == HPE_PAUSED_UPGRADE && parser.method == HTTP_CONNECT) {
+			llhttp_resume_after_upgrade(&parser);
+			break;
+		} else if (lerr != HPE_OK) {
+			oclog(ws, LOG_INFO, "error parsing HTTP request: %s", llhttp_errno_name(lerr));
 			exit_worker(ws);
 		}
 	} while (ws->req.headers_complete == 0);
@@ -989,12 +991,11 @@ void vpn_server(struct worker_st *ws)
 				exit_worker(ws);
 			}
 
-			nparsed =
-			    http_parser_execute(&parser, &settings, (void *)ws->buffer,
-						nrecvd);
-			if (nparsed == 0) {
+			lerr =
+			    llhttp_execute(&parser, (void *)ws->buffer,	nrecvd);
+			if (lerr != HPE_OK) {
 				oclog(ws, LOG_HTTP_DEBUG,
-				      "error parsing HTTP POST request");
+				      "error parsing HTTP POST request: %s", llhttp_errno_name(lerr));
 				exit_worker(ws);
 			}
 		}
@@ -1021,11 +1022,12 @@ void vpn_server(struct worker_st *ws)
 
 	} else {
 		oclog(ws, LOG_HTTP_DEBUG, "unexpected HTTP method %s",
-		      http_method_str(parser.method));
+		      llhttp_method_name(parser.method));
 		response_404(ws, parser.http_minor);
 	}
 
  finish:
+	llhttp_finish(&parser);
 	cstp_close(ws);
 }
 
@@ -2001,7 +2003,7 @@ static int connect_handler(worker_st * ws)
 	ret = cstp_puts(ws, "X-CSTP-Version: 1\r\n");
 	SEND_ERR(ret);
 
-	ret = cstp_puts(ws, "X-CSTP-Server-Name: "PACKAGE_STRING"\r\n");
+	ret = cstp_puts(ws, "X-CSTP-Server-Name: "PACKAGE_NAME"\r\n");
 	SEND_ERR(ret);
 
 	if (req->is_mobile) {

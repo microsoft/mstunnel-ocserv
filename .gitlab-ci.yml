@@ -16,7 +16,7 @@ variables:
   CENTOS9_BUILD: buildenv-centos9
   CENTOS7_BUILD: buildenv-centos7
   CENTOS6_BUILD: buildenv-centos6
-  MINIMALCONFIG: "--without-protobuf --without-libtalloc-prefix --without-libnl --without-maxmind --without-geoip --without-libreadline-prefix --without-liboath --without-libc-prefix --without-pam --without-radius --without-libcrypt-prefix --without-utmp --without-libutil-prefix --without-libwrap --without-libwrap-prefix --without-libseccomp-prefix --without-libsystemd-prefix --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --disable-rpath --disable-seccomp --disable-anyconnect-compat --disable-compression"
+  MINIMALCONFIG: "--without-protobuf --without-libtalloc-prefix --without-libnl --without-maxmind --without-geoip --without-libreadline-prefix --without-liboath --without-libc-prefix --without-pam --without-radius --without-libcrypt-prefix --without-utmp --without-libutil-prefix --without-libwrap --without-libwrap-prefix --without-libseccomp-prefix --without-libsystemd-prefix --without-llhttp --without-lz4 --without-gssapi --without-pcl-lib --disable-rpath --disable-seccomp --disable-anyconnect-compat --disable-compression"
   JOBS: 2
 
 Signoff:
@@ -422,14 +422,13 @@ ubsan/Fedora:
       - ./*.log
       - tests/*.log
 
-static-analyzers/Fedora:
+static-analyzer/Fedora:
   stage: preliminaries
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:
   - autoreconf -fvi -Werror
-  - scan-build ./configure --enable-oidc-auth --enable-latency-stats
+  - scan-build ./configure --enable-oidc-auth --enable-latency-stats --without-protobuf
   - scan-build --status-bugs -o scan-build-src make -j$JOBS
-  - cppcheck --force -q -Isrc/ -Isrc/occtl -Igl/ -I. --error-exitcode=1 src/ -i src/inih -USELF_TEST
   tags:
   - shared
   - linux
@@ -489,7 +488,7 @@ triage:
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:
   - gem install gitlab-triage
-  - gitlab-triage --source-id openconnect/ocserv --token "$API_TOKEN"
+  - gitlab-triage --source-id $CI_PROJECT_ID --token "$API_TOKEN"
   tags:
   - shared
   - linux

@@ -1,5 +1,8 @@
 AC_PREREQ(2.61)
-AC_INIT([ocserv], [1.2.3], [openconnect-devel@lists.infradead.org])
+AC_INIT([OpenConnect VPN Server], [1.3.0],
+        [https://gitlab.com/openconnect/ocserv/-/issues],
+	[ocserv],
+	[https://ocserv.openconnect-vpn.net/])
 PKG_PROG_PKG_CONFIG
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
@@ -10,13 +13,22 @@ AC_CONFIG_HEADERS([config.h])
 
 AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC
+AM_PROG_CC_C_O  # Automake 1.13.4 on CentOS 7
 AC_PROG_RANLIB
 AM_PROG_AR
-AM_PROG_CC_C_O
 AC_PROG_SED
 
 if test "$GCC" = "yes" && ! expr "$CC" : clang >/dev/null 2>&1;then
 	CFLAGS="$CFLAGS -Wall -Wno-strict-aliasing -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-missing-field-initializers -Wno-implicit-fallthrough -Wno-stringop-truncation"
+fi
+
+AC_CHECK_PROGS([IPCALC], [ipcalc ipcalc-ng], [:])
+
+if test x"$IPCALC" = "x:"; then
+	AC_MSG_ERROR([[
+***
+*** ipcalc (ipcalc-ng in debian) was not found. It is needed for the test suite
+*** ]])
 fi
 
 AC_PATH_PROG(CTAGS, ctags, [:])
@@ -453,25 +465,25 @@ else
 	AC_DEFINE_UNQUOTED([OCCTL_PAGER], ["$occtl_pager"], [The default pager for occtl])
 fi
 
-AC_ARG_WITH(http-parser,
-  AS_HELP_STRING([--without-http-parser], [use the included http parser]),
-  test_for_http_parser=$withval,
-  test_for_http_parser=yes)
+AC_ARG_WITH(llhttp,
+  AS_HELP_STRING([--without-llhttp], [use the included llhttp]),
+  test_for_llhttp=$withval,
+  test_for_llhttp=yes)
 
-dnl Test for http_parser library
-with_local_http_parser=yes
+dnl Test for llhttp library
+with_local_llhttp=yes
 
-if test "$test_for_http_parser" = yes;then
+if test "$test_for_llhttp" = yes;then
 oldlibs=$LIBS
-LIBS="$oldlibs -lhttp_parser"
-AC_MSG_CHECKING([for http_parser library])
+LIBS="$oldlibs -lllhttp"
+AC_MSG_CHECKING([for llhttp library])
 AC_LINK_IFELSE([AC_LANG_PROGRAM([
-		   #include <http_parser.h>],[
-		   http_parser_init(0, 0);])],
+		   #include <llhttp.h>],[
+		   llhttp_settings_init(0);])],
 		  [AC_MSG_RESULT(yes)
-		   AC_SUBST([HTTP_PARSER_LIBS], [-lhttp_parser])
-		   AC_SUBST([HTTP_PARSER_CFLAGS], [])
-		   with_local_http_parser=no],
+		   AC_SUBST([LLHTTP_LIBS], [-lllhttp])
+		   AC_SUBST([LLHTTP_CFLAGS], [])
+		   with_local_llhttp=no],
 		  [AC_MSG_RESULT(no)
   	           AC_MSG_WARN([[
 ***
@@ -480,7 +492,7 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 *** ]])])
 LIBS="$oldlibs"
 fi
-AM_CONDITIONAL(LOCAL_HTTP_PARSER, test "x$with_local_http_parser" != xno)
+AM_CONDITIONAL(LOCAL_LLHTTP, test "x$with_local_llhttp" != xno)
 
 dnl compression
 AC_ARG_ENABLE(compression,
@@ -724,7 +736,7 @@ Summary of build options:
   local talloc:         ${with_local_talloc}
   local protobuf-c:     ${with_local_protobuf_c}
   local PCL library:    ${with_local_pcl}
-  local http-parser:    ${with_local_http_parser}
+  local llhttp:         ${with_local_llhttp}
   seccomp trap:		${use_seccomp_trap}
   capture latency stats ${have_latency_stats}
 ])

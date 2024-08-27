@@ -61,6 +61,9 @@ struct radius_ctx_st {
 	char ipv6_dns1[MAX_IP_STR];
 	char ipv6_dns2[MAX_IP_STR];
 
+	uint32_t rx_per_sec;
+	uint32_t tx_per_sec;
+
 	char **routes;
 	unsigned routes_size;
 

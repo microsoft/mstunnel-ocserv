@@ -61,6 +61,7 @@ static const struct known_urls_st known_urls[] = {
 	LL("/ca.cer", get_ca_der_handler, NULL),
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	LL_DIR("/profiles", get_config_handler, NULL),
+	LL("/VPNManifest.xml", get_string_handler, NULL),
 	LL("/1/index.html", get_empty_handler, NULL),
 	LL("/1/Linux", get_empty_handler, NULL),
 	LL("/1/Linux_64", get_empty_handler, NULL),
@@ -438,6 +439,9 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		} else if (strncasecmp(req->user_agent, "Cisco AnyConnect", 16) == 0) {
 			oclog(ws, LOG_DEBUG, "Detected Cisco AnyConnect");
 			req->user_agent_type = AGENT_ANYCONNECT;
+		} else if (strncasecmp(req->user_agent, "AnyConnect-compatible OpenConnect", 33) == 0) {
+			oclog(ws, LOG_DEBUG, "Detected OpenConnect v9 or newer");
+			req->user_agent_type = AGENT_OPENCONNECT;
 		} else if (strncasecmp(req->user_agent, "AnyConnect", 10) == 0) {
 			oclog(ws, LOG_DEBUG, "Detected Cisco AnyConnect");
 			req->user_agent_type = AGENT_ANYCONNECT;
@@ -722,7 +726,7 @@ url_handler_fn http_get_url_handler(const char *url)
 	return NULL;
 }
 
-url_handler_fn http_post_url_handler(struct worker_st *ws, const char *url)
+url_handler_fn http_post_known_service_check(struct worker_st *ws, const char *url)
 {
 	const struct known_urls_st *p;
 	unsigned len = strlen(url);
@@ -747,7 +751,19 @@ url_handler_fn http_post_url_handler(struct worker_st *ws, const char *url)
 	return NULL;
 }
 
-int http_url_cb(http_parser * parser, const char *at, size_t length)
+url_handler_fn http_post_url_handler(struct worker_st *ws, const char *url)
+{
+	url_handler_fn h;
+
+	h = http_post_known_service_check(ws, url);
+	if (h == NULL && ws->auth_state == S_AUTH_INACTIVE) {
+	    return post_auth_handler;
+	}
+
+	return h;
+}
+
+int http_url_cb(llhttp_t * parser, const char *at, size_t length)
 {
 	struct worker_st *ws = parser->data;
 	struct http_req_st *req = &ws->req;
@@ -763,7 +779,7 @@ int http_url_cb(http_parser * parser, const char *at, size_t length)
 	return 0;
 }
 
-int http_header_field_cb(http_parser * parser, const char *at, size_t length)
+int http_header_field_cb(llhttp_t * parser, const char *at, size_t length)
 {
 	struct worker_st *ws = parser->data;
 	struct http_req_st *req = &ws->req;
@@ -799,7 +815,7 @@ static void header_check(struct http_req_st *req)
 	req->next_header = 0;
 }
 
-int http_header_value_cb(http_parser * parser, const char *at, size_t length)
+int http_header_value_cb(llhttp_t * parser, const char *at, size_t length)
 {
 	struct worker_st *ws = parser->data;
 	struct http_req_st *req = &ws->req;
@@ -819,7 +835,7 @@ int http_header_value_cb(http_parser * parser, const char *at, size_t length)
 	return 0;
 }
 
-int http_header_complete_cb(http_parser * parser)
+int http_header_complete_cb(llhttp_t * parser)
 {
 	struct worker_st *ws = parser->data;
 	struct http_req_st *req = &ws->req;
@@ -839,7 +855,7 @@ int http_header_complete_cb(http_parser * parser)
 	return 0;
 }
 
-int http_message_complete_cb(http_parser * parser)
+int http_message_complete_cb(llhttp_t * parser)
 {
 	struct worker_st *ws = parser->data;
 	struct http_req_st *req = &ws->req;
@@ -848,7 +864,7 @@ int http_message_complete_cb(http_parser * parser)
 	return 0;
 }
 
-int http_body_cb(http_parser * parser, const char *at, size_t length)
+int http_body_cb(llhttp_t * parser, const char *at, size_t length)
 {
 	struct worker_st *ws = parser->data;
 	struct http_req_st *req = &ws->req;

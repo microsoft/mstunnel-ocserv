@@ -26,11 +26,8 @@ PIDFILE=ocserv-pid.$$.tmp
 OUTFILE=ban.$$.tmp
 
 ADDRESS=127.0.0.1
-VPNNET=172.17.215.0/24
-VPNADDR=172.17.215.1
-VPNNET6=fc39:d561:62c6:861b:9f38:9734:9fa1:0/112
-VPNADDR6=fc39:d561:62c6:861b:9f38:9734:9fa1:0
-
+. `dirname $0`/random-net.sh
+ADDRESS=127.0.0.1
 
 . `dirname $0`/common.sh
 

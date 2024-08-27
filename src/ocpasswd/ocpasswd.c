@@ -167,6 +167,10 @@ delete_user(const char *fpasswd, const char *username)
 
 	tmp_passwd_len = fpasswd_len + 5;
 	tmp_passwd = malloc(tmp_passwd_len);
+	if (tmp_passwd == NULL) {
+		fprintf(stderr, "memory error\n");
+		exit(EXIT_FAILURE);
+	}
 
 	snprintf(tmp_passwd, tmp_passwd_len, "%s.tmp", fpasswd);
 	if (stat(tmp_passwd, &st) != -1) {
@@ -228,6 +232,10 @@ lock_user(const char *fpasswd, const char *username)
 
 	tmp_passwd_len = fpasswd_len + 5;
 	tmp_passwd = malloc(tmp_passwd_len);
+	if (tmp_passwd == NULL) {
+		fprintf(stderr, "memory error\n");
+		exit(EXIT_FAILURE);
+	}
 
 	snprintf(tmp_passwd, tmp_passwd_len, "%s.tmp", fpasswd);
 	if (stat(tmp_passwd, &st) != -1) {
@@ -301,6 +309,10 @@ unlock_user(const char *fpasswd, const char *username)
 
 	tmp_passwd_len = fpasswd_len + 5;
 	tmp_passwd = malloc(tmp_passwd_len);
+	if (tmp_passwd == NULL) {
+		fprintf(stderr, "memory error\n");
+		exit(EXIT_FAILURE);
+	}
 
 	snprintf(tmp_passwd, tmp_passwd_len, "%s.tmp", fpasswd);
 	if (stat(tmp_passwd, &st) != -1) {
@@ -385,7 +397,7 @@ void usage(void)
 	fprintf(stderr, "hyphen and the flag character.\n\n");
 	fprintf(stderr, "This program is openconnect password (ocpasswd) utility.  It allows the\n");
 	fprintf(stderr, "generation and handling of a 'plain' password file used by ocserv.\n\n");
-	fprintf(stderr, "Please send bug reports to:  "PACKAGE_BUGREPORT"\n");
+	fprintf(stderr, "Please file bug reports at:  "PACKAGE_BUGREPORT"\n");
 }
 
 static
@@ -396,7 +408,7 @@ void version(void)
 	fprintf(stderr, "This is free software. It is licensed for use, modification and\n");
 	fprintf(stderr, "redistribution under the terms of the GNU General Public License,\n");
 	fprintf(stderr, "version 2 <http://gnu.org/licenses/gpl.html>\n\n");
-	fprintf(stderr, "Please send bug reports to:  "PACKAGE_BUGREPORT"\n");
+	fprintf(stderr, "Please file bug reports at:  "PACKAGE_BUGREPORT"\n");
 }
 
 #define FLAG_DELETE 1

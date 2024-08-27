@@ -77,7 +77,7 @@ value2speed(unsigned long bytes, time_t time, char* output, unsigned output_size
 		speed = 0;
 	else
 		speed = bytes / time;
-	bytes2human(speed, output, output_size, "/sec");
+	bytes2human(speed, output, output_size, "/s");
 }
 
 void print_iface_stats(const char *iface, time_t since, FILE * out, cmd_params_st *params, unsigned have_more)

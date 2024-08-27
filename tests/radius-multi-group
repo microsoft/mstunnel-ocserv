@@ -66,12 +66,13 @@ function finish {
   test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
   test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
   rm -f ${OUTFILE} 2>&1
+  test -f "${RADIUSLOG}" && cat "${RADIUSLOG}"
+  rm -f "${RADIUSLOG}"
 }
 trap finish EXIT
 
 # server address
-ADDRESS=10.55.93.0
-CLI_ADDRESS=10.55.92.1
+. `dirname $0`/random-net.sh
 
 # These must match the data/raddb/users:test-class user
 VPNNET=192.168.94.0/24
@@ -85,7 +86,7 @@ OCCTL_SOCKET=./occtl-radius-group-$$.socket
 ${CMDNS2} ${IP} link set dev lo up
 
 # Run servers
-${CMDNS2} ${RADIUSD} -d ${srcdir}/data/raddb/ -s -x -l ${RADIUSLOG} &
+${CMDNS2} ${RADIUSD} -d ${srcdir}/data/raddb/ -s -xx -l ${RADIUSLOG} &
 RADIUSPID=$!
 
 update_config radius-multi-group.config
@@ -100,7 +101,7 @@ sleep 4
 USERNAME=test-multi-class
 GROUP=unknown
 echo " * Testing whether the unknown group is accepted... "
-echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} -authgroup ${GROUP} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly
+echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} --authgroup ${GROUP} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly
 if test $? = 0;then
 	echo "Connected to server although we shouldn't with this group"
 	exit 1
@@ -109,7 +110,7 @@ fi
 USERNAME=test-multi-class
 GROUP=nonexistent
 echo " * Testing whether a non existent group is accepted... "
-echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} -authgroup ${GROUP} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly
+echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} --authgroup ${GROUP} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly
 if test $? = 0;then
 	echo "Connected to server although we shouldn't with this group"
 	exit 1

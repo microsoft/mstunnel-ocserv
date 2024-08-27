@@ -39,9 +39,6 @@ if test "$(id -u)" != "0";then
 	exit 77
 fi
 
-
-echo "Testing that ocserv doesn't assign IPv6 address on unknown clients... "
-
 function finish {
   set +e
   echo " * Cleaning up..."
@@ -53,13 +50,10 @@ function finish {
 }
 trap finish EXIT
 
-ADDRESS=172.23.236.0
-CLI_ADDRESS=10.119.255.0
-VPNNET6=fd50:efcf:d5e5:636d:ffb2:edad:dfe8:5a5c/127
-VPNADDR6=fd50:efcf:d5e5:636d:ffb2:edad:dfe8:5a5d
 OCCTL_SOCKET=./ipv6-no-$$.socket
 USERNAME=test
 
+. `dirname $0`/random-net.sh
 . `dirname $0`/ns.sh
 
 update_config ipv6-iface.config
@@ -70,6 +64,8 @@ fi
 ${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
 wait_server $PID
 
+echo "Testing that ocserv doesn't assign IPv6 address on (ancient) OpenConnect v3 clients... "
+
 echo -n "Connecting to setup interface... "
 echo "test" | ${CMDNS1} timeout 15s $OPENCONNECT -v $ADDRESS:$PORT --useragent="Open AnyConnect VPN Agent v3" --passwd-on-stdin -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s /bin/true >${TMPFILE} 2>&1
 
@@ -78,7 +74,19 @@ echo ok
 cat ${TMPFILE}|grep X-CSTP-Split-Include|grep 'fd63:' >/dev/null
 if test $? = 0;then
 	cat ${TMPFILE}|grep X-CSTP-Split
-	echo "Found route that shouldn't be there"
+	echo "Found IPv6 route that shouldn't be there"
+	exit 1
+fi
+
+echo "Testing that ocserv DOES assign IPv6 address on totally unknown clients... "
+
+echo -n "Connecting to setup interface... "
+echo "test" | ${CMDNS1} timeout 15s $OPENCONNECT -v $ADDRESS:$PORT --useragent="/* An unknown user agent */" --passwd-on-stdin -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s /bin/true >${TMPFILE} 2>&1
+
+cat ${TMPFILE}|grep X-CSTP-Split-Include|grep 'fd63:' >/dev/null
+if test $? != 0;then
+	cat ${TMPFILE}|grep X-CSTP-Split
+	echo "Did not find IPv6 which SHOULD be there"
 	exit 1
 fi
 

@@ -695,10 +695,12 @@ int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum
 		return GNUTLS_E_INTERNAL_ERROR;
 	}
 
+	/* This can be called early during server load when sec-mod is not
+	 * yet available. Thus it is only a debug message. */
 	ret = connect(sd, (struct sockaddr *)&cdata->sa, cdata->sa_len);
 	if (ret == -1) {
 		e = errno;
-		oc_syslog(LOG_ERR, "error connecting to sec-mod socket '%s': %s",
+		oc_syslog(LOG_DEBUG, "error connecting to sec-mod socket '%s': %s",
 			cdata->sa.sun_path, strerror(e));
 		goto error;
 	}
@@ -930,7 +932,7 @@ unsigned need_file_reload(const char *file, time_t last_access)
 /* reload key files etc.
  * @s may be %NULL, and should be used for mslog() purposes only.
  */
-void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
+void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost, unsigned silent)
 {
 	int ret;
 	unsigned i;
@@ -953,7 +955,8 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
 		if (need_reload == 0)
 			return;
 
-		oc_syslog(LOG_INFO, "reloading server certificates");
+		if (!silent)
+			oc_syslog(LOG_INFO, "reloading server certificates");
 	}
 
 	if (vhost->perm_config.log_level >= OCLOG_TLS) {
@@ -1003,7 +1006,8 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
 				exit(EXIT_FAILURE);
 			}
 
-			oc_syslog(LOG_INFO, "processed %d CA certificate(s)", ret);
+			if (!silent)
+				oc_syslog(LOG_INFO, "processed %d CA certificate(s)", ret);
 		}
 
 		tls_reload_crl(s, vhost, 1);

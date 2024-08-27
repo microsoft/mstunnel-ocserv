@@ -66,25 +66,21 @@ function finish {
   test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
   test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
   rm -f ${OUTFILE} 2>&1
+  test -f "${RADIUSLOG}" && cat "${RADIUSLOG}"
+  rm -f "${RADIUSLOG}"
 }
 trap finish EXIT
 
-# server address
-ADDRESS=10.203.2.1
-CLI_ADDRESS=10.203.1.1
-VPNNET=192.168.7.0/24
-VPNADDR=192.168.7.1
-VPNNET6=fd3e:4469:d98:ff54:e437:c9ee:52ac:0/112
-VPNADDR6=fd3e:4469:d98:ff54:e437:c9ee:52ac:1
 OCCTL_SOCKET=./occtl-radius-$$.socket
 USERNAME=test
 
+. `dirname $0`/random-net.sh
 . `dirname $0`/ns.sh
 
 ${CMDNS2} ${IP} link set dev lo up
 
 # Run servers
-${CMDNS2} ${RADIUSD} -d ${srcdir}/data/raddb/ -s -x -l ${RADIUSLOG} &
+${CMDNS2} ${RADIUSD} -d ${srcdir}/data/raddb/ -s -xx -l ${RADIUSLOG} &
 RADIUSPID=$!
 
 update_config radius.config

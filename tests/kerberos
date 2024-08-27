@@ -79,15 +79,9 @@ function finish {
 trap finish EXIT
 
 # server address
-ADDRESS=10.97.216.1
-CLI_ADDRESS=10.97.217.1
-
-VPNNET=192.168.1.0/24
-VPNADDR=192.168.1.1
-VPNNET6=fd91:6d87:7341:db6a::/112
-VPNADDR6=fd91:6d87:7341:db6a::1
 OCCTL_SOCKET=./occtl-radius-$$.socket
 
+. `dirname $0`/random-net.sh
 . `dirname $0`/ns.sh
 
 ${CMDNS2} ${IP} link set dev lo up

@@ -206,7 +206,7 @@ typedef struct worker_st {
 	int conn_fd;
 	sock_type_t conn_type; /* AF_UNIX or something else */
 
-	http_parser *parser;
+	llhttp_t *parser;
 
 	struct list_head *vconfig;
 
@@ -365,12 +365,12 @@ int get_cert_names(worker_st * ws, const gnutls_datum_t * raw);
 void set_resume_db_funcs(gnutls_session_t);
 
 typedef int (*url_handler_fn) (worker_st *, unsigned http_ver);
-int http_url_cb(http_parser * parser, const char *at, size_t length);
-int http_header_value_cb(http_parser * parser, const char *at, size_t length);
-int http_header_field_cb(http_parser * parser, const char *at, size_t length);
-int http_header_complete_cb(http_parser * parser);
-int http_message_complete_cb(http_parser * parser);
-int http_body_cb(http_parser * parser, const char *at, size_t length);
+int http_url_cb(llhttp_t * parser, const char *at, size_t length);
+int http_header_value_cb(llhttp_t * parser, const char *at, size_t length);
+int http_header_field_cb(llhttp_t * parser, const char *at, size_t length);
+int http_header_complete_cb(llhttp_t * parser);
+int http_message_complete_cb(llhttp_t * parser);
+int http_body_cb(llhttp_t * parser, const char *at, size_t length);
 void http_req_deinit(worker_st * ws);
 void http_req_reset(worker_st * ws);
 void http_req_init(worker_st * ws);
@@ -379,6 +379,7 @@ unsigned valid_hostname(const char *host);
 
 url_handler_fn http_get_url_handler(const char *url);
 url_handler_fn http_post_url_handler(worker_st * ws, const char *url);
+url_handler_fn http_post_known_service_check(worker_st * ws, const char *url);
 
 int complete_vpn_info(worker_st * ws,
                     struct vpn_st* vinfo);

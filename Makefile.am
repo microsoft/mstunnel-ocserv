@@ -9,11 +9,21 @@ ACLOCAL_AMFLAGS = -I m4
 
 @CODE_COVERAGE_RULES@
 
+CODE_COVERAGE_OUTPUT_FILE = @PACKAGE@-@PACKAGE_VERSION@-coverage.info
+CODE_COVERAGE_OUTPUT_DIRECTORY = @PACKAGE@-@PACKAGE_VERSION@-coverage
 CODE_COVERAGE_LCOV_RMOPTS_DEFAULT = --ignore-errors unused
 CODE_COVERAGE_GENHTML_OPTIONS_DEFAULT = --ignore-errors unmapped
 
 local-code-coverage-output: code-coverage-capture
-	cat $(CODE_COVERAGE_OUTPUT_DIRECTORY)/index.html|grep headerCovTableEntry|grep "%"|head -1|sed 's/&nbsp;//g'|sed 's/^.*>\([0-9\.\ %]*\)<.*$$/coverage lines: \1/'
+	test -f "$(CODE_COVERAGE_OUTPUT_DIRECTORY)/index.html" || exit 1
+	cat "$(CODE_COVERAGE_OUTPUT_DIRECTORY)/index.html"|grep headerCovTableEntry|grep "%"|head -1|sed 's/&nbsp;//g'|sed 's/^.*>\([0-9\.\ %]*\)<.*$$/coverage lines: \1/'
+
+LLHTTP_VERSION = 9.2.1
+llhttp-update:
+	test -f v$(LLHTTP_VERSION).tar.gz || wget -c https://github.com/nodejs/llhttp/archive/refs/tags/release/v$(LLHTTP_VERSION).tar.gz
+	tar xvf v$(LLHTTP_VERSION).tar.gz
+	cp llhttp-release-v$(LLHTTP_VERSION)/src/llhttp.c llhttp-release-v$(LLHTTP_VERSION)/src/http.c \
+		llhttp-release-v$(LLHTTP_VERSION)/src/api.c llhttp-release-v$(LLHTTP_VERSION)/include/llhttp.h src/llhttp/
 
 clang:
 	make clean

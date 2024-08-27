@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2023 Nikos Mavrogiannopoulos
  * Copyright (C) 2014, 2015 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1099,8 +1099,10 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 		READ_MULTI_LINE(config->network.no_routes, config->network.no_routes_size);
 	} else if (strcmp(name, "default-select-group") == 0) {
 		READ_STRING(config->default_select_group);
+	} else if (strcmp(name, "select-group-by-url") == 0) {
+		READ_TF(config->select_group_by_url);
 	} else if (strcmp(name, "auto-select-group") == 0) {
-		READ_TF(vhost->auto_select_group);
+		READ_TF(config->auto_select_group);
 	} else if (strcmp(name, "select-group") == 0) {
 		READ_MULTI_BRACKET_LINE(config->group_list,
 					config->friendly_group_list,
@@ -1183,7 +1185,7 @@ static void replace_file_with_snapshot(char ** file_name)
 static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 			   unsigned flags)
 {
-	int ret;
+	int ret, silent = 0;
 	struct cfg_st *config;
 	struct ini_ctx_st ctx;
 	vhost_cfg_st *vhost = NULL;
@@ -1304,7 +1306,7 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 			vhost->auth_init = 1;
 		}
 
-		if (vhost->auto_select_group != 0 && vhost->perm_config.auth[0].amod != NULL && vhost->perm_config.auth[0].amod->group_list != NULL) {
+		if (config->auto_select_group != 0 && vhost->perm_config.auth[0].amod != NULL && vhost->perm_config.auth[0].amod->group_list != NULL) {
 			vhost->perm_config.auth[0].amod->group_list(config, vhost->perm_config.auth[0].additional, &config->group_list, &config->group_list_size);
 			switch (vhost->perm_config.auth[0].amod->type) {
 			case AUTH_TYPE_PAM|AUTH_TYPE_USERNAME_PASS:
@@ -1332,11 +1334,13 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 			defvhost = NULL;
 
 		/* this check copies mandatory fields from default vhost if needed */
-		check_cfg(vhost, defvhost, ctx.reload);
+		if (ctx.reload || ctx.is_worker)
+			silent = 1;
+		check_cfg(vhost, defvhost, silent);
 
 		/* the following are only useful in main process */
 		if (!(flags & CFG_FLAG_SECMOD)) {
-			tls_load_files(NULL, vhost);
+			tls_load_files(NULL, vhost, silent);
 			tls_load_prio(NULL, vhost);
 			tls_reload_crl(NULL, vhost, 1);
 		}
@@ -1528,6 +1532,11 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 			fprintf(stderr, NOTESTR"%sthe cisco-client-compat option implies dtls-legacy = true; enabling\n", PREFIX_VHOST(vhost));
 		}
 		config->dtls_legacy = 1;
+
+		if (!config->select_group_by_url && !silent) {
+			fprintf(stderr, NOTESTR"%sthe cisco-client-compat option implies select-group-by-url = true; enabling\n", PREFIX_VHOST(vhost));
+		}
+		config->select_group_by_url = 1;
 	}
 
 	if (config->match_dtls_and_tls) {
@@ -1611,7 +1620,7 @@ static const struct option long_options[] = {
 static
 void usage(void)
 {
-	fprintf(stderr, "ocserv - OpenConnect VPN server\n");
+	fprintf(stderr, PACKAGE" - "PACKAGE_NAME"\n");
 	fprintf(stderr, "Usage:  ocserv [ -<flag> [<val>] | --<name>[{=| }<val>] ]...\n\n");
 
 	fprintf(stderr, "   -f, --foreground           Do not fork into background\n");
@@ -1630,11 +1639,11 @@ void usage(void)
 	fprintf(stderr, "   -s, --syslog               Log to syslog (default)\n");
 	fprintf(stderr, "   -h, --help                 Display extended usage information and exit\n\n");
 
-	fprintf(stderr, "OpenConnect VPN server (ocserv) is a VPN server compatible with the\n");
+	fprintf(stderr, PACKAGE_NAME" ("PACKAGE") is a VPN server compatible with the\n");
 	fprintf(stderr, "OpenConnect VPN client.  It follows the TLS and DTLS-based AnyConnect VPN\n");
 	fprintf(stderr, "protocol which is used by several CISCO routers.\n\n");
 
-	fprintf(stderr, "Please send bug reports to:  "PACKAGE_BUGREPORT"\n");
+	fprintf(stderr, "Please file bug reports at:  "PACKAGE_BUGREPORT"\n");
 }
 
 int cmd_parser (void *pool, int argc, char **argv, struct list_head *head, bool worker)
