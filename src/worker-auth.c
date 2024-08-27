@@ -83,6 +83,9 @@ static const char ocv3_success_msg_foot[] = "</auth>\n";
     "<message>%s</message>\n" \
     "<form method=\"post\" action=\"/auth\">\n"
 
+#define OC_MESSAGE \
+	"<message>%s</message>\n"
+
 #define OC_LOGIN_END \
     "</form></auth>\n" "</config-auth>"
 
@@ -218,7 +221,12 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 		else
 			login_start = OCV3_LOGIN_START;
 		login_end = OCV3_LOGIN_END;
-	} else {
+	}
+	else if (ws->req.user_agent_type == AGENT_UNKNOWN) {
+		login_start = "";
+		login_end = "";
+	}
+	else {
 		login_start = OC_LOGIN_START;
 		login_end = OC_LOGIN_END;
 	}
@@ -302,7 +310,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 	} else {
 		/* Username / Groups Form */
 		if (pmsg == NULL)
-			pmsg = "Please enter your username.";
+			pmsg = (ws->req.user_agent_type == AGENT_UNKNOWN) ? "I am still alive!!" : "Please enter your username.";
 
 		ret = str_append_str(&str, login_start);
 		if (ret < 0) {
@@ -318,7 +326,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 			}
 		}
 
-		ret = str_append_printf(&str, OC_LOGIN_FORM_START, pmsg);
+		ret = (ws->req.user_agent_type == AGENT_UNKNOWN) ? str_append_printf(&str, OC_MESSAGE, pmsg) : str_append_printf(&str, OC_LOGIN_FORM_START, pmsg);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;

@@ -1878,8 +1878,11 @@ static void calc_mtu_values(worker_st * ws)
 				     gnutls_mac_get(ws->session));
 	}
 
-	/* link MTU is the device MTU */
-	ws->link_mtu = ws->vinfo.mtu;
+	/* link MTU is the device MTU if smaller */
+	oclog(ws, LOG_INFO, "Current link MTU is %u", ws->link_mtu);
+	if (ws->link_mtu <= 0 || ws->vinfo.mtu < ws->link_mtu) {
+		ws->link_mtu = ws->vinfo.mtu;
+	}
 
 	if (DTLS_ACTIVE(ws)->udp_state != UP_DISABLED) {
 		/* crypto overhead for DTLS */

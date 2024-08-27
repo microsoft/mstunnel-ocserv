@@ -15,6 +15,10 @@
  */
 
 #include <config.h>
+// The two includes below are part of the workaround of a security bug in cjose. Remove after building with libcjose-dev 0.6.2+.
+// Reference: https://github.com/cisco/cjose/issues/123
+#include <setjmp.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -131,6 +135,16 @@ static void oidc_vhost_deinit(void *ctx)
 	}
 }
 
+// Environment and handler for SIGABRT from oidc_verify_token.
+// The function is part of the workaround of a security bug in cjose. Remove after building with libcjose-dev 0.6.2+.
+// Reference: https://github.com/cisco/cjose/issues/123
+static jmp_buf env_sigabrt;
+void on_sigabrt(int signum)
+{
+        signal(signum, SIG_DFL);
+        longjmp(env_sigabrt, 1);
+}
+
 static int oidc_auth_init(void **ctx, void *pool, void *vctx,
 			    const common_auth_init_st * info)
 {
@@ -143,7 +157,20 @@ static int oidc_auth_init(void **ctx, void *pool, void *vctx,
 	ct->vctx_st = vt;
 	*ctx = (void *)ct;
 
-	if (oidc_verify_token(ct->vctx_st, info->username, strlen(info->username), ct->username)) {
+	// Catch SIGABRT from oidc_verify_token to avoid crashing the server.
+	// The logic is part of the workaround of a security bug in cjose. Revert after building with libcjose-dev 0.6.2+.
+	// Reference: https://github.com/cisco/cjose/issues/123
+	bool succeeded = false;
+	if (setjmp(env_sigabrt) == 0) {
+		signal(SIGABRT, &on_sigabrt);
+		succeeded = oidc_verify_token(ct->vctx_st, info->username, strlen(info->username), ct->username);
+		signal(SIGABRT, SIG_DFL);
+	} else {
+		syslog(LOG_NOTICE, "ocserv-oidc: Token malformed - caught SIGABRT from oidc_verify_token\n");
+		return ERR_AUTH_FAIL;
+	}
+
+	if (succeeded) {
 		ct->token_verified = 1;
 		return 0;
 	} else {
