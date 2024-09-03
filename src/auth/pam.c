@@ -48,7 +48,7 @@
 #include "auth/pam.h"
 #include "auth-unix.h"
 
-#define PAM_STACK_SIZE (96*1024)
+#define PAM_STACK_SIZE (1024*1024)
 
 #define MAX_REPLIES 2
 
