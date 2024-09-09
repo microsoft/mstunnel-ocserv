@@ -487,7 +487,7 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 		  [AC_MSG_RESULT(no)
   	           AC_MSG_WARN([[
 ***
-*** libhttp-parser not found.
+*** libllhttp not found.
 *** An included version of the library will be used.
 *** ]])])
 LIBS="$oldlibs"
