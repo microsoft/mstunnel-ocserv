@@ -105,6 +105,7 @@ int disable_system_calls(struct worker_st *ws)
 	 * them when socket wrapper is active */
 	if (getenv("SOCKET_WRAPPER_DIR") != NULL) {
 		ADD_SYSCALL(readlink, 0);
+		ADD_SYSCALL(readlinkat, 0);
 	}
 
 	/* we use quite some system calls here, and in the end
