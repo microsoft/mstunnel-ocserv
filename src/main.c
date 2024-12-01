@@ -858,7 +858,7 @@ static int forward_udp_to_owner(main_server_st *s, struct listener_st *listener)
 	}
 
 fail:
-	if (sfd != -1)
+	if (sfd >= 0)
 		close(sfd);
 
 	return 0;
