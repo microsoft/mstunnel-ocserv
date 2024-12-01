@@ -36,28 +36,29 @@
 
 #define escape_val json_escape_val
 
-int print_list_entries(FILE* out, cmd_params_st *params, const char* name, char **val, unsigned vsize, unsigned have_more)
+int print_list_entries(FILE *out, cmd_params_st *params, const char *name,
+		       char **val, unsigned int vsize, unsigned int have_more)
 {
-	const char * tmp;
+	const char *tmp;
 	unsigned int i = 0;
 
 	if (HAVE_JSON(params)) {
 		fprintf(out, "    \"%s\":\t[", name);
-		for (i=0;i<vsize;i++) {
+		for (i = 0; i < vsize; i++) {
 			tmp = val[i];
 			if (tmp != NULL) {
-				if (i==0)
+				if (i == 0)
 					fprintf(out, "\"%s\"", tmp);
 				else
 					fprintf(out, ", \"%s\"", tmp);
 			}
 		}
-		fprintf(out, "]%s\n", have_more?",":"");
+		fprintf(out, "]%s\n", have_more ? "," : "");
 	} else {
-		for (i=0;i<vsize;i++) {
+		for (i = 0; i < vsize; i++) {
 			tmp = val[i];
 			if (tmp != NULL) {
-				if (i==0)
+				if (i == 0)
 					fprintf(out, "\t%s: %s\n", name, tmp);
 				else
 					fprintf(out, "\t\t%s\n", tmp);
@@ -68,32 +69,44 @@ int print_list_entries(FILE* out, cmd_params_st *params, const char* name, char 
 	return i;
 }
 
-int print_fwport_entries(FILE* out, cmd_params_st *params, const char* name, FwPortSt **val, unsigned vsize, unsigned have_more)
+int print_fwport_entries(FILE *out, cmd_params_st *params, const char *name,
+			 FwPortSt **val, unsigned int vsize,
+			 unsigned int have_more)
 {
 	unsigned int i = 0;
 	char tmp[64];
 
 	if (HAVE_JSON(params)) {
 		fprintf(out, "    \"%s\":\t[", name);
-		for (i=0;i<vsize;i++) {
+		for (i = 0; i < vsize; i++) {
 			if (val[i]->port)
-				snprintf(tmp, sizeof(tmp), "%s%s(%d)", val[i]->negate?"!":"", proto_to_str(val[i]->proto), val[i]->port);
+				snprintf(tmp, sizeof(tmp), "%s%s(%d)",
+					 val[i]->negate ? "!" : "",
+					 proto_to_str(val[i]->proto),
+					 val[i]->port);
 			else
-				snprintf(tmp, sizeof(tmp), "%s%s()", val[i]->negate?"!":"", proto_to_str(val[i]->proto));
+				snprintf(tmp, sizeof(tmp), "%s%s()",
+					 val[i]->negate ? "!" : "",
+					 proto_to_str(val[i]->proto));
 
-			if (i==0)
+			if (i == 0)
 				fprintf(out, "\"%s\"", tmp);
 			else
 				fprintf(out, ", \"%s\"", tmp);
 		}
-		fprintf(out, "]%s\n", have_more?",":"");
+		fprintf(out, "]%s\n", have_more ? "," : "");
 	} else {
-		for (i=0;i<vsize;i++) {
+		for (i = 0; i < vsize; i++) {
 			if (val[i]->port)
-				snprintf(tmp, sizeof(tmp), "%s%s(%d)", val[i]->negate?"!":"", proto_to_str(val[i]->proto), val[i]->port);
+				snprintf(tmp, sizeof(tmp), "%s%s(%d)",
+					 val[i]->negate ? "!" : "",
+					 proto_to_str(val[i]->proto),
+					 val[i]->port);
 			else
-				snprintf(tmp, sizeof(tmp), "%s%s()", val[i]->negate?"!":"", proto_to_str(val[i]->proto));
-			if (i==0)
+				snprintf(tmp, sizeof(tmp), "%s%s()",
+					 val[i]->negate ? "!" : "",
+					 proto_to_str(val[i]->proto));
+			if (i == 0)
 				fprintf(out, "\t%s: %s", name, tmp);
 			else
 				fprintf(out, ", %s", tmp);
@@ -110,10 +123,10 @@ void print_start_block(FILE *out, cmd_params_st *params)
 		fprintf(out, "  {\n");
 }
 
-void print_end_block(FILE *out, cmd_params_st *params, unsigned have_more)
+void print_end_block(FILE *out, cmd_params_st *params, unsigned int have_more)
 {
 	if (HAVE_JSON(params))
-		fprintf(out, "  }%s\n", have_more?",":"");
+		fprintf(out, "  }%s\n", have_more ? "," : "");
 }
 
 void print_array_block(FILE *out, cmd_params_st *params)
@@ -134,53 +147,72 @@ void print_separator(FILE *out, cmd_params_st *params)
 		fprintf(out, "\n");
 }
 
-void print_single_value(FILE *out, cmd_params_st *params, const char *name, const char *value, unsigned have_more)
+void print_single_value(FILE *out, cmd_params_st *params, const char *name,
+			const char *value, unsigned int have_more)
 {
 	char tmp[MAX_STR_SIZE];
+
 	if (value[0] == 0)
 		return;
 
 	if (HAVE_JSON(params))
-		fprintf(out, "    \"%s\":  \"%s\"%s\n", name, escape_val(tmp, sizeof(tmp), value), have_more?",":"");
+		fprintf(out, "    \"%s\":  \"%s\"%s\n", name,
+			escape_val(tmp, sizeof(tmp), value),
+			have_more ? "," : "");
 	else
 		fprintf(out, "\t%s: %s\n", name, value);
 }
 
-void print_single_value_int(FILE *out, cmd_params_st *params, const char *name, long i, unsigned have_more)
+void print_single_value_int(FILE *out, cmd_params_st *params, const char *name,
+			    long i, unsigned int have_more)
 {
 	if (HAVE_JSON(params))
-		fprintf(out, "    \"%s\":  \%lu%s\n", name, i, have_more?",":"");
+		fprintf(out, "    \"%s\":  \%lu%s\n", name, i,
+			have_more ? "," : "");
 	else
 		fprintf(out, "\t%s: %lu\n", name, i);
 }
 
-void print_single_value_ex(FILE *out, cmd_params_st *params, const char *name, const char *value, const char *ex, unsigned have_more)
+void print_single_value_ex(FILE *out, cmd_params_st *params, const char *name,
+			   const char *value, const char *ex,
+			   unsigned int have_more)
 {
 	char tmp[MAX_STR_SIZE];
+
 	if (value[0] == 0)
 		return;
 
 	if (HAVE_JSON(params)) {
-		fprintf(out, "    \"%s\":  \"%s\",\n", name, escape_val(tmp, sizeof(tmp), value));
-		fprintf(out, "    \"_%s\":  \"%s\"%s\n", name, escape_val(tmp, sizeof(tmp), ex), have_more?",":"");
+		fprintf(out, "    \"%s\":  \"%s\",\n", name,
+			escape_val(tmp, sizeof(tmp), value));
+		fprintf(out, "    \"_%s\":  \"%s\"%s\n", name,
+			escape_val(tmp, sizeof(tmp), ex), have_more ? "," : "");
 	} else
 		fprintf(out, "\t%s: %s (%s)\n", name, value, ex);
 }
 
-void print_pair_value(FILE *out, cmd_params_st *params, const char *name1, const char *value1, const char *name2, const char *value2, unsigned have_more)
+void print_pair_value(FILE *out, cmd_params_st *params, const char *name1,
+		      const char *value1, const char *name2, const char *value2,
+		      unsigned int have_more)
 {
 	char tmp[MAX_STR_SIZE];
+
 	if (HAVE_JSON(params)) {
 		if (value1 && value1[0] != 0)
-			fprintf(out, "    \"%s\":  \"%s\"%s\n", name1, escape_val(tmp, sizeof(tmp), value1), have_more?",":"");
+			fprintf(out, "    \"%s\":  \"%s\"%s\n", name1,
+				escape_val(tmp, sizeof(tmp), value1),
+				have_more ? "," : "");
 		if (value2 && value2[0] != 0)
-			fprintf(out, "    \"%s\":  \"%s\"%s\n", name2, escape_val(tmp, sizeof(tmp), value2), have_more?",":"");
+			fprintf(out, "    \"%s\":  \"%s\"%s\n", name2,
+				escape_val(tmp, sizeof(tmp), value2),
+				have_more ? "," : "");
 	} else {
 		if (value1 && value1[0] != 0)
 			fprintf(out, "\t%s: %s", name1, value1);
 
 		if (value2 && value2[0] != 0) {
 			const char *sep;
+
 			if (name1)
 				sep = "   ";
 			else

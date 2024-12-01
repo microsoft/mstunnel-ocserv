@@ -27,11 +27,12 @@
 
 int syslog_open = 0;
 
-static unsigned ip_to_sockaddr(const char *ip, unsigned port, struct sockaddr_storage *ss)
+static unsigned int ip_to_sockaddr(const char *ip, unsigned int port,
+				   struct sockaddr_storage *ss)
 {
 	int ret;
-	struct sockaddr_in6 *s6 = (void*)ss;
-	struct sockaddr_in *s4 = (void*)ss;
+	struct sockaddr_in6 *s6 = (void *)ss;
+	struct sockaddr_in *s4 = (void *)ss;
 
 	memset(ss, 0, sizeof(*ss));
 	if (strchr(ip, '.') == 0) {
@@ -67,20 +68,21 @@ static void check(const char *ip)
 	char buf[128];
 
 	len = ip_to_sockaddr(ip, 443, &ss);
-	p = human_addr2((struct sockaddr*)&ss, len, buf, sizeof(buf), 0);
+	p = human_addr2((struct sockaddr *)&ss, len, buf, sizeof(buf), 0);
 	if (p == NULL) {
 		fprintf(stderr, "human_addr2 couldn't convert: %s\n", ip);
 		exit(1);
 	}
 
 	if (strcmp(ip, buf) != 0) {
-		fprintf(stderr, "human_addr2 returned different value (have: %s, expected: %s)\n", buf, ip);
+		fprintf(stderr,
+			"human_addr2 returned different value (have: %s, expected: %s)\n",
+			buf, ip);
 		exit(1);
-
 	}
 }
 
-static void check_port(const char *ip, unsigned port)
+static void check_port(const char *ip, unsigned int port)
 {
 	struct sockaddr_storage ss;
 	socklen_t len;
@@ -89,7 +91,7 @@ static void check_port(const char *ip, unsigned port)
 	char buf2[128];
 
 	len = ip_to_sockaddr(ip, port, &ss);
-	p = human_addr2((struct sockaddr*)&ss, len, buf, sizeof(buf), 1);
+	p = human_addr2((struct sockaddr *)&ss, len, buf, sizeof(buf), 1);
 	if (p == NULL) {
 		fprintf(stderr, "human_addr2 couldn't convert: %s\n", ip);
 		exit(1);
@@ -102,9 +104,10 @@ static void check_port(const char *ip, unsigned port)
 	}
 
 	if (strcmp(buf2, buf) != 0) {
-		fprintf(stderr, "human_addr2 returned different value (have: %s, expected: %s)\n", buf, buf2);
+		fprintf(stderr,
+			"human_addr2 returned different value (have: %s, expected: %s)\n",
+			buf, buf2);
 		exit(1);
-
 	}
 }
 

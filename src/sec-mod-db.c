@@ -57,6 +57,7 @@ static size_t rehash(const void *_e, void *unused)
 void *sec_mod_client_db_init(sec_mod_st *sec)
 {
 	struct htable *db = talloc(sec, struct htable);
+
 	if (db == NULL)
 		return NULL;
 
@@ -68,16 +69,16 @@ void *sec_mod_client_db_init(sec_mod_st *sec)
 
 void sec_mod_client_db_deinit(sec_mod_st *sec)
 {
-struct htable *db = sec->client_db;
+	struct htable *db = sec->client_db;
 
 	htable_clear(db);
 	talloc_free(db);
 }
 
 /* The number of elements */
-unsigned sec_mod_client_db_elems(sec_mod_st *sec)
+unsigned int sec_mod_client_db_elems(sec_mod_st *sec)
 {
-struct htable *db = sec->client_db;
+	struct htable *db = sec->client_db;
 
 	if (db)
 		return db->elems;
@@ -85,7 +86,8 @@ struct htable *db = sec->client_db;
 		return 0;
 }
 
-client_entry_st *new_client_entry(sec_mod_st *sec, struct vhost_cfg_st *vhost, const char *ip, unsigned pid)
+client_entry_st *new_client_entry(sec_mod_st *sec, struct vhost_cfg_st *vhost,
+				  const char *ip, unsigned int pid)
 {
 	struct htable *db = sec->client_db;
 	client_entry_st *e, *te;
@@ -99,7 +101,8 @@ client_entry_st *new_client_entry(sec_mod_st *sec, struct vhost_cfg_st *vhost, c
 	}
 
 	if (ip)
-		strlcpy(e->acct_info.remote_ip, ip, sizeof(e->acct_info.remote_ip));
+		strlcpy(e->acct_info.remote_ip, ip,
+			sizeof(e->acct_info.remote_ip));
 	e->acct_info.id = pid;
 	e->vhost = vhost;
 
@@ -111,21 +114,23 @@ client_entry_st *new_client_entry(sec_mod_st *sec, struct vhost_cfg_st *vhost, c
 		}
 
 		e->sid[0] = sec->sec_mod_instance_id;
-		seclog(sec, LOG_INFO, "sec-mod instance %d issue cookie", sec->sec_mod_instance_id);
+		seclog(sec, LOG_INFO, "sec-mod instance %d issue cookie",
+		       sec->sec_mod_instance_id);
 
 		/* check if in use */
 		te = find_client_entry(sec, e->sid);
 	} while (te != NULL && retries-- >= 0);
 
 	if (te != NULL) {
-		seclog(sec, LOG_ERR,
-		       "could not generate a unique SID!");
+		seclog(sec, LOG_ERR, "could not generate a unique SID!");
 		goto fail;
 	}
 
-	calc_safe_id(e->sid, SID_SIZE, (char *)e->acct_info.safe_id, sizeof(e->acct_info.safe_id));
+	calc_safe_id(e->sid, SID_SIZE, (char *)e->acct_info.safe_id,
+		     sizeof(e->acct_info.safe_id));
 	now = time(NULL);
-	e->exptime = now + vhost->perm_config.config->cookie_timeout + AUTH_SLACK_TIME;
+	e->exptime = now + vhost->perm_config.config->cookie_timeout +
+		     AUTH_SLACK_TIME;
 	e->created = now;
 
 	if (htable_add(db, rehash(e, NULL), e) == 0) {
@@ -136,7 +141,7 @@ client_entry_st *new_client_entry(sec_mod_st *sec, struct vhost_cfg_st *vhost, c
 
 	return e;
 
- fail:
+fail:
 	talloc_free(e);
 	return NULL;
 }
@@ -161,7 +166,7 @@ client_entry_st *find_client_entry(sec_mod_st *sec, uint8_t sid[SID_SIZE])
 	return htable_get(db, rehash(&t, NULL), client_entry_cmp, &t);
 }
 
-static void clean_entry(sec_mod_st *sec, client_entry_st * e)
+static void clean_entry(sec_mod_st *sec, client_entry_st *e)
 {
 	sec_auth_user_deinit(sec, e);
 	talloc_free(e->msg_str);
@@ -177,16 +182,15 @@ void cleanup_client_entries(sec_mod_st *sec)
 
 	t = htable_first(db, &iter);
 	while (t != NULL) {
-		if IS_CLIENT_ENTRY_EXPIRED_FULL(sec, t, now, 1) {
+		if IS_CLIENT_ENTRY_EXPIRED_FULL (sec, t, now, 1) {
 			htable_delval(db, &iter);
 			clean_entry(sec, t);
 		}
 		t = htable_next(db, &iter);
-
 	}
 }
 
-void del_client_entry(sec_mod_st *sec, client_entry_st * e)
+void del_client_entry(sec_mod_st *sec, client_entry_st *e)
 {
 	struct htable *db = sec->client_db;
 
@@ -194,16 +198,20 @@ void del_client_entry(sec_mod_st *sec, client_entry_st * e)
 	clean_entry(sec, e);
 }
 
-void expire_client_entry(sec_mod_st *sec, client_entry_st * e)
+void expire_client_entry(sec_mod_st *sec, client_entry_st *e)
 {
 	time_t now;
 
 	if (e->in_use > 0)
 		e->in_use--;
 	if (e->in_use == 0) {
-		if (e->vhost->perm_config.config->persistent_cookies == 0 && (e->discon_reason == REASON_SERVER_DISCONNECT ||
-		    e->discon_reason == REASON_SESSION_TIMEOUT || (e->session_is_open && e->discon_reason == REASON_USER_DISCONNECT))) {
-			seclog(sec, LOG_INFO, "invalidating session of user '%s' "SESSION_STR,
+		if (e->vhost->perm_config.config->persistent_cookies == 0 &&
+		    (e->discon_reason == REASON_SERVER_DISCONNECT ||
+		     e->discon_reason == REASON_SESSION_TIMEOUT ||
+		     (e->session_is_open &&
+		      e->discon_reason == REASON_USER_DISCONNECT))) {
+			seclog(sec, LOG_INFO,
+			       "invalidating session of user '%s' " SESSION_STR,
 			       e->acct_info.username, e->acct_info.safe_id);
 			/* immediately disconnect the user */
 			del_client_entry(sec, e);
@@ -214,12 +222,19 @@ void expire_client_entry(sec_mod_st *sec, client_entry_st * e)
 			 * explicitly disconnect with the intention to reconnect
 			 * seconds later. */
 			if (e->discon_reason == REASON_USER_DISCONNECT) {
-				if (!e->vhost->perm_config.config->persistent_cookies || (now+AUTH_SLACK_TIME >= e->exptime))
+				if (!e->vhost->perm_config.config
+					     ->persistent_cookies ||
+				    (now + AUTH_SLACK_TIME >= e->exptime))
 					e->exptime = now + AUTH_SLACK_TIME;
 			} else {
-				e->exptime = now + e->vhost->perm_config.config->cookie_timeout + AUTH_SLACK_TIME;
+				e->exptime = now +
+					     e->vhost->perm_config.config
+						     ->cookie_timeout +
+					     AUTH_SLACK_TIME;
 			}
-			seclog(sec, LOG_INFO, "temporarily closing session for %s "SESSION_STR, e->acct_info.username, e->acct_info.safe_id);
+			seclog(sec, LOG_INFO,
+			       "temporarily closing session for %s " SESSION_STR,
+			       e->acct_info.username, e->acct_info.safe_id);
 		}
 	}
 }

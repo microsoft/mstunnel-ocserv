@@ -33,12 +33,12 @@
 #include <netlink/route/link.h>
 #include <inttypes.h>
 
-static struct nl_sock *sock = NULL;
-static int nl_failed = 0;
+static struct nl_sock *sock;
+static int nl_failed;
 
 static int open_netlink(void)
 {
-int err;
+	int err;
 
 	if (sock != NULL)
 		return 0;
@@ -52,7 +52,8 @@ int err;
 		goto error;
 	}
 
-	if ((err = nl_connect(sock, NETLINK_ROUTE)) < 0) {
+	err = nl_connect(sock, NETLINK_ROUTE);
+	if (err < 0) {
 		fprintf(stderr, "nl: error in nl_connect (%d)", err);
 		goto error;
 	}
@@ -68,8 +69,8 @@ error:
 	return -1;
 }
 
-static void
-value2speed(unsigned long bytes, time_t time, char* output, unsigned output_size)
+static void value2speed(unsigned long bytes, time_t time, char *output,
+			unsigned int output_size)
 {
 	unsigned long speed;
 
@@ -80,7 +81,8 @@ value2speed(unsigned long bytes, time_t time, char* output, unsigned output_size
 	bytes2human(speed, output, output_size, "/s");
 }
 
-void print_iface_stats(const char *iface, time_t since, FILE * out, cmd_params_st *params, unsigned have_more)
+void print_iface_stats(const char *iface, time_t since, FILE *out,
+		       cmd_params_st *params, unsigned int have_more)
 {
 	uint64_t tx, rx;
 	char buf1[32], buf2[32];
@@ -106,21 +108,30 @@ void print_iface_stats(const char *iface, time_t since, FILE * out, cmd_params_s
 	bytes2human(rx, buf1, sizeof(buf1), NULL);
 	bytes2human(tx, buf2, sizeof(buf2), NULL);
 	if (HAVE_JSON(params)) {
-		fprintf(out, "    \"RX\":  \"%"PRIu64"\",\n    \"TX\":  \"%"PRIu64"\",\n", rx, tx);
-		fprintf(out, "    \"_RX\":  \"%s\",\n    \"_TX\":  \"%s\",\n", buf1, buf2);
+		fprintf(out,
+			"    \"RX\":  \"%" PRIu64 "\",\n    \"TX\":  \"%" PRIu64
+			"\",\n",
+			rx, tx);
+		fprintf(out, "    \"_RX\":  \"%s\",\n    \"_TX\":  \"%s\",\n",
+			buf1, buf2);
 	} else
-		fprintf(out, "\tRX: %"PRIu64" (%s)   TX: %"PRIu64" (%s)\n", rx, buf1, tx, buf2);
+		fprintf(out, "\tRX: %" PRIu64 " (%s)   TX: %" PRIu64 " (%s)\n",
+			rx, buf1, tx, buf2);
 
 	value2speed(rx, diff, buf1, sizeof(buf1));
 	value2speed(tx, diff, buf2, sizeof(buf2));
 	if (HAVE_JSON(params))
-		fprintf(out, "    \"Average RX\":  \"%s\",\n    \"Average TX\":  \"%s\"%s\n", buf1, buf2, have_more?",":"");
+		fprintf(out,
+			"    \"Average RX\":  \"%s\",\n    \"Average TX\":  \"%s\"%s\n",
+			buf1, buf2, have_more ? "," : "");
 	else
-		fprintf(out, "\tAverage bandwidth RX: %s  TX: %s\n", buf1, buf2);
+		fprintf(out, "\tAverage bandwidth RX: %s  TX: %s\n", buf1,
+			buf2);
 }
 
 #else
-void print_iface_stats(const char *iface, time_t since, FILE * out, cmd_params_st *params, unsigned have_more)
+void print_iface_stats(const char *iface, time_t since, FILE *out,
+		       cmd_params_st *params, unsigned int have_more)
 {
 }
 #endif

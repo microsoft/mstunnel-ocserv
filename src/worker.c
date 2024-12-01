@@ -40,16 +40,16 @@
 #include <libtasn1.h>
 
 extern const asn1_static_node kkdcp_asn1_tab[];
-asn1_node _kkdcp_pkix1_asn = NULL;
+asn1_node _kkdcp_pkix1_asn;
 #endif
 
 extern struct snapshot_t *config_snapshot;
 
-int syslog_open = 0;
+int syslog_open;
 sigset_t sig_default_set;
-static unsigned allow_broken_clients = 0;
+static unsigned int allow_broken_clients;
 
-static int set_ws_from_env(worker_st * ws);
+static int set_ws_from_env(worker_st *ws);
 
 extern char secmod_socket_file_name_socket_file[_POSIX_PATH_MAX];
 
@@ -203,9 +203,9 @@ int main(int argc, char **argv)
 extern char **pam_auth_group_list;
 extern char **gssapi_auth_group_list;
 extern char **plain_auth_group_list;
-extern unsigned pam_auth_group_list_size;
-extern unsigned gssapi_auth_group_list_size;
-extern unsigned plain_auth_group_list_size;
+extern unsigned int pam_auth_group_list_size;
+extern unsigned int gssapi_auth_group_list_size;
+extern unsigned int plain_auth_group_list_size;
 
 static int clone_array(void *pool, char **input_array, size_t input_array_size,
 		       char ***output_array)
@@ -213,6 +213,7 @@ static int clone_array(void *pool, char **input_array, size_t input_array_size,
 	int ret = 0;
 	int index;
 	char **array = talloc_zero_array(pool, char *, input_array_size);
+
 	if (array == NULL) {
 		goto cleanup;
 	}
@@ -227,7 +228,7 @@ static int clone_array(void *pool, char **input_array, size_t input_array_size,
 	*output_array = array;
 	array = NULL;
 	ret = 1;
- cleanup:
+cleanup:
 	if (array != NULL) {
 		for (index = 0; index < input_array_size; index++) {
 			if (array[index] != NULL) {
@@ -239,7 +240,7 @@ static int clone_array(void *pool, char **input_array, size_t input_array_size,
 	return ret;
 }
 
-static int set_ws_from_env(worker_st * ws)
+static int set_ws_from_env(worker_st *ws)
 {
 	PROTOBUF_ALLOCATOR(pa, ws);
 	WorkerStartupMsg *msg = NULL;
@@ -251,14 +252,15 @@ static int set_ws_from_env(worker_st * ws)
 	size_t index;
 
 	if (string_buffer == NULL) {
-		fprintf(stderr, "This application must be called from ocserv (no env variable set)\n");
+		fprintf(stderr,
+			"This application must be called from ocserv (no env variable set)\n");
 		goto cleanup;
 	}
 
 	string_size = strlen(string_buffer);
 
-	if (!oc_base64_decode_alloc
-	    (ws, string_buffer, string_size, (char **)&msg_buffer, &msg_size)) {
+	if (!oc_base64_decode_alloc(ws, string_buffer, string_size,
+				    (char **)&msg_buffer, &msg_size)) {
 		fprintf(stderr, "oc_base64_decode_alloc failed\n");
 		goto cleanup;
 	}
@@ -291,7 +293,7 @@ static int set_ws_from_env(worker_st * ws)
 
 	ws->cmd_fd = msg->cmd_fd;
 	ws->conn_fd = msg->conn_fd;
-	ws->conn_type = (sock_type_t) msg->conn_type;
+	ws->conn_type = (sock_type_t)msg->conn_type;
 	ws->session_start_time = msg->session_start_time;
 	ws->remote_addr_len = msg->remote_addr.len;
 	memcpy(&ws->remote_addr, msg->remote_addr.data, msg->remote_addr.len);
@@ -310,31 +312,31 @@ static int set_ws_from_env(worker_st * ws)
 	for (index = 0; index < msg->n_snapshot_entries; index++) {
 		int fd = msg->snapshot_entries[index]->file_descriptor;
 		const char *file_name = msg->snapshot_entries[index]->file_name;
+
 		if (snapshot_restore_entry(config_snapshot, fd, file_name) != 0)
 			goto cleanup;
 	}
 
-	if (!clone_array
-	    (ws, msg->pam_auth_group_list, msg->n_pam_auth_group_list,
-	     &pam_auth_group_list))
+	if (!clone_array(ws, msg->pam_auth_group_list,
+			 msg->n_pam_auth_group_list, &pam_auth_group_list))
 		goto cleanup;
-	pam_auth_group_list_size = (unsigned)msg->n_pam_auth_group_list;
+	pam_auth_group_list_size = (unsigned int)msg->n_pam_auth_group_list;
 
-	if (!clone_array
-	    (ws, msg->plain_auth_group_list, msg->n_plain_auth_group_list,
-	     &plain_auth_group_list))
+	if (!clone_array(ws, msg->plain_auth_group_list,
+			 msg->n_plain_auth_group_list, &plain_auth_group_list))
 		goto cleanup;
-	plain_auth_group_list_size = (unsigned)msg->n_plain_auth_group_list;
+	plain_auth_group_list_size = (unsigned int)msg->n_plain_auth_group_list;
 
-	if (!clone_array
-	    (ws, msg->gssapi_auth_group_list, msg->n_gssapi_auth_group_list,
-	     &gssapi_auth_group_list))
+	if (!clone_array(ws, msg->gssapi_auth_group_list,
+			 msg->n_gssapi_auth_group_list,
+			 &gssapi_auth_group_list))
 		goto cleanup;
-	gssapi_auth_group_list_size = (unsigned)msg->n_gssapi_auth_group_list;
+	gssapi_auth_group_list_size =
+		(unsigned int)msg->n_gssapi_auth_group_list;
 
 	ret = 1;
 
- cleanup:
+cleanup:
 	if (msg_buffer)
 		talloc_free(msg_buffer);
 

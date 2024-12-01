@@ -47,8 +47,8 @@ int main(void)
 		exit(1);
 	}
 
-	if (str.length != sizeof(STR1)-1 ||
-	    strncmp((char*)str.data, STR1, sizeof(STR1)-1) != 0) {
+	if (str.length != sizeof(STR1) - 1 ||
+	    strncmp((char *)str.data, STR1, sizeof(STR1) - 1) != 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}
@@ -64,9 +64,13 @@ int main(void)
 	STR_TAB_TERM(7);
 
 	/* check proper operation */
-#define STR2 "This is one route1, and one route2, while a route3 was replaced by dev1 and dev2 and dev1. That's all u1."
+#define STR2 \
+	"This is one route1, and one route2, while a route3 was replaced by dev1 and dev2 and dev1. That's all u1."
 	str_reset(&str);
-	if (str_append_str(&str, "This is one %R, and one %{R}, while a %{R2} was replaced by %{D} and %D and %{D}. That's all %U.") != 0) {
+	if (str_append_str(
+		    &str,
+		    "This is one %R, and one %{R}, while a %{R2} was replaced by %{D} and %D and %{D}. That's all %U.") !=
+	    0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}
@@ -76,12 +80,12 @@ int main(void)
 		exit(1);
 	}
 
-	if (str.length != sizeof(STR2)-1) {
+	if (str.length != sizeof(STR2) - 1) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}
 
-	if (strncmp((char*)str.data, STR2, sizeof(STR2)-1) != 0) {
+	if (strncmp((char *)str.data, STR2, sizeof(STR2) - 1) != 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}
@@ -104,12 +108,12 @@ int main(void)
 		exit(1);
 	}
 
-	if (str.length != sizeof(STR3_OUT)-1) {
+	if (str.length != sizeof(STR3_OUT) - 1) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}
 
-	if (strncmp((char*)str.data, STR3_OUT, sizeof(STR3_OUT)-1) != 0) {
+	if (strncmp((char *)str.data, STR3_OUT, sizeof(STR3_OUT) - 1) != 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}

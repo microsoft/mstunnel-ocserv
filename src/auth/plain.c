@@ -31,12 +31,12 @@
 #include <ccan/htable/htable.h>
 #include <ccan/hash/hash.h>
 #ifdef HAVE_LIBOATH
-# include <liboath/oath.h>
+#include <liboath/oath.h>
 #endif
 #ifdef HAVE_CRYPT_H
-  /* libcrypt in Fedora28 does not provide prototype
+/* libcrypt in Fedora28 does not provide prototype
    * in unistd.h */
-# include <crypt.h>
+#include <crypt.h>
 #endif
 #include "log.h"
 
@@ -45,14 +45,14 @@
 
 struct plain_ctx_st {
 	char username[MAX_USERNAME_SIZE];
-	char cpass[MAX_CPASS_SIZE];	/* crypt() passwd */
+	char cpass[MAX_CPASS_SIZE]; /* crypt() passwd */
 
 	char *groupnames[MAX_GROUPS];
-	unsigned groupnames_size;
+	unsigned int groupnames_size;
 
 	const char *pass_msg;
-	unsigned retries;
-	unsigned failed; /* non-zero if the username is wrong */
+	unsigned int retries;
+	unsigned int failed; /* non-zero if the username is wrong */
 
 	const struct plain_cfg_st *config;
 };
@@ -68,7 +68,7 @@ static void plain_vhost_init(void **vctx, void *pool, void *additional)
 		exit(EXIT_FAILURE);
 	}
 
-	*vctx = (void*)config;
+	*vctx = (void *)config;
 
 #ifdef HAVE_LIBOATH
 	oath_init();
@@ -78,13 +78,13 @@ static void plain_vhost_init(void **vctx, void *pool, void *additional)
 /* Breaks a list of "xxx", "yyy", to a character array, of
  * MAX_COMMA_SEP_ELEMENTS size; Note that the given string is modified.
   */
-static void
-break_group_list(void *pool, char *text,
-		 char *broken_text[MAX_GROUPS], unsigned *elements)
+static void break_group_list(void *pool, char *text,
+			     char *broken_text[MAX_GROUPS],
+			     unsigned int *elements)
 {
 	char *p = talloc_strdup(pool, text);
 	char *p2;
-	unsigned len;
+	unsigned int len;
 
 	*elements = 0;
 
@@ -98,16 +98,16 @@ break_group_list(void *pool, char *text,
 		p = strchr(p, ',');
 		if (p) {
 			*p = 0;
-			len = p - broken_text[*elements-1];
+			len = p - broken_text[*elements - 1];
 
 			/* remove any trailing space */
-			p2 = p-1;
+			p2 = p - 1;
 			while (isspace(*p2)) {
 				*p2 = 0;
 				p2--;
 			}
 
-			p++;	/* move to next entry and skip white
+			p++; /* move to next entry and skip white
 				 * space.
 				 */
 			while (isspace(*p))
@@ -118,7 +118,7 @@ break_group_list(void *pool, char *text,
 				(*elements)--;
 			}
 		} else {
-			p2 = strrchr(broken_text[(*elements)-1], ' ');
+			p2 = strrchr(broken_text[(*elements) - 1], ' ');
 			if (p2 != NULL) {
 				while (isspace(*p2)) {
 					*p2 = 0;
@@ -126,13 +126,12 @@ break_group_list(void *pool, char *text,
 				}
 			}
 
-			if (strlen(broken_text[(*elements)-1]) == 1) {
+			if (strlen(broken_text[(*elements) - 1]) == 1) {
 				/* skip the group */
 				(*elements)--;
 			}
 		}
-	}
-	while (p != NULL && *elements < MAX_GROUPS);
+	} while (p != NULL && *elements < MAX_GROUPS);
 }
 
 /* Returns 0 if the user is successfully authenticated, and sets the appropriate group name.
@@ -155,13 +154,13 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 	fp = fopen(pctx->config->passwd, "r");
 	if (fp == NULL) {
 		oc_syslog(LOG_ERR,
-		       "error in plain authentication; cannot open: %s",
-		       pctx->config->passwd);
+			  "error in plain authentication; cannot open: %s",
+			  pctx->config->passwd);
 		return -1;
 	}
 
-	line[sizeof(line)-1] = 0;
-	while ((p=fgets(line, sizeof(line)-1, fp)) != NULL) {
+	line[sizeof(line) - 1] = 0;
+	while ((p = fgets(line, sizeof(line) - 1, fp)) != NULL) {
 		ll = strlen(p);
 
 		if (ll <= 4)
@@ -182,11 +181,13 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 		if (p != NULL && strcmp(pctx->username, p) == 0) {
 			p = strsep(&sp, ":");
 			if (p != NULL) {
-				break_group_list(pctx, p, pctx->groupnames, &pctx->groupnames_size);
+				break_group_list(pctx, p, pctx->groupnames,
+						 &pctx->groupnames_size);
 
 				p = strsep(&sp, ":");
 				if (p != NULL) {
-					strlcpy(pctx->cpass, p, sizeof(pctx->cpass));
+					strlcpy(pctx->cpass, p,
+						sizeof(pctx->cpass));
 					pctx->failed = 0;
 					ret = 0;
 					goto exit;
@@ -200,11 +201,13 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 		if (p != NULL && strcmp(pctx->username, p) == 0) {
 			p = strtok_r(NULL, ":", &sp);
 			if (p != NULL) {
-				break_group_list(pctx, p, pctx->groupnames, &pctx->groupnames_size);
+				break_group_list(pctx, p, pctx->groupnames,
+						 &pctx->groupnames_size);
 
 				p = strtok_r(NULL, ":", &sp);
 				if (p != NULL) {
-					strlcpy(pctx->cpass, p, sizeof(pctx->cpass));
+					strlcpy(pctx->cpass, p,
+						sizeof(pctx->cpass));
 					pctx->failed = 0;
 					ret = 0;
 					goto exit;
@@ -216,20 +219,20 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 
 	/* always succeed */
 	ret = 0;
- exit:
+exit:
 	safe_memset(line, 0, sizeof(line));
 	fclose(fp);
 	return ret;
 }
 
-static int plain_auth_init(void **ctx, void *pool, void *vctx, const common_auth_init_st *info)
+static int plain_auth_init(void **ctx, void *pool, void *vctx,
+			   const common_auth_init_st *info)
 {
 	struct plain_ctx_st *pctx;
 	int ret;
 
 	if (info->username == NULL || info->username[0] == 0) {
-		oc_syslog(LOG_ERR,
-		       "plain-auth: no username present");
+		oc_syslog(LOG_ERR, "plain-auth: no username present");
 		return ERR_AUTH_FAIL;
 	}
 
@@ -262,26 +265,29 @@ static int plain_auth_init(void **ctx, void *pool, void *vctx, const common_auth
 	return ERR_AUTH_CONTINUE;
 }
 
-static int plain_auth_group(void *ctx, const char *suggested, char *groupname, int groupname_size)
+static int plain_auth_group(void *ctx, const char *suggested, char *groupname,
+			    int groupname_size)
 {
 	struct plain_ctx_st *pctx = ctx;
-	unsigned i, found = 0;
+	unsigned int i, found = 0;
 
 	groupname[0] = 0;
 
 	if (suggested != NULL) {
-		for (i=0;i<pctx->groupnames_size;i++) {
+		for (i = 0; i < pctx->groupnames_size; i++) {
 			if (strcmp(suggested, pctx->groupnames[i]) == 0) {
-				strlcpy(groupname, pctx->groupnames[i], groupname_size);
+				strlcpy(groupname, pctx->groupnames[i],
+					groupname_size);
 				found = 1;
 				break;
 			}
 		}
 
 		if (found == 0) {
-			oc_syslog(LOG_NOTICE,
-			       "user '%s' requested group '%s' but is not a member",
-			       pctx->username, suggested);
+			oc_syslog(
+				LOG_NOTICE,
+				"user '%s' requested group '%s' but is not a member",
+				pctx->username, suggested);
 			return -1;
 		}
 	}
@@ -300,7 +306,7 @@ static int plain_auth_user(void *ctx, char *username, int username_size)
 
 /* Returns 0 if the user is successfully authenticated, and sets the appropriate group name.
  */
-static int plain_auth_pass(void *ctx, const char *pass, unsigned pass_len)
+static int plain_auth_pass(void *ctx, const char *pass, unsigned int pass_len)
 {
 	struct plain_ctx_st *pctx = ctx;
 	const char *p;
@@ -314,21 +320,22 @@ static int plain_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	}
 
 	if (pctx->failed) {
-		if (pctx->retries++ < MAX_PASSWORD_TRIES-1) {
+		if (pctx->retries++ < MAX_PASSWORD_TRIES - 1) {
 			pctx->pass_msg = pass_msg_failed;
 			return ERR_AUTH_CONTINUE;
 		} else {
 			oc_syslog(LOG_NOTICE,
-			       "plain-auth: error authenticating user '%s'",
-			       pctx->username);
+				  "plain-auth: error authenticating user '%s'",
+				  pctx->username);
 			return ERR_AUTH_FAIL;
 		}
 	}
 
 	if (pctx->cpass[0] == 0 && pctx->config->otp_file == NULL) {
-		oc_syslog(LOG_NOTICE,
-		       "plain-auth: user '%s' has empty password and no OTP file configured",
-		       pctx->username);
+		oc_syslog(
+			LOG_NOTICE,
+			"plain-auth: user '%s' has empty password and no OTP file configured",
+			pctx->username);
 		return ERR_AUTH_FAIL;
 	}
 
@@ -344,12 +351,13 @@ static int plain_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		}
 
 		/* no primary password -> check OTP */
-		ret = oath_authenticate_usersfile(pctx->config->otp_file, pctx->username,
-			pass, HOTP_WINDOW, NULL, &last);
+		ret = oath_authenticate_usersfile(pctx->config->otp_file,
+						  pctx->username, pass,
+						  HOTP_WINDOW, NULL, &last);
 		if (ret != OATH_OK) {
 			oc_syslog(LOG_NOTICE,
-			       "plain-auth: OTP auth failed for '%s': %s",
-			       pctx->username, oath_strerror(ret));
+				  "plain-auth: OTP auth failed for '%s': %s",
+				  pctx->username, oath_strerror(ret));
 			return ERR_AUTH_FAIL;
 		}
 	}
@@ -381,10 +389,11 @@ static void plain_auth_deinit(void *ctx)
 static size_t rehash(const void *_e, void *unused)
 {
 	const char *e = _e;
+
 	return hash_any(e, strlen(e), 0);
 }
 
-static bool str_cmp(const void* _c1, void* _c2)
+static bool str_cmp(const void *_c1, void *_c2)
 {
 	const char *c1 = _c1, *c2 = _c2;
 
@@ -393,17 +402,18 @@ static bool str_cmp(const void* _c1, void* _c2)
 	return 0;
 }
 
-static void plain_group_list(void *pool, void *additional, char ***groupname, unsigned *groupname_size)
+static void plain_group_list(void *pool, void *additional, char ***groupname,
+			     unsigned int *groupname_size)
 {
 	FILE *fp;
 	char line[512];
 	ssize_t ll;
 	char *p, *sp;
-	unsigned i;
+	unsigned int i;
 	size_t hval;
 	struct htable_iter iter;
 	char *tgroup[MAX_GROUPS];
-	unsigned tgroup_size;
+	unsigned int tgroup_size;
 	struct htable hash;
 	struct plain_cfg_st *config = additional;
 
@@ -413,13 +423,13 @@ static void plain_group_list(void *pool, void *additional, char ***groupname, un
 	fp = fopen(config->passwd, "r");
 	if (fp == NULL) {
 		oc_syslog(LOG_NOTICE,
-		       "error in plain authentication; cannot open: %s",
-		       (char*)config->passwd);
+			  "error in plain authentication; cannot open: %s",
+			  (char *)config->passwd);
 		return;
 	}
 
-	line[sizeof(line)-1] = 0;
-	while ((p=fgets(line, sizeof(line)-1, fp)) != NULL) {
+	line[sizeof(line) - 1] = 0;
+	while ((p = fgets(line, sizeof(line) - 1, fp)) != NULL) {
 		ll = strlen(p);
 
 		if (ll <= 4)
@@ -449,12 +459,15 @@ static void plain_group_list(void *pool, void *additional, char ***groupname, un
 			if (p != NULL) {
 				break_group_list(pool, p, tgroup, &tgroup_size);
 
-				for (i=0;i<tgroup_size;i++) {
+				for (i = 0; i < tgroup_size; i++) {
 					hval = rehash(tgroup[i], NULL);
 
-					if (htable_get(&hash, hval, str_cmp, tgroup[i]) == NULL) {
+					if (htable_get(&hash, hval, str_cmp,
+						       tgroup[i]) == NULL) {
 						if (strlen(tgroup[i]) > 1)
-							(void)htable_add(&hash, hval, tgroup[i]);
+							(void)htable_add(
+								&hash, hval,
+								tgroup[i]);
 					}
 				}
 			}
@@ -462,7 +475,7 @@ static void plain_group_list(void *pool, void *additional, char ***groupname, un
 	}
 
 	*groupname_size = 0;
-	*groupname = talloc_size(pool, sizeof(char*)*MAX_GROUPS);
+	*groupname = talloc_size(pool, sizeof(char *) * MAX_GROUPS);
 	if (*groupname == NULL) {
 		goto exit;
 	}
@@ -475,21 +488,20 @@ static void plain_group_list(void *pool, void *additional, char ***groupname, un
 	}
 
 	/* always succeed */
- exit:
+exit:
 	htable_clear(&hash);
 	safe_memset(line, 0, sizeof(line));
 	fclose(fp);
 }
 
-const struct auth_mod_st plain_auth_funcs = {
-	.type = AUTH_TYPE_PLAIN | AUTH_TYPE_USERNAME_PASS,
-	.allows_retries = 1,
-	.vhost_init = plain_vhost_init,
-	.auth_init = plain_auth_init,
-	.auth_deinit = plain_auth_deinit,
-	.auth_msg = plain_auth_msg,
-	.auth_pass = plain_auth_pass,
-	.auth_user = plain_auth_user,
-	.auth_group = plain_auth_group,
-	.group_list = plain_group_list
-};
+const struct auth_mod_st plain_auth_funcs = { .type = AUTH_TYPE_PLAIN |
+						      AUTH_TYPE_USERNAME_PASS,
+					      .allows_retries = 1,
+					      .vhost_init = plain_vhost_init,
+					      .auth_init = plain_auth_init,
+					      .auth_deinit = plain_auth_deinit,
+					      .auth_msg = plain_auth_msg,
+					      .auth_pass = plain_auth_pass,
+					      .auth_user = plain_auth_user,
+					      .auth_group = plain_auth_group,
+					      .group_list = plain_group_list };

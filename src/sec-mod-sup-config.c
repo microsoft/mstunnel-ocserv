@@ -34,13 +34,19 @@ void sup_config_init(sec_mod_st *sec)
 {
 	vhost_cfg_st *vhost = NULL;
 
-	list_for_each(sec->vconfig, vhost, list) {
+	list_for_each(sec->vconfig, vhost, list)
+	{
 		if (vhost->perm_config.sup_config_type == SUP_CONFIG_FILE) {
-			seclog(sec, LOG_INFO, "%sreading supplemental config from files", PREFIX_VHOST(vhost));
+			seclog(sec, LOG_INFO,
+			       "%sreading supplemental config from files",
+			       PREFIX_VHOST(vhost));
 			vhost->config_module = &file_sup_config;
 #ifdef HAVE_RADIUS
-		} else if (vhost->perm_config.sup_config_type == SUP_CONFIG_RADIUS) {
-			seclog(sec, LOG_INFO, "%sreading supplemental config from radius", PREFIX_VHOST(vhost));
+		} else if (vhost->perm_config.sup_config_type ==
+			   SUP_CONFIG_RADIUS) {
+			seclog(sec, LOG_INFO,
+			       "%sreading supplemental config from radius",
+			       PREFIX_VHOST(vhost));
 			vhost->config_module = &radius_sup_config;
 #endif
 		}

@@ -34,7 +34,7 @@ int _ocserv_vasprintf(char **strp, const char *fmt, va_list ap)
 	if (!res)
 		goto err;
 
-	/* Use a copy of 'ap', preserving it in case we need to retry into
+		/* Use a copy of 'ap', preserving it in case we need to retry into
 	   a larger buffer. 160 characters should be sufficient for most
 	   strings in openconnect. */
 #ifdef HAVE_VA_COPY
@@ -52,7 +52,7 @@ int _ocserv_vasprintf(char **strp, const char *fmt, va_list ap)
 	va_end(ap2);
 
 	if (len < 0) {
-	printf_err:
+printf_err:
 		errno_save = errno;
 		free(res);
 		res = NULL;
@@ -62,21 +62,21 @@ int _ocserv_vasprintf(char **strp, const char *fmt, va_list ap)
 		goto out;
 
 	free(res);
-	res = malloc(len+1);
+	res = malloc(len + 1);
 	if (!res)
 		goto err;
 
-	len2 = vsnprintf(res, len+1, fmt, ap);
+	len2 = vsnprintf(res, len + 1, fmt, ap);
 	if (len2 < 0 || len2 > len)
 		goto printf_err;
 
 	ret = 0;
 	goto out;
 
- err:
+err:
 	errno = errno_save;
 	ret = -1;
- out:
+out:
 	*strp = res;
 	return ret;
 }

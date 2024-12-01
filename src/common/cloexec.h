@@ -18,7 +18,7 @@
 */
 
 #ifndef CLOEXEC_H
-# define CLOEXEC_H
+#define CLOEXEC_H
 
 #include <stdbool.h>
 
@@ -32,12 +32,12 @@
    open or pipe2 that accept flags like O_CLOEXEC to create DESC
    non-inheritable in the first place.  */
 
-int set_cloexec_flag (int desc, bool value);
+int set_cloexec_flag(int desc, bool value);
 
 /* Duplicates a file handle FD, while marking the copy to be closed
    prior to exec or spawn.  Returns -1 and sets errno if FD could not
    be duplicated.  */
 
-int dup_cloexec (int fd);
+int dup_cloexec(int fd);
 
 #endif /* CLOEXEC_H */

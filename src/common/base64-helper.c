@@ -22,21 +22,20 @@
 #include <talloc.h>
 #include "base64-helper.h"
 
-void oc_base64_encode (const char *in, size_t inlen,
-                       char *out, size_t outlen)
+void oc_base64_encode(const char *in, size_t inlen, char *out, size_t outlen)
 {
-	unsigned raw = BASE64_ENCODE_RAW_LENGTH(inlen);
-	if (outlen < raw+1) {
+	unsigned int raw = BASE64_ENCODE_RAW_LENGTH(inlen);
+
+	if (outlen < raw + 1) {
 		snprintf(out, outlen, "(too long data)");
 		return;
 	}
-	base64_encode_raw((void*)out, inlen, (uint8_t*)in);
+	base64_encode_raw((void *)out, inlen, (uint8_t *)in);
 	out[raw] = 0;
 }
 
-int
-oc_base64_decode(const uint8_t *src, unsigned src_length,
-	      uint8_t *dst, size_t *dst_length)
+int oc_base64_decode(const uint8_t *src, unsigned int src_length, uint8_t *dst,
+		     size_t *dst_length)
 {
 	struct base64_decode_ctx ctx;
 	int ret;
@@ -46,12 +45,14 @@ oc_base64_decode(const uint8_t *src, unsigned src_length,
 #ifdef NETTLE_OLD_BASE64_API
 	{
 		unsigned int len = *dst_length;
+
 		ret = base64_decode_update(&ctx, &len, dst, src_length, src);
 		if (ret != 0)
 			*dst_length = len;
 	}
 #else
-	ret = base64_decode_update(&ctx, dst_length, dst, src_length, (void*)src);
+	ret = base64_decode_update(&ctx, dst_length, dst, src_length,
+				   (void *)src);
 #endif
 
 	if (ret == 0)
@@ -60,8 +61,8 @@ oc_base64_decode(const uint8_t *src, unsigned src_length,
 	return base64_decode_final(&ctx);
 }
 
-int oc_base64_decode_alloc(void *pool, const char *in, size_t inlen,
-                           char **out, size_t *outlen)
+int oc_base64_decode_alloc(void *pool, const char *in, size_t inlen, char **out,
+			   size_t *outlen)
 {
 	int len, ret;
 	void *tmp;
@@ -73,7 +74,7 @@ int oc_base64_decode_alloc(void *pool, const char *in, size_t inlen,
 		return 0;
 
 	*outlen = len;
-	ret = oc_base64_decode((void*)in, inlen, tmp, outlen);
+	ret = oc_base64_decode((void *)in, inlen, tmp, outlen);
 	if (ret == 0) {
 		talloc_free(tmp);
 		return 0;

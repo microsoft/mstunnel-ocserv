@@ -42,7 +42,7 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 			  SecmSessionReplyMsg *msg, void *pool)
 {
 	struct radius_ctx_st *pctx = entry->auth_ctx;
-	unsigned dns = 0, i;
+	unsigned int dns = 0, i;
 
 	if (pctx == NULL)
 		return 0;
@@ -60,20 +60,29 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 	}
 
 	if (pctx->ipv4_mask[0] != 0) {
-		msg->config->ipv4_netmask = talloc_strdup(pool, pctx->ipv4_mask);
+		msg->config->ipv4_netmask =
+			talloc_strdup(pool, pctx->ipv4_mask);
 	}
 
 	if (pctx->routes_size > 0) {
-		msg->config->routes = talloc_size(pool, pctx->routes_size*sizeof(char*));
+		msg->config->routes =
+			talloc_size(pool, pctx->routes_size * sizeof(char *));
 		if (msg->config->routes != NULL) {
-			for (i=0;i<pctx->routes_size;i++) {
-				msg->config->routes[i] = talloc_strdup(pool, pctx->routes[i]);
+			for (i = 0; i < pctx->routes_size; i++) {
+				msg->config->routes[i] =
+					talloc_strdup(pool, pctx->routes[i]);
 				if (msg->config->routes[i] == NULL) {
-					oc_syslog(LOG_ERR, "Error allocating memory for routes");
+					oc_syslog(
+						LOG_ERR,
+						"Error allocating memory for routes");
 					return -1;
 				}
-				if (ip_route_sanity_check(msg->config->routes, &msg->config->routes[i]) < 0) {
-					oc_syslog(LOG_ERR, "Route '%s' is malformed", msg->config->routes[i]);
+				if (ip_route_sanity_check(
+					    msg->config->routes,
+					    &msg->config->routes[i]) < 0) {
+					oc_syslog(LOG_ERR,
+						  "Route '%s' is malformed",
+						  msg->config->routes[i]);
 					return -1;
 				}
 			}
@@ -91,17 +100,22 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 		dns++;
 
 	if (dns > 0) {
-		msg->config->dns = talloc_size(pool, dns*sizeof(char*));
+		msg->config->dns = talloc_size(pool, dns * sizeof(char *));
 		if (msg->config->dns != NULL) {
-			unsigned pos = 0;
+			unsigned int pos = 0;
+
 			if (pctx->ipv4_dns1[0] != 0)
-				msg->config->dns[pos++] = talloc_strdup(pool, pctx->ipv4_dns1);
+				msg->config->dns[pos++] =
+					talloc_strdup(pool, pctx->ipv4_dns1);
 			if (pctx->ipv4_dns2[0] != 0)
-				msg->config->dns[pos++] = talloc_strdup(pool, pctx->ipv4_dns2);
+				msg->config->dns[pos++] =
+					talloc_strdup(pool, pctx->ipv4_dns2);
 			if (pctx->ipv6_dns1[0] != 0)
-				msg->config->dns[pos++] = talloc_strdup(pool, pctx->ipv6_dns1);
+				msg->config->dns[pos++] =
+					talloc_strdup(pool, pctx->ipv6_dns1);
 			if (pctx->ipv6_dns2[0] != 0)
-				msg->config->dns[pos++] = talloc_strdup(pool, pctx->ipv6_dns2);
+				msg->config->dns[pos++] =
+					talloc_strdup(pool, pctx->ipv6_dns2);
 
 			msg->config->n_dns = dns;
 		}

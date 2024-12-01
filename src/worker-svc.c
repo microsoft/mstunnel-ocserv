@@ -33,15 +33,17 @@
 #include <worker.h>
 #include <tlslib.h>
 
-int get_svc_handler(worker_st *ws, unsigned http_ver)
+int get_svc_handler(worker_st *ws, unsigned int http_ver)
 {
 	int ret;
 
 	if (!WSCONFIG(ws)->cisco_svc_client_compat)
-		oclog(ws, LOG_WARNING, "request to /svc but cisco-svc-client-compat = false");
+		oclog(ws, LOG_WARNING,
+		      "request to /svc but cisco-svc-client-compat = false");
 
 	if (ws->req.user_agent_type != AGENT_SVC_IPPHONE)
-		oclog(ws, LOG_WARNING, "unexpected /svc user-agent of '%s'", ws->req.user_agent);
+		oclog(ws, LOG_WARNING, "unexpected /svc user-agent of '%s'",
+		      ws->req.user_agent);
 
 	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: 200 OK");
 	cstp_cork(ws);
@@ -54,7 +56,9 @@ int get_svc_handler(worker_st *ws, unsigned http_ver)
 	if (ret < 0)
 		goto fail;
 
-	ret = cstp_puts(ws, "Set-Cookie: webvpn=; expires=Thu, 01 Jan 1970 22:00:00 GMT; path=/; secure\r\n");
+	ret = cstp_puts(
+		ws,
+		"Set-Cookie: webvpn=; expires=Thu, 01 Jan 1970 22:00:00 GMT; path=/; secure\r\n");
 	if (ret < 0)
 		goto fail;
 
@@ -89,7 +93,7 @@ static int client_auth(worker_st *ws, char *password)
 {
 	int ret = -1, sd = -1;
 	char *msg;
-	unsigned pcounter = 0;
+	unsigned int pcounter = 0;
 	SecAuthInitMsg init = SEC_AUTH_INIT_MSG__INIT;
 	SecAuthContMsg cont = SEC_AUTH_CONT_MSG__INIT;
 
@@ -116,7 +120,7 @@ static int client_auth(worker_st *ws, char *password)
 	init.orig_remote_ip = ws->orig_remote_ip_str;
 	init.our_ip = ws->our_ip_str;
 	init.session_start_time = ws->session_start_time;
-	init.hmac.data = (uint8_t*)ws->sec_auth_init_hmac;
+	init.hmac.data = (uint8_t *)ws->sec_auth_init_hmac;
 	init.hmac.len = sizeof(ws->sec_auth_init_hmac);
 
 	if (ws->req.user_agent[0] != 0)
@@ -134,11 +138,13 @@ static int client_auth(worker_st *ws, char *password)
 		goto fail;
 	}
 
-	ret = send_msg_to_secmod(ws, sd, CMD_SEC_AUTH_INIT, &init,
-				 (pack_size_func)sec_auth_init_msg__get_packed_size,
-				 (pack_func)sec_auth_init_msg__pack);
+	ret = send_msg_to_secmod(
+		ws, sd, CMD_SEC_AUTH_INIT, &init,
+		(pack_size_func)sec_auth_init_msg__get_packed_size,
+		(pack_func)sec_auth_init_msg__pack);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "failed sending auth init message to sec mod");
+		oclog(ws, LOG_ERR,
+		      "failed sending auth init message to sec mod");
 		goto fail;
 	}
 
@@ -168,11 +174,13 @@ static int client_auth(worker_st *ws, char *password)
 			goto fail;
 		}
 
-		ret = send_msg_to_secmod(ws, sd, CMD_SEC_AUTH_CONT, &cont,
-					 (pack_size_func)sec_auth_cont_msg__get_packed_size,
-					 (pack_func)sec_auth_cont_msg__pack);
+		ret = send_msg_to_secmod(
+			ws, sd, CMD_SEC_AUTH_CONT, &cont,
+			(pack_size_func)sec_auth_cont_msg__get_packed_size,
+			(pack_func)sec_auth_cont_msg__pack);
 		if (ret < 0) {
-			oclog(ws, LOG_ERR, "failed sending auth cont message to sec mod");
+			oclog(ws, LOG_ERR,
+			      "failed sending auth cont message to sec mod");
 			goto fail;
 		}
 
@@ -194,7 +202,7 @@ fail:
 	return ret;
 }
 
-int post_svc_handler(worker_st *ws, unsigned http_ver)
+int post_svc_handler(worker_st *ws, unsigned int http_ver)
 {
 	char *username = NULL;
 	char *password = NULL;
@@ -202,10 +210,12 @@ int post_svc_handler(worker_st *ws, unsigned http_ver)
 	char cookie[BASE64_ENCODE_RAW_LENGTH(sizeof(ws->cookie)) + 1];
 
 	if (!WSCONFIG(ws)->cisco_svc_client_compat)
-		oclog(ws, LOG_WARNING, "request to /svc but cisco-svc-client-compat = false");
+		oclog(ws, LOG_WARNING,
+		      "request to /svc but cisco-svc-client-compat = false");
 
 	if (ws->req.user_agent_type != AGENT_SVC_IPPHONE)
-		oclog(ws, LOG_WARNING, "unexpected /svc user-agent of '%s'", ws->req.user_agent);
+		oclog(ws, LOG_WARNING, "unexpected /svc user-agent of '%s'",
+		      ws->req.user_agent);
 
 	if (ws->selected_auth->type & AUTH_TYPE_USERNAME_PASS) {
 		/* fail if username or password is missing */
@@ -235,9 +245,11 @@ int post_svc_handler(worker_st *ws, unsigned http_ver)
 
 	if (ret < 0) {
 		oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: 401 Unauthorized");
-		ret = cstp_printf(ws, "HTTP/1.%d 401 Authentication failed\r\n"
+		ret = cstp_printf(ws,
+				  "HTTP/1.%d 401 Authentication failed\r\n"
 				  "Content-Length: 0\r\n"
-				  "\r\n", http_ver);
+				  "\r\n",
+				  http_ver);
 
 		if (ret >= 0)
 			cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
@@ -248,8 +260,8 @@ int post_svc_handler(worker_st *ws, unsigned http_ver)
 	oclog(ws, LOG_HTTP_DEBUG, "user '%s' obtained cookie", ws->username);
 	ws->auth_state = S_AUTH_COOKIE;
 
-	oc_base64_encode((char *)ws->cookie, sizeof(ws->cookie),
-			 cookie, sizeof(cookie));
+	oc_base64_encode((char *)ws->cookie, sizeof(ws->cookie), cookie,
+			 sizeof(cookie));
 
 	/* reply */
 	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: 200 OK");

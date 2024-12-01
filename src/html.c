@@ -29,18 +29,19 @@
 #include "html.h"
 #include "log.h"
 
-char *unescape_html(void *pool, const char *html, unsigned len, unsigned *out_len)
+char *unescape_html(void *pool, const char *html, unsigned int len,
+		    unsigned int *out_len)
 {
 	char *msg;
 	int pos;
-	unsigned i;
+	unsigned int i;
 
 	msg = talloc_size(pool, len + 1);
 	if (msg == NULL)
 		return NULL;
 
 	for (i = pos = 0; i < len;) {
-		if (len-pos < 1) {
+		if (len - pos < 1) {
 			goto fail;
 		}
 
@@ -68,28 +69,31 @@ char *unescape_html(void *pool, const char *html, unsigned len, unsigned *out_le
 				char *endptr = NULL;
 				long val;
 
-				if (p[2]=='x') {
+				if (p[2] == 'x') {
 					p += 3;
 					val = strtol(p, &endptr, 16);
 				} else {
 					p += 2;
 					val = strtol(p, &endptr, 10);
 				}
-				if (endptr == NULL || *endptr != ';' || val > WCHAR_MAX) {
+				if (endptr == NULL || *endptr != ';' ||
+				    val > WCHAR_MAX) {
 					/* skip */
 					msg[pos++] = html[i++];
 				} else {
 					char tmpmb[MB_CUR_MAX];
 					wchar_t ch = val;
 					mbstate_t ps;
+
 					memset(&ps, 0, sizeof(ps));
 
-					i += (ptrdiff_t)(1+endptr-(&html[i]));
+					i += (ptrdiff_t)(1 + endptr -
+							 (&html[i]));
 					val = wcrtomb(tmpmb, ch, &ps);
 
 					if (val == -1)
 						goto fail;
-					if (len-pos > val)
+					if (len - pos > val)
 						memcpy(&msg[pos], tmpmb, val);
 					else
 						goto fail;
@@ -106,16 +110,17 @@ char *unescape_html(void *pool, const char *html, unsigned len, unsigned *out_le
 		*out_len = pos;
 
 	return msg;
- fail:
+fail:
 	talloc_free(msg);
 	return NULL;
 }
 
-char *unescape_url(void *pool, const char *url, unsigned len, unsigned *out_len)
+char *unescape_url(void *pool, const char *url, unsigned int len,
+		   unsigned int *out_len)
 {
 	char *msg;
 	int pos;
-	unsigned i;
+	unsigned int i;
 
 	msg = talloc_size(pool, len + 1);
 	if (msg == NULL)
@@ -132,7 +137,8 @@ char *unescape_url(void *pool, const char *url, unsigned len, unsigned *out_len)
 
 			if (sscanf(b, "%02x", &u) <= 0) {
 				talloc_free(msg);
-				oc_syslog(LOG_ERR, "%s: error parsing URL: %s", __func__, url);
+				oc_syslog(LOG_ERR, "%s: error parsing URL: %s",
+					  __func__, url);
 				return NULL;
 			}
 
@@ -152,25 +158,28 @@ char *unescape_url(void *pool, const char *url, unsigned len, unsigned *out_len)
 	return msg;
 }
 
-char *escape_url(void *pool, const char *url, unsigned len, unsigned *out_len)
+char *escape_url(void *pool, const char *url, unsigned int len,
+		 unsigned int *out_len)
 {
 	char *msg;
 	int pos;
-	unsigned i;
+	unsigned int i;
 
-	msg = talloc_size(pool, 3*len + 1);
+	msg = talloc_size(pool, 3 * len + 1);
 	if (msg == NULL)
 		return NULL;
 
 	for (i = pos = 0; i < len;) {
-		if (isalnum(url[i]) || url[i]=='-' || url[i]=='_' || url[i]=='.' || url[i]=='~') {
+		if (isalnum(url[i]) || url[i] == '-' || url[i] == '_' ||
+		    url[i] == '.' || url[i] == '~') {
 			msg[pos++] = url[i++];
 		} else if (url[i] == ' ') {
 			msg[pos++] = '+';
 			i++;
 		} else {
-			snprintf(&msg[pos], 4, "%%%02X", (unsigned)url[i++]);
-			pos+=3;
+			snprintf(&msg[pos], 4, "%%%02X",
+				 (unsigned int)url[i++]);
+			pos += 3;
 		}
 	}
 	msg[pos] = 0;

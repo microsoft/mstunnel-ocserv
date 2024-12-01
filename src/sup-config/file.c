@@ -42,38 +42,43 @@
 #define READ_RAW_MULTI_LINE(varname, num) \
 	_add_multi_line_val(pool, &varname, &num, value)
 
-#define READ_RAW_STRING(varname) { \
-	if (varname != NULL) \
-		talloc_free(varname); \
-	varname = talloc_strdup(pool, value); \
+#define READ_RAW_STRING(varname)                      \
+	{                                             \
+		if (varname != NULL)                  \
+			talloc_free(varname);         \
+		varname = talloc_strdup(pool, value); \
 	}
 
-#define READ_RAW_NUMERIC(varname, var_set) { \
-	varname = strtol(value, NULL, 10); \
-	var_set = 1; \
-	}
-
-#define READ_RAW_PRIO_TOS(varname, var_set) { \
-	if (strncmp(value, "0x", 2) == 0) { \
-		varname = strtol(value, NULL, 16); \
-		varname = TOS_PACK(varname); \
-		var_set = 1; \
-	} else { \
+#define READ_RAW_NUMERIC(varname, var_set)         \
+	{                                          \
 		varname = strtol(value, NULL, 10); \
-		varname++; \
-		var_set = 1; \
-	} \
+		var_set = 1;                       \
 	}
 
-#define READ_TF(varname, is_set) { \
-	char* tmp_tf = NULL; \
-	READ_RAW_STRING(tmp_tf); \
-	if (strcasecmp(tmp_tf, "true") == 0 || strcasecmp(tmp_tf, "yes") == 0) \
-		varname = 1; \
-	else \
-		varname = 0; \
-	is_set = 1; \
-	talloc_free(tmp_tf); \
+#define READ_RAW_PRIO_TOS(varname, var_set)                \
+	{                                                  \
+		if (strncmp(value, "0x", 2) == 0) {        \
+			varname = strtol(value, NULL, 16); \
+			varname = TOS_PACK(varname);       \
+			var_set = 1;                       \
+		} else {                                   \
+			varname = strtol(value, NULL, 10); \
+			varname++;                         \
+			var_set = 1;                       \
+		}                                          \
+	}
+
+#define READ_TF(varname, is_set)                       \
+	{                                              \
+		char *tmp_tf = NULL;                   \
+		READ_RAW_STRING(tmp_tf);               \
+		if (strcasecmp(tmp_tf, "true") == 0 || \
+		    strcasecmp(tmp_tf, "yes") == 0)    \
+			varname = 1;                   \
+		else                                   \
+			varname = 0;                   \
+		is_set = 1;                            \
+		talloc_free(tmp_tf);                   \
 	}
 
 struct ini_ctx_st {
@@ -82,18 +87,20 @@ struct ini_ctx_st {
 	void *pool;
 };
 
-static int group_cfg_ini_handler(void *_ctx, const char *section, const char *name, const char* _value)
+static int group_cfg_ini_handler(void *_ctx, const char *section,
+				 const char *name, const char *_value)
 {
 	struct ini_ctx_st *ctx = _ctx;
 	SecmSessionReplyMsg *msg = ctx->msg;
 	const char *file = ctx->file;
 	void *pool = ctx->pool;
-	unsigned prefix = 0, prefix4 = 0;
+	unsigned int prefix = 0, prefix4 = 0;
 	int ret;
 	char *value;
 
 	if (section != NULL && section[0] != 0) {
-		oc_syslog(LOG_INFO, "skipping unknown section '%s' in %s", section, file);
+		oc_syslog(LOG_INFO, "skipping unknown section '%s' in %s",
+			  section, file);
 		return 1;
 	}
 
@@ -103,20 +110,26 @@ static int group_cfg_ini_handler(void *_ctx, const char *section, const char *na
 
 	if (strcmp(name, "no-udp") == 0) {
 		READ_TF(msg->config->no_udp, msg->config->has_no_udp);
-	} else if (strcmp(name, "restrict-user-to-routes")==0) {
-		READ_TF(msg->config->restrict_user_to_routes, msg->config->has_restrict_user_to_routes);
+	} else if (strcmp(name, "restrict-user-to-routes") == 0) {
+		READ_TF(msg->config->restrict_user_to_routes,
+			msg->config->has_restrict_user_to_routes);
 	} else if (strcmp(name, "tunnel_all_dns") == 0) {
-		READ_TF(msg->config->tunnel_all_dns, msg->config->has_tunnel_all_dns);
+		READ_TF(msg->config->tunnel_all_dns,
+			msg->config->has_tunnel_all_dns);
 	} else if (strcmp(name, "deny-roaming") == 0) {
-		READ_TF(msg->config->deny_roaming, msg->config->has_deny_roaming);
+		READ_TF(msg->config->deny_roaming,
+			msg->config->has_deny_roaming);
 	} else if (strcmp(name, "route") == 0) {
 		READ_RAW_MULTI_LINE(msg->config->routes, msg->config->n_routes);
 	} else if (strcmp(name, "split-dns") == 0) {
-		READ_RAW_MULTI_LINE(msg->config->split_dns, msg->config->n_split_dns);
+		READ_RAW_MULTI_LINE(msg->config->split_dns,
+				    msg->config->n_split_dns);
 	} else if (strcmp(name, "no-route") == 0) {
-		READ_RAW_MULTI_LINE(msg->config->no_routes, msg->config->n_no_routes);
+		READ_RAW_MULTI_LINE(msg->config->no_routes,
+				    msg->config->n_no_routes);
 	} else if (strcmp(name, "iroute") == 0) {
-		READ_RAW_MULTI_LINE(msg->config->iroutes, msg->config->n_iroutes);
+		READ_RAW_MULTI_LINE(msg->config->iroutes,
+				    msg->config->n_iroutes);
 	} else if (strcmp(name, "dns") == 0) {
 		READ_RAW_MULTI_LINE(msg->config->dns, msg->config->n_dns);
 	} else if (strcmp(name, "ipv6-dns") == 0) {
@@ -135,7 +148,8 @@ static int group_cfg_ini_handler(void *_ctx, const char *section, const char *na
 		READ_RAW_STRING(msg->config->ipv4_net);
 		prefix4 = extract_prefix(msg->config->ipv4_net);
 		if (prefix4 != 0)
-			msg->config->ipv4_netmask = ipv4_prefix_to_strmask(pool, prefix4);
+			msg->config->ipv4_netmask =
+				ipv4_prefix_to_strmask(pool, prefix4);
 	} else if (strcmp(name, "ipv4-netmask") == 0) {
 		READ_RAW_STRING(msg->config->ipv4_netmask);
 	} else if (strcmp(name, "explicit-ipv4") == 0) {
@@ -146,7 +160,9 @@ static int group_cfg_ini_handler(void *_ctx, const char *section, const char *na
 		prefix = extract_prefix(msg->config->ipv6_net);
 		if (prefix != 0) {
 			if (valid_ipv6_prefix(prefix) == 0) {
-				oc_syslog(LOG_ERR, "unknown ipv6-prefix '%u' in %s", msg->config->ipv6_prefix, file);
+				oc_syslog(LOG_ERR,
+					  "unknown ipv6-prefix '%u' in %s",
+					  msg->config->ipv6_prefix, file);
 			}
 			msg->config->ipv6_prefix = prefix;
 			msg->config->has_ipv6_prefix = 1;
@@ -154,51 +170,65 @@ static int group_cfg_ini_handler(void *_ctx, const char *section, const char *na
 	} else if (strcmp(name, "explicit-ipv6") == 0) {
 		READ_RAW_STRING(msg->config->explicit_ipv6);
 	} else if (strcmp(name, "ipv6-subnet-prefix") == 0) {
-		READ_RAW_NUMERIC(msg->config->ipv6_subnet_prefix, msg->config->has_ipv6_subnet_prefix);
+		READ_RAW_NUMERIC(msg->config->ipv6_subnet_prefix,
+				 msg->config->has_ipv6_subnet_prefix);
 	} else if (strcmp(name, "hostname") == 0) {
 		READ_RAW_STRING(msg->config->hostname);
 	} else if (strcmp(name, "rx-data-per-sec") == 0) {
-		READ_RAW_NUMERIC(msg->config->rx_per_sec, msg->config->has_rx_per_sec);
+		READ_RAW_NUMERIC(msg->config->rx_per_sec,
+				 msg->config->has_rx_per_sec);
 		msg->config->rx_per_sec /= 1000; /* in kb */
 	} else if (strcmp(name, "tx-data-per-sec") == 0) {
-		READ_RAW_NUMERIC(msg->config->tx_per_sec, msg->config->has_tx_per_sec);
+		READ_RAW_NUMERIC(msg->config->tx_per_sec,
+				 msg->config->has_tx_per_sec);
 		msg->config->tx_per_sec /= 1000; /* in kb */
 	} else if (strcmp(name, "stats-report-time") == 0) {
-		READ_RAW_NUMERIC(msg->config->interim_update_secs, msg->config->has_interim_update_secs);
+		READ_RAW_NUMERIC(msg->config->interim_update_secs,
+				 msg->config->has_interim_update_secs);
 	} else if (strcmp(name, "session-timeout") == 0) {
-		READ_RAW_NUMERIC(msg->config->session_timeout_secs, msg->config->has_session_timeout_secs);
+		READ_RAW_NUMERIC(msg->config->session_timeout_secs,
+				 msg->config->has_session_timeout_secs);
 	} else if (strcmp(name, "mtu") == 0) {
 		READ_RAW_NUMERIC(msg->config->mtu, msg->config->has_mtu);
 	} else if (strcmp(name, "dpd") == 0) {
 		READ_RAW_NUMERIC(msg->config->dpd, msg->config->has_dpd);
 	} else if (strcmp(name, "mobile-dpd") == 0) {
-		READ_RAW_NUMERIC(msg->config->mobile_dpd, msg->config->has_mobile_dpd);
+		READ_RAW_NUMERIC(msg->config->mobile_dpd,
+				 msg->config->has_mobile_dpd);
 	} else if (strcmp(name, "idle-timeout") == 0) {
-		READ_RAW_NUMERIC(msg->config->idle_timeout, msg->config->has_idle_timeout);
+		READ_RAW_NUMERIC(msg->config->idle_timeout,
+				 msg->config->has_idle_timeout);
 	} else if (strcmp(name, "mobile-idle-timeout") == 0) {
-		READ_RAW_NUMERIC(msg->config->mobile_idle_timeout, msg->config->has_mobile_idle_timeout);
+		READ_RAW_NUMERIC(msg->config->mobile_idle_timeout,
+				 msg->config->has_mobile_idle_timeout);
 	} else if (strcmp(name, "keepalive") == 0) {
-		READ_RAW_NUMERIC(msg->config->keepalive, msg->config->has_keepalive);
+		READ_RAW_NUMERIC(msg->config->keepalive,
+				 msg->config->has_keepalive);
 	} else if (strcmp(name, "max-same-clients") == 0) {
-		READ_RAW_NUMERIC(msg->config->max_same_clients, msg->config->has_max_same_clients);
+		READ_RAW_NUMERIC(msg->config->max_same_clients,
+				 msg->config->has_max_same_clients);
 	} else if (strcmp(name, "net-priority") == 0) {
 		/* net-priority will contain the actual priority + 1,
 		 * to allow having zero as uninitialized. */
-		 READ_RAW_PRIO_TOS(msg->config->net_priority, msg->config->has_net_priority);
+		READ_RAW_PRIO_TOS(msg->config->net_priority,
+				  msg->config->has_net_priority);
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	} else if (strcmp(name, "user-profile") == 0) {
 		READ_RAW_STRING(msg->config->xml_config_file);
 #endif
 	} else if (strcmp(name, "client-bypass-protocol") == 0) {
-		READ_TF(msg->config->client_bypass_protocol, msg->config->has_client_bypass_protocol);
+		READ_TF(msg->config->client_bypass_protocol,
+			msg->config->has_client_bypass_protocol);
 	} else if (strcmp(name, "restrict-user-to-ports") == 0) {
-		ret = cfg_parse_ports(pool, &msg->config->fw_ports, &msg->config->n_fw_ports, value);
+		ret = cfg_parse_ports(pool, &msg->config->fw_ports,
+				      &msg->config->n_fw_ports, value);
 		if (ret < 0) {
 			talloc_free(value);
 			return 0;
 		}
 	} else {
-		oc_syslog(LOG_INFO, "skipping unknown option '%s' in %s", name, file);
+		oc_syslog(LOG_INFO, "skipping unknown option '%s' in %s", name,
+			  file);
 	}
 
 	talloc_free(value);
@@ -209,13 +239,12 @@ static int group_cfg_ini_handler(void *_ctx, const char *section, const char *na
  * config. The provided config must either be memset to zero, or be
  * already allocated using this function.
  */
-static
-int parse_group_cfg_file(struct cfg_st *global_config,
-			 SecmSessionReplyMsg *msg, void *pool,
-			 const char* file)
+static int parse_group_cfg_file(struct cfg_st *global_config,
+				SecmSessionReplyMsg *msg, void *pool,
+				const char *file)
 {
 	int ret;
-	unsigned j;
+	unsigned int j;
 	struct ini_ctx_st ctx;
 
 	ctx.pool = pool;
@@ -225,57 +254,65 @@ int parse_group_cfg_file(struct cfg_st *global_config,
 	ret = ini_parse(file, group_cfg_ini_handler, &ctx);
 	if (ret != 0) {
 		if (ret > 0)
-			oc_syslog(LOG_ERR, "error in line %d of config file %s", ret, file);
+			oc_syslog(LOG_ERR, "error in line %d of config file %s",
+				  ret, file);
 		else
 			oc_syslog(LOG_ERR, "cannot load config file %s", file);
 		return 0;
 	}
 
-	for (j=0;j<msg->config->n_routes;j++) {
-		if (ip_route_sanity_check(msg->config->routes, &msg->config->routes[j]) != 0) {
+	for (j = 0; j < msg->config->n_routes; j++) {
+		if (ip_route_sanity_check(msg->config->routes,
+					  &msg->config->routes[j]) != 0) {
 			ret = ERR_READ_CONFIG;
 			goto fail;
 		}
 	}
 
-	for (j=0;j<msg->config->n_iroutes;j++) {
-		if (ip_route_sanity_check(msg->config->iroutes, &msg->config->iroutes[j]) != 0) {
+	for (j = 0; j < msg->config->n_iroutes; j++) {
+		if (ip_route_sanity_check(msg->config->iroutes,
+					  &msg->config->iroutes[j]) != 0) {
 			ret = ERR_READ_CONFIG;
 			goto fail;
 		}
 	}
 
-	for (j=0;j<msg->config->n_no_routes;j++) {
-		if (ip_route_sanity_check(msg->config->no_routes, &msg->config->no_routes[j]) != 0) {
+	for (j = 0; j < msg->config->n_no_routes; j++) {
+		if (ip_route_sanity_check(msg->config->no_routes,
+					  &msg->config->no_routes[j]) != 0) {
 			ret = ERR_READ_CONFIG;
 			goto fail;
 		}
 	}
 
 	ret = 0;
- fail:
+fail:
 
 	return ret;
 }
 
 static int read_sup_config_file(struct cfg_st *global_config,
 				SecmSessionReplyMsg *msg, void *pool,
-				const char *file, const char *fallback, const char *type)
+				const char *file, const char *fallback,
+				const char *type)
 {
 	int ret;
 
 	if (access(file, R_OK) == 0) {
 		oc_syslog(LOG_DEBUG, "Loading %s configuration '%s'", type,
-		      file);
+			  file);
 
 		ret = parse_group_cfg_file(global_config, msg, pool, file);
 		if (ret < 0)
 			return ERR_READ_CONFIG;
 	} else {
 		if (fallback != NULL) {
-			oc_syslog(LOG_DEBUG, "Loading default %s configuration '%s'", type, fallback);
+			oc_syslog(LOG_DEBUG,
+				  "Loading default %s configuration '%s'", type,
+				  fallback);
 
-			ret = parse_group_cfg_file(global_config, msg, pool, fallback);
+			ret = parse_group_cfg_file(global_config, msg, pool,
+						   fallback);
 			if (ret < 0)
 				return ERR_READ_CONFIG;
 		}
@@ -294,7 +331,8 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 		snprintf(file, sizeof(file), "%s/%s", cfg->per_group_dir,
 			 entry->acct_info.groupname);
 
-		ret = read_sup_config_file(cfg, msg, pool, file, cfg->default_group_conf, "group");
+		ret = read_sup_config_file(cfg, msg, pool, file,
+					   cfg->default_group_conf, "group");
 		if (ret < 0)
 			return ret;
 	}
@@ -302,7 +340,8 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 	if (cfg->per_user_dir != NULL) {
 		snprintf(file, sizeof(file), "%s/%s", cfg->per_user_dir,
 			 entry->acct_info.username);
-		ret = read_sup_config_file(cfg, msg, pool, file, cfg->default_user_conf, "user");
+		ret = read_sup_config_file(cfg, msg, pool, file,
+					   cfg->default_user_conf, "user");
 		if (ret < 0)
 			return ret;
 	}

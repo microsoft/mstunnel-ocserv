@@ -26,9 +26,9 @@
 #include <unistd.h>
 #include <occtl/occtl.h>
 
-static const char* get_pager(void)
+static const char *get_pager(void)
 {
-	char* pager;
+	char *pager;
 
 	pager = getenv("OCCTL_PAGER");
 	if (pager == NULL)
@@ -40,7 +40,7 @@ static const char* get_pager(void)
 }
 
 /* Always succeeds */
-FILE* pager_start(cmd_params_st *params)
+FILE *pager_start(cmd_params_st *params)
 {
 	FILE *fp;
 	const char *pager;
@@ -64,14 +64,15 @@ FILE* pager_start(cmd_params_st *params)
 	fp = popen(pager, "w");
 
 	if (fp == NULL) { /* no pager */
-		fprintf(stderr, "unable to start pager; check your $PAGER environment variable\n");
+		fprintf(stderr,
+			"unable to start pager; check your $PAGER environment variable\n");
 		fp = stdout;
 	}
 
 	return fp;
 }
 
-void pager_stop(FILE* fp)
+void pager_stop(FILE *fp)
 {
 	if (fp != stdout)
 		pclose(fp);

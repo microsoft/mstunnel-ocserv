@@ -36,39 +36,40 @@
 #include "common-config.h"
 
 #ifdef LEGACY_RADIUS
-# include <freeradius-client.h>
+#include <freeradius-client.h>
 #else
-# include <radcli/radcli.h>
+#include <radcli/radcli.h>
 #endif
 
 #ifndef VENDOR_BIT_SIZE
-# define VENDOR_BIT_SIZE 16
-# define VENDOR_MASK 0xffff
+#define VENDOR_BIT_SIZE 16
+#define VENDOR_MASK 0xffff
 #else
-# define VENDOR_MASK 0xffffffff
+#define VENDOR_MASK 0xffffffff
 #endif
 
-#define VATTRID_SET(a,v) ((a)|((uint64_t)((v)&VENDOR_MASK)) << VENDOR_BIT_SIZE)
+#define VATTRID_SET(a, v) \
+	((a) | ((uint64_t)((v) & VENDOR_MASK)) << VENDOR_BIT_SIZE)
 
 #define RAD_GROUP_NAME PW_CLASS
 /* Microsoft - RFC 2548 */
 #define MS_PRIMARY_DNS_SERVER VATTRID_SET(28, 311)
 #define MS_SECONDARY_DNS_SERVER VATTRID_SET(29, 311)
 /* Roaring Penguin */
-#define RP_UPSTREAM_SPEED_LIMIT  VATTRID_SET(1, 10055)
+#define RP_UPSTREAM_SPEED_LIMIT VATTRID_SET(1, 10055)
 #define RP_DOWNSTREAM_SPEED_LIMIT VATTRID_SET(2, 10055)
 
 #if defined(LEGACY_RADIUS)
-# ifndef PW_DELEGATED_IPV6_PREFIX
-#  define PW_DELEGATED_IPV6_PREFIX 123
-# endif
-# ifndef PW_ACCT_INTERIM_INTERVAL
-#  define PW_ACCT_INTERIM_INTERVAL 85
-# endif
+#ifndef PW_DELEGATED_IPV6_PREFIX
+#define PW_DELEGATED_IPV6_PREFIX 123
+#endif
+#ifndef PW_ACCT_INTERIM_INTERVAL
+#define PW_ACCT_INTERIM_INTERVAL 85
+#endif
 #endif
 
 #if RADCLI_VERSION_NUMBER < 0x010207
-# define CHALLENGE_RC 3
+#define CHALLENGE_RC 3
 #endif
 
 #define MAX_CHALLENGES 16
@@ -91,19 +92,21 @@ static void radius_vhost_init(void **_vctx, void *pool, void *additional)
 	}
 
 	if (config->nas_identifier) {
-		strlcpy(vctx->nas_identifier, config->nas_identifier, sizeof(vctx->nas_identifier));
+		strlcpy(vctx->nas_identifier, config->nas_identifier,
+			sizeof(vctx->nas_identifier));
 	} else {
 		vctx->nas_identifier[0] = 0;
 	}
 
-	if (rc_read_dictionary(vctx->rh, rc_conf_str(vctx->rh, "dictionary")) != 0) {
+	if (rc_read_dictionary(vctx->rh, rc_conf_str(vctx->rh, "dictionary")) !=
+	    0) {
 		fprintf(stderr, "error reading the radius dictionary\n");
 		exit(EXIT_FAILURE);
 	}
 	*_vctx = vctx;
 
 	return;
- fail:
+fail:
 	fprintf(stderr, "radius initialization error\n");
 	exit(EXIT_FAILURE);
 }
@@ -116,15 +119,15 @@ static void radius_vhost_deinit(void *_vctx)
 		rc_destroy(vctx->rh);
 }
 
-static int radius_auth_init(void **ctx, void *pool, void *_vctx, const common_auth_init_st *info)
+static int radius_auth_init(void **ctx, void *pool, void *_vctx,
+			    const common_auth_init_st *info)
 {
 	struct radius_ctx_st *pctx;
 	char *default_realm;
 	struct radius_vhost_ctx *vctx = _vctx;
 
 	if (info->username == NULL || info->username[0] == 0) {
-		oc_syslog(LOG_NOTICE,
-		       "radius-auth: no username present");
+		oc_syslog(LOG_NOTICE, "radius-auth: no username present");
 		return ERR_AUTH_FAIL;
 	}
 
@@ -145,38 +148,43 @@ static int radius_auth_init(void **ctx, void *pool, void *_vctx, const common_au
 
 	if ((strchr(info->username, '@') == NULL) && default_realm &&
 	    default_realm[0] != 0) {
-		snprintf(pctx->username, sizeof(pctx->username), "%s@%s", info->username, default_realm);
+		snprintf(pctx->username, sizeof(pctx->username), "%s@%s",
+			 info->username, default_realm);
 	} else {
 		strlcpy(pctx->username, info->username, sizeof(pctx->username));
 	}
 	pctx->id = info->id;
 
 	if (info->user_agent)
-		strlcpy(pctx->user_agent, info->user_agent, sizeof(pctx->user_agent));
+		strlcpy(pctx->user_agent, info->user_agent,
+			sizeof(pctx->user_agent));
 
 	*ctx = pctx;
 
 	return ERR_AUTH_CONTINUE;
 }
 
-static int radius_auth_group(void *ctx, const char *suggested, char *groupname, int groupname_size)
+static int radius_auth_group(void *ctx, const char *suggested, char *groupname,
+			     int groupname_size)
 {
 	struct radius_ctx_st *pctx = ctx;
-	unsigned i;
+	unsigned int i;
 
 	groupname[0] = 0;
 
 	if (suggested != NULL) {
-		for (i=0;i<pctx->groupnames_size;i++) {
+		for (i = 0; i < pctx->groupnames_size; i++) {
 			if (strcmp(suggested, pctx->groupnames[i]) == 0) {
-				strlcpy(groupname, pctx->groupnames[i], groupname_size);
+				strlcpy(groupname, pctx->groupnames[i],
+					groupname_size);
 				return 0;
 			}
 		}
 
-		oc_syslog(LOG_NOTICE,
-		       "radius-auth: user '%s' requested group '%s' but is not a member",
-		       pctx->username, suggested);
+		oc_syslog(
+			LOG_NOTICE,
+			"radius-auth: user '%s' requested group '%s' but is not a member",
+			pctx->username, suggested);
 		return -1;
 	}
 
@@ -193,13 +201,15 @@ static int radius_auth_user(void *ctx, char *username, int username_size)
 	return -1;
 }
 
-static void append_route(struct radius_ctx_st *pctx, const char *route, unsigned len)
+static void append_route(struct radius_ctx_st *pctx, const char *route,
+			 unsigned int len)
 {
-	unsigned i;
+	unsigned int i;
 	char *p;
 
 	/* accept route/mask */
-	if ((p=strchr(route, '/')) == 0)
+	p = strchr(route, '/');
+	if (p == 0)
 		return;
 
 	p = strchr(p, ' ');
@@ -208,10 +218,11 @@ static void append_route(struct radius_ctx_st *pctx, const char *route, unsigned
 	}
 
 	if (pctx->routes_size == 0) {
-		pctx->routes = talloc_size(pctx, sizeof(char*));
+		pctx->routes = talloc_size(pctx, sizeof(char *));
 	} else {
 		pctx->routes = talloc_realloc_size(pctx, pctx->routes,
-						   (pctx->routes_size+1)*sizeof(char*));
+						   (pctx->routes_size + 1) *
+							   sizeof(char *));
 	}
 
 	if (pctx->routes != NULL) {
@@ -228,11 +239,13 @@ static void parse_groupnames(struct radius_ctx_st *pctx, const char *full)
 	char *p, *p2;
 
 	if (pctx->groupnames_size >= MAX_GROUPS) {
-		oc_syslog(LOG_WARNING,
-		       "radius-auth: cannot handle more than %d groups, ignoring group string %s",
-		       MAX_GROUPS, full);
+		oc_syslog(
+			LOG_WARNING,
+			"radius-auth: cannot handle more than %d groups, ignoring group string %s",
+			MAX_GROUPS, full);
 	} else if (strncmp(full, "OU=", 3) == 0) {
-		oc_syslog(LOG_DEBUG, "radius-auth: found group string %s", full);
+		oc_syslog(LOG_DEBUG, "radius-auth: found group string %s",
+			  full);
 		full += 3;
 
 		p = talloc_strdup(pctx, full);
@@ -249,14 +262,16 @@ static void parse_groupnames(struct radius_ctx_st *pctx, const char *full)
 
 			if (pctx->groupnames_size == MAX_GROUPS) {
 				if (p2)
-					oc_syslog(LOG_WARNING,
-					       "radius-auth: cannot handle more than %d groups, ignoring trailing group(s) %s",
-					       MAX_GROUPS, p2);
+					oc_syslog(
+						LOG_WARNING,
+						"radius-auth: cannot handle more than %d groups, ignoring trailing group(s) %s",
+						MAX_GROUPS, p2);
 				break;
 			}
 		}
 	} else {
-		oc_syslog(LOG_DEBUG, "radius-auth: found group string %s", full);
+		oc_syslog(LOG_DEBUG, "radius-auth: found group string %s",
+			  full);
 		p = talloc_strdup(pctx, full);
 		if (p == NULL)
 			return;
@@ -266,7 +281,7 @@ static void parse_groupnames(struct radius_ctx_st *pctx, const char *full)
 
 /* Returns 0 if the user is successfully authenticated, and sets the appropriate group name.
  */
-static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
+static int radius_auth_pass(void *ctx, const char *pass, unsigned int pass_len)
 {
 	struct radius_ctx_st *pctx = ctx;
 	VALUE_PAIR *send = NULL, *recvd = NULL;
@@ -277,18 +292,24 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	int ret;
 
 	/* send Access-Request */
-	oc_syslog(LOG_DEBUG, "radius-auth: communicating username (%s) and password", pctx->username);
-	if (rc_avpair_add(pctx->vctx->rh, &send, PW_USER_NAME, pctx->username, -1, 0) == NULL) {
-		oc_syslog(LOG_ERR,
-		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
-		       pctx->username);
+	oc_syslog(LOG_DEBUG,
+		  "radius-auth: communicating username (%s) and password",
+		  pctx->username);
+	if (rc_avpair_add(pctx->vctx->rh, &send, PW_USER_NAME, pctx->username,
+			  -1, 0) == NULL) {
+		oc_syslog(
+			LOG_ERR,
+			"%s:%u: error in constructing radius message for user '%s'",
+			__func__, __LINE__, pctx->username);
 		return ERR_AUTH_FAIL;
 	}
 
-	if (rc_avpair_add(pctx->vctx->rh, &send, PW_USER_PASSWORD, (char*)pass, -1, 0) == NULL) {
-		oc_syslog(LOG_ERR,
-		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
-		       pctx->username);
+	if (rc_avpair_add(pctx->vctx->rh, &send, PW_USER_PASSWORD, (char *)pass,
+			  -1, 0) == NULL) {
+		oc_syslog(
+			LOG_ERR,
+			"%s:%u: error in constructing radius message for user '%s'",
+			__func__, __LINE__, pctx->username);
 		ret = ERR_AUTH_FAIL;
 		goto cleanup;
 	}
@@ -299,18 +320,24 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 
 		if (inet_pton(AF_INET, pctx->our_ip, &in) != 0) {
 			in.s_addr = ntohl(in.s_addr);
-			if (rc_avpair_add(pctx->vctx->rh, &send, PW_NAS_IP_ADDRESS, (char*)&in, sizeof(struct in_addr), 0) == NULL) {
-				oc_syslog(LOG_ERR,
-				       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
-				       pctx->username);
+			if (rc_avpair_add(pctx->vctx->rh, &send,
+					  PW_NAS_IP_ADDRESS, (char *)&in,
+					  sizeof(struct in_addr), 0) == NULL) {
+				oc_syslog(
+					LOG_ERR,
+					"%s:%u: error in constructing radius message for user '%s'",
+					__func__, __LINE__, pctx->username);
 				ret = ERR_AUTH_FAIL;
 				goto cleanup;
 			}
 		} else if (inet_pton(AF_INET6, pctx->our_ip, &in6) != 0) {
-			if (rc_avpair_add(pctx->vctx->rh, &send, PW_NAS_IPV6_ADDRESS, (char*)&in6, sizeof(struct in6_addr), 0) == NULL) {
-				oc_syslog(LOG_ERR,
-				       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
-				       pctx->username);
+			if (rc_avpair_add(pctx->vctx->rh, &send,
+					  PW_NAS_IPV6_ADDRESS, (char *)&in6,
+					  sizeof(struct in6_addr), 0) == NULL) {
+				oc_syslog(
+					LOG_ERR,
+					"%s:%u: error in constructing radius message for user '%s'",
+					__func__, __LINE__, pctx->username);
 				ret = ERR_AUTH_FAIL;
 				goto cleanup;
 			}
@@ -318,56 +345,68 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	}
 
 	if (pctx->vctx->nas_identifier[0] != 0) {
-		if (rc_avpair_add(pctx->vctx->rh, &send, PW_NAS_IDENTIFIER, pctx->vctx->nas_identifier, -1, 0) == NULL) {
-			oc_syslog(LOG_ERR,
-			       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
-			       pctx->username);
+		if (rc_avpair_add(pctx->vctx->rh, &send, PW_NAS_IDENTIFIER,
+				  pctx->vctx->nas_identifier, -1, 0) == NULL) {
+			oc_syslog(
+				LOG_ERR,
+				"%s:%u: error in constructing radius message for user '%s'",
+				__func__, __LINE__, pctx->username);
 			ret = ERR_AUTH_FAIL;
 			goto cleanup;
 		}
 	}
 
-	if (rc_avpair_add(pctx->vctx->rh, &send, PW_CALLING_STATION_ID, pctx->remote_ip, -1, 0) == NULL) {
-		oc_syslog(LOG_ERR,
-		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
-		       pctx->username);
+	if (rc_avpair_add(pctx->vctx->rh, &send, PW_CALLING_STATION_ID,
+			  pctx->remote_ip, -1, 0) == NULL) {
+		oc_syslog(
+			LOG_ERR,
+			"%s:%u: error in constructing radius message for user '%s'",
+			__func__, __LINE__, pctx->username);
 		ret = ERR_AUTH_FAIL;
 		goto cleanup;
 	}
 
 	if (pctx->user_agent[0] != 0) {
-		if (rc_avpair_add(pctx->vctx->rh, &send, PW_CONNECT_INFO, pctx->user_agent, -1, 0) == NULL) {
-			oc_syslog(LOG_ERR,
-			       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
-			       pctx->username);
+		if (rc_avpair_add(pctx->vctx->rh, &send, PW_CONNECT_INFO,
+				  pctx->user_agent, -1, 0) == NULL) {
+			oc_syslog(
+				LOG_ERR,
+				"%s:%u: error in constructing radius message for user '%s'",
+				__func__, __LINE__, pctx->username);
 			ret = ERR_AUTH_FAIL;
 			goto cleanup;
 		}
 	}
 
 	service = PW_AUTHENTICATE_ONLY;
-	if (rc_avpair_add(pctx->vctx->rh, &send, PW_SERVICE_TYPE, &service, -1, 0) == NULL) {
-		oc_syslog(LOG_ERR,
-		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
-		       pctx->username);
+	if (rc_avpair_add(pctx->vctx->rh, &send, PW_SERVICE_TYPE, &service, -1,
+			  0) == NULL) {
+		oc_syslog(
+			LOG_ERR,
+			"%s:%u: error in constructing radius message for user '%s'",
+			__func__, __LINE__, pctx->username);
 		ret = ERR_AUTH_FAIL;
 		goto cleanup;
 	}
 
 	service = PW_ASYNC;
-	if (rc_avpair_add(pctx->vctx->rh, &send, PW_NAS_PORT_TYPE, &service, -1, 0) == NULL) {
-		oc_syslog(LOG_ERR,
-		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
-		       pctx->username);
+	if (rc_avpair_add(pctx->vctx->rh, &send, PW_NAS_PORT_TYPE, &service, -1,
+			  0) == NULL) {
+		oc_syslog(
+			LOG_ERR,
+			"%s:%u: error in constructing radius message for user '%s'",
+			__func__, __LINE__, pctx->username);
 		ret = ERR_AUTH_FAIL;
 		goto cleanup;
 	}
 
 	if (pctx->state != NULL) {
-		if (rc_avpair_add(pctx->vctx->rh, &send, PW_STATE, pctx->state, -1, 0) == NULL) {
-			oc_syslog(LOG_ERR,
-			       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
-			       pctx->username);
+		if (rc_avpair_add(pctx->vctx->rh, &send, PW_STATE, pctx->state,
+				  -1, 0) == NULL) {
+			oc_syslog(
+				LOG_ERR,
+				"%s:%u: error in constructing radius message for user '%s'",
+				__func__, __LINE__, pctx->username);
 			ret = ERR_AUTH_FAIL;
 			goto cleanup;
 		}
@@ -376,7 +415,8 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	}
 
 	pctx->pass_msg[0] = 0;
-	ret = rc_aaa(pctx->vctx->rh, 0, send, &recvd, pctx->pass_msg, 0, PW_ACCESS_REQUEST);
+	ret = rc_aaa(pctx->vctx->rh, 0, send, &recvd, pctx->pass_msg, 0,
+		     PW_ACCESS_REQUEST);
 
 	if (ret == OK_RC) {
 		uint32_t ipv4;
@@ -385,90 +425,144 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		vp = recvd;
 
 		while (vp != NULL) {
-			if (vp->attribute == PW_SERVICE_TYPE && vp->lvalue != PW_FRAMED) {
-				oc_syslog(LOG_ERR,
-				       "%s:%u: unknown radius service type '%d'", __func__, __LINE__,
-				       (int)vp->lvalue);
+			if (vp->attribute == PW_SERVICE_TYPE &&
+			    vp->lvalue != PW_FRAMED) {
+				oc_syslog(
+					LOG_ERR,
+					"%s:%u: unknown radius service type '%d'",
+					__func__, __LINE__, (int)vp->lvalue);
 				goto fail;
-			} else if (vp->attribute == RAD_GROUP_NAME && vp->type == PW_TYPE_STRING) {
+			} else if (vp->attribute == RAD_GROUP_NAME &&
+				   vp->type == PW_TYPE_STRING) {
 				/* Group-Name */
 				parse_groupnames(pctx, vp->strvalue);
-			} else if (vp->attribute == PW_FRAMED_IPV6_ADDRESS && vp->type == PW_TYPE_IPV6ADDR) {
+			} else if (vp->attribute == PW_FRAMED_IPV6_ADDRESS &&
+				   vp->type == PW_TYPE_IPV6ADDR) {
 				/* Framed-IPv6-Address */
-				if (inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6, sizeof(pctx->ipv6)) != NULL) {
+				if (inet_ntop(AF_INET6, vp->strvalue,
+					      pctx->ipv6,
+					      sizeof(pctx->ipv6)) != NULL) {
 					pctx->ipv6_subnet_prefix = 64;
-					strlcpy(pctx->ipv6_net, pctx->ipv6, sizeof(pctx->ipv6_net));
+					strlcpy(pctx->ipv6_net, pctx->ipv6,
+						sizeof(pctx->ipv6_net));
 				}
-			} else if (vp->attribute == PW_DELEGATED_IPV6_PREFIX && vp->type == PW_TYPE_IPV6PREFIX) {
+			} else if (vp->attribute == PW_DELEGATED_IPV6_PREFIX &&
+				   vp->type == PW_TYPE_IPV6PREFIX) {
 				/* Delegated-IPv6-Prefix */
-				if (inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6, sizeof(pctx->ipv6)) != NULL) {
+				if (inet_ntop(AF_INET6, vp->strvalue,
+					      pctx->ipv6,
+					      sizeof(pctx->ipv6)) != NULL) {
 					memset(ipv6, 0, sizeof(ipv6));
-					memcpy(ipv6, vp->strvalue+2, vp->lvalue-2);
-					if (inet_ntop(AF_INET6, ipv6, pctx->ipv6, sizeof(pctx->ipv6)) != NULL) {
-						pctx->ipv6_subnet_prefix = (unsigned)(unsigned char)vp->strvalue[1];
+					memcpy(ipv6, vp->strvalue + 2,
+					       vp->lvalue - 2);
+					if (inet_ntop(AF_INET6, ipv6,
+						      pctx->ipv6,
+						      sizeof(pctx->ipv6)) !=
+					    NULL) {
+						pctx->ipv6_subnet_prefix =
+							(unsigned int)(unsigned char)
+								vp->strvalue[1];
 					}
 				}
-			} else if (vp->attribute == PW_FRAMED_IPV6_PREFIX && vp->type == PW_TYPE_IPV6PREFIX) {
+			} else if (vp->attribute == PW_FRAMED_IPV6_PREFIX &&
+				   vp->type == PW_TYPE_IPV6PREFIX) {
 				if (vp->lvalue > 2 && vp->lvalue <= 18) {
 					/* Framed-IPv6-Prefix */
 					memset(ipv6, 0, sizeof(ipv6));
-					memcpy(ipv6, vp->strvalue+2, vp->lvalue-2);
-					if (inet_ntop(AF_INET6, ipv6, txt, sizeof(txt)) != NULL) {
-						snprintf(route, sizeof(route), "%s/%u", txt, (unsigned)(unsigned char)vp->strvalue[1]);
-						append_route(pctx, vp->strvalue, vp->lvalue);
+					memcpy(ipv6, vp->strvalue + 2,
+					       vp->lvalue - 2);
+					if (inet_ntop(AF_INET6, ipv6, txt,
+						      sizeof(txt)) != NULL) {
+						snprintf(
+							route, sizeof(route),
+							"%s/%u", txt,
+							(unsigned int)(unsigned char)
+								vp->strvalue[1]);
+						append_route(pctx, vp->strvalue,
+							     vp->lvalue);
 					}
 				}
-			} else if (vp->attribute == PW_DNS_SERVER_IPV6_ADDRESS && vp->type == PW_TYPE_IPV6ADDR) {
+			} else if (vp->attribute ==
+					   PW_DNS_SERVER_IPV6_ADDRESS &&
+				   vp->type == PW_TYPE_IPV6ADDR) {
 				/* DNS-Server-IPv6-Address */
 				if (pctx->ipv6_dns1[0] == 0)
-					inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6_dns1, sizeof(pctx->ipv6_dns1));
+					inet_ntop(AF_INET6, vp->strvalue,
+						  pctx->ipv6_dns1,
+						  sizeof(pctx->ipv6_dns1));
 				else if (pctx->ipv6_dns2[0] == 0)
-					inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6_dns2, sizeof(pctx->ipv6_dns2));
+					inet_ntop(AF_INET6, vp->strvalue,
+						  pctx->ipv6_dns2,
+						  sizeof(pctx->ipv6_dns2));
 				else {
 					char dst[MAX_IP_STR];
-					inet_ntop(AF_INET6, vp->strvalue, dst, sizeof(dst));
-					oc_syslog(LOG_NOTICE, "radius-auth: cannot handle more than 2 DNS servers, ignoring additional DNS server from RADIUS: %s", dst);
+
+					inet_ntop(AF_INET6, vp->strvalue, dst,
+						  sizeof(dst));
+					oc_syslog(
+						LOG_NOTICE,
+						"radius-auth: cannot handle more than 2 DNS servers, ignoring additional DNS server from RADIUS: %s",
+						dst);
 				}
-			} else if (vp->attribute == PW_FRAMED_IP_ADDRESS && vp->type == PW_TYPE_IPADDR) {
+			} else if (vp->attribute == PW_FRAMED_IP_ADDRESS &&
+				   vp->type == PW_TYPE_IPADDR) {
 				/* Framed-IP-Address */
-				if (vp->lvalue != 0xffffffff && vp->lvalue != 0xfffffffe) {
+				if (vp->lvalue != 0xffffffff &&
+				    vp->lvalue != 0xfffffffe) {
 					/* According to RFC2865 the values above (fe) instruct the
 					 * server to assign an address from the pool of the server,
 					 * and (ff) to assign address as negotiated with the client.
 					 * We don't negotiate with clients.
 					 */
 					ipv4 = htonl(vp->lvalue);
-					inet_ntop(AF_INET, &ipv4, pctx->ipv4, sizeof(pctx->ipv4));
+					inet_ntop(AF_INET, &ipv4, pctx->ipv4,
+						  sizeof(pctx->ipv4));
 				}
-			} else if (vp->attribute == PW_FRAMED_IP_NETMASK && vp->type == PW_TYPE_IPADDR) {
+			} else if (vp->attribute == PW_FRAMED_IP_NETMASK &&
+				   vp->type == PW_TYPE_IPADDR) {
 				/* Framed-IP-Netmask */
 				ipv4 = htonl(vp->lvalue);
-				inet_ntop(AF_INET, &ipv4, pctx->ipv4_mask, sizeof(pctx->ipv4_mask));
-			} else if (vp->attribute == MS_PRIMARY_DNS_SERVER && vp->type == PW_TYPE_IPADDR) {
+				inet_ntop(AF_INET, &ipv4, pctx->ipv4_mask,
+					  sizeof(pctx->ipv4_mask));
+			} else if (vp->attribute == MS_PRIMARY_DNS_SERVER &&
+				   vp->type == PW_TYPE_IPADDR) {
 				/* MS-Primary-DNS-Server */
 				ipv4 = htonl(vp->lvalue);
-				inet_ntop(AF_INET, &ipv4, pctx->ipv4_dns1, sizeof(pctx->ipv4_dns1));
-			} else if (vp->attribute == MS_SECONDARY_DNS_SERVER && vp->type == PW_TYPE_IPADDR) {
+				inet_ntop(AF_INET, &ipv4, pctx->ipv4_dns1,
+					  sizeof(pctx->ipv4_dns1));
+			} else if (vp->attribute == MS_SECONDARY_DNS_SERVER &&
+				   vp->type == PW_TYPE_IPADDR) {
 				/* MS-Secondary-DNS-Server */
 				ipv4 = htonl(vp->lvalue);
-				inet_ntop(AF_INET, &ipv4, pctx->ipv4_dns2, sizeof(pctx->ipv4_dns2));
-			} else if (vp->attribute == PW_FRAMED_ROUTE && vp->type == PW_TYPE_STRING) {
+				inet_ntop(AF_INET, &ipv4, pctx->ipv4_dns2,
+					  sizeof(pctx->ipv4_dns2));
+			} else if (vp->attribute == PW_FRAMED_ROUTE &&
+				   vp->type == PW_TYPE_STRING) {
 				/* Framed-Route */
 				append_route(pctx, vp->strvalue, vp->lvalue);
-			} else if (vp->attribute == PW_FRAMED_IPV6_ROUTE && vp->type == PW_TYPE_STRING) {
+			} else if (vp->attribute == PW_FRAMED_IPV6_ROUTE &&
+				   vp->type == PW_TYPE_STRING) {
 				/* Framed-IPv6-Route */
 				append_route(pctx, vp->strvalue, vp->lvalue);
-			} else if (vp->attribute == PW_ACCT_INTERIM_INTERVAL && vp->type == PW_TYPE_INTEGER) {
+			} else if (vp->attribute == PW_ACCT_INTERIM_INTERVAL &&
+				   vp->type == PW_TYPE_INTEGER) {
 				pctx->interim_interval_secs = vp->lvalue;
-			} else if (vp->attribute == PW_SESSION_TIMEOUT && vp->type == PW_TYPE_INTEGER) {
+			} else if (vp->attribute == PW_SESSION_TIMEOUT &&
+				   vp->type == PW_TYPE_INTEGER) {
 				pctx->session_timeout_secs = vp->lvalue;
-			} else if (vp->attribute == RP_UPSTREAM_SPEED_LIMIT && vp->type == PW_TYPE_INTEGER) {
+			} else if (vp->attribute == RP_UPSTREAM_SPEED_LIMIT &&
+				   vp->type == PW_TYPE_INTEGER) {
 				pctx->rx_per_sec = vp->lvalue;
-			} else if (vp->attribute == RP_DOWNSTREAM_SPEED_LIMIT && vp->type == PW_TYPE_INTEGER) {
+			} else if (vp->attribute == RP_DOWNSTREAM_SPEED_LIMIT &&
+				   vp->type == PW_TYPE_INTEGER) {
 				pctx->tx_per_sec = vp->lvalue;
 			} else {
-				oc_syslog(LOG_DEBUG, "radius-auth: ignoring server's attribute (%u,%u) of type %u",
-					(unsigned)ATTRID(vp->attribute), (unsigned)VENDOR(vp->attribute), (unsigned)vp->type);
+				oc_syslog(
+					LOG_DEBUG,
+					"radius-auth: ignoring server's attribute (%u,%u) of type %u",
+					(unsigned int)ATTRID(vp->attribute),
+					(unsigned int)VENDOR(vp->attribute),
+					(unsigned int)vp->type);
 			}
 			vp = vp->next;
 		}
@@ -476,47 +570,58 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		ret = 0;
 		goto cleanup;
 	} else if (ret == CHALLENGE_RC) {
-
 		vp = recvd;
 
 		while (vp != NULL) {
-			if (vp->attribute == PW_STATE && vp->type == PW_TYPE_STRING) {
+			if (vp->attribute == PW_STATE &&
+			    vp->type == PW_TYPE_STRING) {
 				/* State */
 				if (vp->lvalue > 0)
-					pctx->state = talloc_strdup(pctx, vp->strvalue);
+					pctx->state = talloc_strdup(
+						pctx, vp->strvalue);
 
 				pctx->id++;
-				oc_syslog(LOG_DEBUG, "radius-auth: Access-Challenge response stage %u, State %s", pctx->passwd_counter, vp->strvalue);
+				oc_syslog(
+					LOG_DEBUG,
+					"radius-auth: Access-Challenge response stage %u, State %s",
+					pctx->passwd_counter, vp->strvalue);
 				ret = ERR_AUTH_CONTINUE;
 			}
 			vp = vp->next;
 		}
 
 		/* PW_STATE or PW_REPLY_MESSAGE is empty or MAX_CHALLENGES limit exceeded */
-		if ((pctx->pass_msg[0] == 0) || (pctx->state == NULL) || (pctx->passwd_counter >= MAX_CHALLENGES)) {
-			strlcpy(pctx->pass_msg, pass_msg_failed, sizeof(pctx->pass_msg));
-			oc_syslog(LOG_ERR, "radius-auth: Access-Challenge with invalid State or Reply-Message, or max number of password requests exceeded");
+		if ((pctx->pass_msg[0] == 0) || (pctx->state == NULL) ||
+		    (pctx->passwd_counter >= MAX_CHALLENGES)) {
+			strlcpy(pctx->pass_msg, pass_msg_failed,
+				sizeof(pctx->pass_msg));
+			oc_syslog(
+				LOG_ERR,
+				"radius-auth: Access-Challenge with invalid State or Reply-Message, or max number of password requests exceeded");
 			ret = ERR_AUTH_FAIL;
 		}
 		goto cleanup;
 	} else {
- fail:
+fail:
 		if (pctx->pass_msg[0] == 0)
-			strlcpy(pctx->pass_msg, pass_msg_failed, sizeof(pctx->pass_msg));
+			strlcpy(pctx->pass_msg, pass_msg_failed,
+				sizeof(pctx->pass_msg));
 
-		if (pctx->retries++ < MAX_PASSWORD_TRIES-1 && pctx->passwd_counter == 0) {
+		if (pctx->retries++ < MAX_PASSWORD_TRIES - 1 &&
+		    pctx->passwd_counter == 0) {
 			ret = ERR_AUTH_CONTINUE;
 			goto cleanup;
 		}
 
-		oc_syslog(LOG_NOTICE,
-		       "radius-auth: error authenticating user '%s' (code %d)",
-		       pctx->username, ret);
+		oc_syslog(
+			LOG_NOTICE,
+			"radius-auth: error authenticating user '%s' (code %d)",
+			pctx->username, ret);
 		ret = ERR_AUTH_FAIL;
 		goto cleanup;
 	}
 
- cleanup:
+cleanup:
 	if (send != NULL)
 		rc_avpair_free(send);
 	if (recvd != NULL)
@@ -533,11 +638,11 @@ static int radius_auth_msg(void *ctx, void *pool, passwd_msg_st *pst)
 		pst->msg_str = talloc_strdup(pool, pctx->pass_msg);
 
 	if (pctx->state != NULL) {
-
 		/* differentiate password prompts, if the hash of the prompt
 		 * is different.
 		 */
-		prompt_hash = hash_any(pctx->pass_msg, strlen(pctx->pass_msg), 0);
+		prompt_hash =
+			hash_any(pctx->pass_msg, strlen(pctx->pass_msg), 0);
 		if (pctx->prev_prompt_hash != prompt_hash)
 			pctx->passwd_counter++;
 		pctx->prev_prompt_hash = prompt_hash;
@@ -551,6 +656,7 @@ static int radius_auth_msg(void *ctx, void *pool, passwd_msg_st *pst)
 static void radius_auth_deinit(void *ctx)
 {
 	struct radius_ctx_st *pctx = ctx;
+
 	talloc_free(pctx);
 }
 

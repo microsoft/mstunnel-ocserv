@@ -15,7 +15,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include <config.h>
 
 #if defined(LINUX_NAMESPACES)
@@ -45,7 +44,8 @@ static int init_default_namespace(void)
 	int fd;
 
 	pid = getpid();
-	if (snprintf(netns_path, sizeof(netns_path), "/proc/%d/ns/net", pid) < 0)
+	if (snprintf(netns_path, sizeof(netns_path), "/proc/%d/ns/net", pid) <
+	    0)
 		return -1;
 
 	fd = open(netns_path, O_RDONLY | O_CLOEXEC);
@@ -64,7 +64,8 @@ static int init_listen_namespace(const char *ns_name)
 	int error;
 	int fd;
 
-	if (snprintf(netns_path, sizeof(netns_path), "/var/run/netns/%s", ns_name) < 0)
+	if (snprintf(netns_path, sizeof(netns_path), "/var/run/netns/%s",
+		     ns_name) < 0)
 		return -1;
 
 	fd = open(netns_path, O_RDONLY | O_CLOEXEC);
@@ -101,16 +102,19 @@ int close_namespaces(struct netns_fds *netns)
 }
 
 /* opens a socket in the namespace described by <nsfd> */
-int socket_netns(const struct netns_fds *fds, int domain, int type, int protocol)
+int socket_netns(const struct netns_fds *fds, int domain, int type,
+		 int protocol)
 {
 	int sock;
 
-	if (fds->default_fd >= 0 && fds->listen_fd && setns(fds->listen_fd, CLONE_NEWNET) == -1)
+	if (fds->default_fd >= 0 && fds->listen_fd &&
+	    setns(fds->listen_fd, CLONE_NEWNET) == -1)
 		return -1;
 
 	sock = socket(domain, type, protocol);
 
-	if (fds->default_fd >= 0 && fds->listen_fd && setns(fds->default_fd, CLONE_NEWNET) == -1) {
+	if (fds->default_fd >= 0 && fds->listen_fd &&
+	    setns(fds->default_fd, CLONE_NEWNET) == -1) {
 		if (sock >= 0)
 			close(sock);
 		return -1;

@@ -20,7 +20,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #ifndef OC_MAIN_H
-# define OC_MAIN_H
+#define OC_MAIN_H
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -40,8 +40,8 @@
 #include <namespace.h>
 
 #if defined(__FreeBSD__) || defined(__OpenBSD__)
-# include <limits.h>
-# define SOL_IP IPPROTO_IP
+#include <limits.h>
+#define SOL_IP IPPROTO_IP
 #endif
 
 #define COOKIE_KEY_SIZE 16
@@ -56,7 +56,8 @@ extern ev_timer maintainance_watcher;
 
 #define MAIN_MAINTENANCE_TIME (900)
 
-int cmd_parser (void *pool, int argc, char **argv, struct list_head *head, bool worker);
+int cmd_parser(void *pool, int argc, char **argv, struct list_head *head,
+	       bool worker);
 
 #if defined(CAPTURE_LATENCY_SUPPORT)
 #define LATENCY_AGGREGATION_TIME (60)
@@ -89,7 +90,7 @@ struct script_wait_st {
 	struct list_node list;
 
 	pid_t pid;
-	struct proc_st* proc;
+	struct proc_st *proc;
 };
 
 /* Each worker process maps to a unique proc_st structure.
@@ -102,7 +103,7 @@ typedef struct proc_st {
 	struct list_node list;
 	int fd; /* the command file descriptor */
 	pid_t pid;
-	unsigned pid_killed; /* if explicitly disconnected */
+	unsigned int pid_killed; /* if explicitly disconnected */
 
 	time_t udp_fd_receive_time; /* when the corresponding process has received a UDP fd */
 
@@ -112,7 +113,7 @@ typedef struct proc_st {
 	struct tun_lease_st tun_lease;
 	struct ip_lease_st *ipv4;
 	struct ip_lease_st *ipv6;
-	unsigned leases_in_use; /* someone else got our IP leases */
+	unsigned int leases_in_use; /* someone else got our IP leases */
 
 	struct sockaddr_storage remote_addr; /* peer address (CSTP) */
 	socklen_t remote_addr_len;
@@ -125,20 +126,21 @@ typedef struct proc_st {
 
 	/* The SID which acts as a cookie */
 	uint8_t sid[SID_SIZE];
-	unsigned active_sid;
+	unsigned int active_sid;
 
 	/* non zero if the sid has been invalidated and must not be allowed
 	 * to reconnect. */
-	unsigned invalidated;
+	unsigned int invalidated;
 
 	/* whether the host-update script has already been called */
-	unsigned host_updated;
+	unsigned int host_updated;
 
 	/* The DTLS session ID associated with the TLS session
 	 * it is either generated or restored from a cookie.
 	 */
 	uint8_t dtls_session_id[GNUTLS_MAX_SESSION_ID];
-	unsigned dtls_session_id_size; /* would act as a flag if session_id is set */
+	unsigned int
+		dtls_session_id_size; /* would act as a flag if session_id is set */
 
 	/* The following are set by the worker process (or by a stored cookie) */
 	char username[MAX_USERNAME_SIZE]; /* the owner */
@@ -154,7 +156,7 @@ typedef struct proc_st {
 	char dtls_ciphersuite[MAX_CIPHERSUITE_NAME];
 	char cstp_compr[8];
 	char dtls_compr[8];
-	unsigned mtu;
+	unsigned int mtu;
 	unsigned int sec_mod_instance_index;
 
 	/* if the session is initiated by a cookie the following two are set
@@ -163,7 +165,7 @@ typedef struct proc_st {
 	 */
 	uint8_t ipv4_seed[4];
 
-	unsigned status; /* PS_AUTH_ */
+	unsigned int status; /* PS_AUTH_ */
 
 	/* these are filled in after the worker process dies, using the
 	 * Cli stats message. */
@@ -171,7 +173,8 @@ typedef struct proc_st {
 	uint64_t bytes_out;
 	uint32_t discon_reason; /* filled on session close */
 
-	unsigned applied_iroutes; /* whether the iroutes in the config have been successfully applied */
+	unsigned int
+		applied_iroutes; /* whether the iroutes in the config have been successfully applied */
 
 	/* The following we rely on talloc for deallocation */
 	GroupCfgSt *config; /* custom user/group config */
@@ -205,7 +208,7 @@ struct proc_hash_db_st {
 	struct htable *db_dtls_ip;
 	struct htable *db_dtls_id;
 	struct htable *db_sid;
-	unsigned total;
+	unsigned int total;
 };
 
 #if defined(CAPTURE_LATENCY_SUPPORT)
@@ -223,10 +226,10 @@ struct main_stats_st {
 	uint64_t sessions_closed; /* sessions closed since last reset */
 	uint64_t kbytes_in;
 	uint64_t kbytes_out;
-	unsigned min_mtu;
-	unsigned max_mtu;
+	unsigned int min_mtu;
+	unsigned int max_mtu;
 
-	unsigned active_clients;
+	unsigned int active_clients;
 	time_t start_time;
 	time_t last_reset;
 
@@ -245,20 +248,20 @@ struct main_stats_st {
 };
 
 typedef struct sec_mod_instance_st {
-	struct main_server_st * server;
+	struct main_server_st *server;
 	char socket_file[_POSIX_PATH_MAX];
 	char full_socket_file[_POSIX_PATH_MAX];
 	pid_t sec_mod_pid;
 
 	struct sockaddr_un secmod_addr;
-	unsigned secmod_addr_len;
+	unsigned int secmod_addr_len;
 
 	int sec_mod_fd; /* messages are sent and received async */
 	int sec_mod_fd_sync; /* messages are send in a sync order (ping-pong). Only main sends. */
 	/* updated on the cli_stats_msg from sec-mod.
 	 * Holds the number of entries in secmod list of users */
-	unsigned secmod_client_entries;
-	unsigned tlsdb_entries;
+	unsigned int secmod_client_entries;
+	unsigned int tlsdb_entries;
 	uint32_t avg_auth_time; /* in seconds */
 	uint32_t max_auth_time; /* in seconds */
 
@@ -285,13 +288,13 @@ typedef struct main_server_st {
 
 	struct main_stats_st stats;
 
-	void * auth_extra;
+	void *auth_extra;
 
 	/* This one is on worker pool */
 	struct worker_st *ws;
 
 	unsigned int sec_mod_instance_count;
-	sec_mod_instance_st * sec_mod_instances;
+	sec_mod_instance_st *sec_mod_instances;
 
 	int top_fd;
 	int ctl_fd;
@@ -310,52 +313,55 @@ typedef struct main_server_st {
 	struct rlimit fd_limits_default_set;
 #endif
 
-	struct if_address_st * if_addresses;
+	struct if_address_st *if_addresses;
 	unsigned int if_addresses_count;
 } main_server_st;
 
 void clear_lists(main_server_st *s);
 
-int handle_worker_commands(main_server_st *s, struct proc_st* cur);
-int handle_sec_mod_commands(sec_mod_instance_st * sec_mod_instances);
+int handle_worker_commands(main_server_st *s, struct proc_st *cur);
+int handle_sec_mod_commands(sec_mod_instance_st *sec_mod_instances);
 
-int user_connected(main_server_st *s, struct proc_st* cur);
-void user_hostname_update(main_server_st *s, struct proc_st* cur);
-void user_disconnected(main_server_st *s, struct proc_st* cur);
+int user_connected(main_server_st *s, struct proc_st *cur);
+void user_hostname_update(main_server_st *s, struct proc_st *cur);
+void user_disconnected(main_server_st *s, struct proc_st *cur);
 
-int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd);
+int send_udp_fd(main_server_st *s, struct proc_st *proc, int fd);
 
-int session_open(sec_mod_instance_st * sec_mod_instance, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size);
-int session_close(sec_mod_instance_st * sec_mod_instance, struct proc_st *proc);
+int session_open(sec_mod_instance_st *sec_mod_instance, struct proc_st *proc,
+		 const uint8_t *cookie, unsigned int cookie_size);
+int session_close(sec_mod_instance_st *sec_mod_instance, struct proc_st *proc);
 
-int open_tun(main_server_st* s, struct proc_st* proc);
-void close_tun(main_server_st* s, struct proc_st* proc);
-void reset_tun(struct proc_st* proc);
-int set_tun_mtu(main_server_st* s, struct proc_st * proc, unsigned mtu);
+int open_tun(main_server_st *s, struct proc_st *proc);
+void close_tun(main_server_st *s, struct proc_st *proc);
+void reset_tun(struct proc_st *proc);
+int set_tun_mtu(main_server_st *s, struct proc_st *proc, unsigned int mtu);
 
-int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
-			AUTHREP r);
+int send_cookie_auth_reply(main_server_st *s, struct proc_st *proc, AUTHREP r);
 
-int handle_auth_cookie_req(sec_mod_instance_st * sec_mod_instance, struct proc_st* proc,
-			   const AuthCookieRequestMsg * req);
+int handle_auth_cookie_req(sec_mod_instance_st *sec_mod_instance,
+			   struct proc_st *proc,
+			   const AuthCookieRequestMsg *req);
 
-int check_multiple_users(main_server_st *s, struct proc_st* proc);
-int handle_script_exit(main_server_st *s, struct proc_st* proc, int code);
+int check_multiple_users(main_server_st *s, struct proc_st *proc);
+int handle_script_exit(main_server_st *s, struct proc_st *proc, int code);
 
-void run_sec_mod(sec_mod_instance_st * sec_mod_instance, unsigned int instance_index);
+void run_sec_mod(sec_mod_instance_st *sec_mod_instance,
+		 unsigned int instance_index);
 
-struct proc_st *new_proc(main_server_st * s, pid_t pid, int cmd_fd,
-			struct sockaddr_storage *remote_addr, socklen_t remote_addr_len,
-			struct sockaddr_storage *our_addr, socklen_t our_addr_len,
-			uint8_t *sid, size_t sid_size);
+struct proc_st *new_proc(main_server_st *s, pid_t pid, int cmd_fd,
+			 struct sockaddr_storage *remote_addr,
+			 socklen_t remote_addr_len,
+			 struct sockaddr_storage *our_addr,
+			 socklen_t our_addr_len, uint8_t *sid, size_t sid_size);
 
 /* kill the pid */
 #define RPROC_KILL 1
 /* we are on shutdown, don't wait for anything */
-#define RPROC_QUIT (1<<1)
+#define RPROC_QUIT (1 << 1)
 
-void remove_proc(main_server_st* s, struct proc_st *proc, unsigned flags);
-void proc_to_zombie(main_server_st* s, struct proc_st *proc);
+void remove_proc(main_server_st *s, struct proc_st *proc, unsigned int flags);
+void proc_to_zombie(main_server_st *s, struct proc_st *proc);
 
 inline static void disconnect_proc(main_server_st *s, proc_st *proc)
 {
@@ -365,34 +371,39 @@ inline static void disconnect_proc(main_server_st *s, proc_st *proc)
 	/* if it has a PID, send a signal so that we cleanup
 	 * and sec-mod gets stats orderly */
 	if (proc->pid != -1 && proc->pid != 0) {
-                kill(proc->pid, SIGTERM);
+		kill(proc->pid, SIGTERM);
 	} else {
 		remove_proc(s, proc, RPROC_KILL);
 	}
 }
 
-void put_into_cgroup(main_server_st * s, const char* cgroup, pid_t pid);
+void put_into_cgroup(main_server_st *s, const char *cgroup, pid_t pid);
 
-inline static
-int send_msg_to_worker(main_server_st* s, struct proc_st* proc, uint8_t cmd,
-	    const void* msg, pack_size_func get_size, pack_func pack)
+inline static int send_msg_to_worker(main_server_st *s, struct proc_st *proc,
+				     uint8_t cmd, const void *msg,
+				     pack_size_func get_size, pack_func pack)
 {
-	mslog(s, proc, LOG_DEBUG, "sending message '%s' to worker", cmd_request_to_str(cmd));
+	mslog(s, proc, LOG_DEBUG, "sending message '%s' to worker",
+	      cmd_request_to_str(cmd));
 	return send_msg(proc, proc->fd, cmd, msg, get_size, pack);
 }
 
-inline static
-int send_socket_msg_to_worker(main_server_st* s, struct proc_st* proc, uint8_t cmd,
-		int socketfd, const void* msg, pack_size_func get_size, pack_func pack)
+inline static int send_socket_msg_to_worker(main_server_st *s,
+					    struct proc_st *proc, uint8_t cmd,
+					    int socketfd, const void *msg,
+					    pack_size_func get_size,
+					    pack_func pack)
 {
-	mslog(s, proc, LOG_DEBUG, "sending (socket) message %u to worker", (unsigned)cmd);
-	return send_socket_msg(proc, proc->fd, cmd, socketfd, msg, get_size, pack);
+	mslog(s, proc, LOG_DEBUG, "sending (socket) message %u to worker",
+	      (unsigned int)cmd);
+	return send_socket_msg(proc, proc->fd, cmd, socketfd, msg, get_size,
+			       pack);
 }
 
-int secmod_reload(sec_mod_instance_st * sec_mod_instance);
+int secmod_reload(sec_mod_instance_st *sec_mod_instance);
 
 const char *secmod_socket_file_name(struct perm_cfg_st *perm_config);
-void restore_secmod_socket_file_name(const char * save_path);
+void restore_secmod_socket_file_name(const char *save_path);
 void clear_vhosts(struct list_head *head);
 
 void request_reload(int signo);

@@ -19,18 +19,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #ifndef RADIUS_H
-# define RADIUS_H
+#define RADIUS_H
 
-# include <sec-mod-auth.h>
-# include "common/common.h"
+#include <sec-mod-auth.h>
+#include "common/common.h"
 
-# ifdef HAVE_RADIUS
+#ifdef HAVE_RADIUS
 
-#  ifdef LEGACY_RADIUS
-#   include <freeradius-client.h>
-#  else
-#   include <radcli/radcli.h>
-#  endif
+#ifdef LEGACY_RADIUS
+#include <freeradius-client.h>
+#else
+#include <radcli/radcli.h>
+#endif
 
 struct radius_vhost_ctx {
 	rc_handle *rh;
@@ -38,16 +38,16 @@ struct radius_vhost_ctx {
 };
 
 struct radius_ctx_st {
-	char username[MAX_USERNAME_SIZE*2];
+	char username[MAX_USERNAME_SIZE * 2];
 	char user_agent[MAX_AGENT_NAME];
 
 	char *groupnames[MAX_GROUPS];
-	unsigned groupnames_size;
+	unsigned int groupnames_size;
 
 	char remote_ip[MAX_IP_STR];
 	char our_ip[MAX_IP_STR];
-	unsigned interim_interval_secs;
-	unsigned session_timeout_secs;
+	unsigned int interim_interval_secs;
+	unsigned int session_timeout_secs;
 
 	/* variables for configuration */
 	char ipv4[MAX_IP_STR];
@@ -65,19 +65,19 @@ struct radius_ctx_st {
 	uint32_t tx_per_sec;
 
 	char **routes;
-	unsigned routes_size;
+	unsigned int routes_size;
 
 	char pass_msg[PW_MAX_MSG_SIZE];
-	unsigned retries;
-	unsigned id;
+	unsigned int retries;
+	unsigned int id;
 
 	struct radius_vhost_ctx *vctx;
 	char *state;
-	unsigned passwd_counter;
+	unsigned int passwd_counter;
 	size_t prev_prompt_hash;
 };
 
 extern const struct auth_mod_st radius_auth_funcs;
 
-# endif
+#endif
 #endif

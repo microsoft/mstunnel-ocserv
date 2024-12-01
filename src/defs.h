@@ -28,7 +28,6 @@
 #define LOG_TRANSFER_DEBUG 2049
 #define LOG_SENSITIVE 2050
 
-
 /* User Disconnect reasons (must be > 0) */
 #define REASON_ANY 1
 #define REASON_USER_DISCONNECT 2
@@ -46,12 +45,12 @@
 
 /* Debug definitions for logger */
 #define OCLOG_BASIC 1
-#define OCLOG_INFO  2
+#define OCLOG_INFO 2
 #define OCLOG_DEBUG 3
-#define OCLOG_HTTP  4
+#define OCLOG_HTTP 4
 #define OCLOG_TRANSFERRED 5
 #define OCLOG_SENSITIVE 8
-#define OCLOG_TLS   9
+#define OCLOG_TLS 9
 
 /* Authentication states */
 enum {
@@ -90,7 +89,7 @@ typedef enum {
 	CMD_SEC_CLI_STATS,
 
 	/* from main to sec-mod and vice versa */
-	MIN_SECM_CMD=239,
+	MIN_SECM_CMD = 239,
 	CMD_SECM_SESSION_OPEN, /* sync: reply is CMD_SECM_SESSION_REPLY */
 	CMD_SECM_SESSION_CLOSE, /* sync: reply is CMD_SECM_CLI_STATS */
 	CMD_SECM_SESSION_REPLY,

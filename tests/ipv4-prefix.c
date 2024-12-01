@@ -23,7 +23,7 @@
 #include "../src/ip-util.h"
 #include "../src/ip-util.c"
 
-int syslog_open = 0;
+int syslog_open;
 
 int main(void)
 {

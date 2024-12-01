@@ -31,21 +31,23 @@
 
 /* libseccomp 2.4.2 broke accidentally the API. Work around it. */
 #ifndef __SNR_ppoll
-# ifdef __NR_ppoll
-#  define __SNR_ppoll			__NR_ppoll
-# else
-#  define __SNR_ppoll			__PNR_ppoll
-# endif
+#ifdef __NR_ppoll
+#define __SNR_ppoll __NR_ppoll
+#else
+#define __SNR_ppoll __PNR_ppoll
+#endif
 #endif
 
 #ifdef USE_SECCOMP_TRAP
-# define _SECCOMP_ERR SCMP_ACT_TRAP
+#define _SECCOMP_ERR SCMP_ACT_TRAP
 #include <execinfo.h>
 #include <signal.h>
-void sigsys_action(int sig, siginfo_t * info, void* ucontext)
+void sigsys_action(int sig, siginfo_t *info, void *ucontext)
 {
-	char * call_addr = *backtrace_symbols(&info->si_call_addr, 1);
-	oc_syslog(LOG_ERR, "Function %s called disabled syscall %d\n", call_addr, info->si_syscall);
+	char *call_addr = *backtrace_symbols(&info->si_call_addr, 1);
+
+	oc_syslog(LOG_ERR, "Function %s called disabled syscall %d\n",
+		  call_addr, info->si_syscall);
 	exit(EXIT_FAILURE);
 }
 
@@ -59,21 +61,19 @@ int set_sigsys_handler(struct worker_st *ws)
 	return sigaction(SIGSYS, &sa, NULL);
 }
 #else
-# define _SECCOMP_ERR SCMP_ACT_ERRNO(ENOSYS)
+#define _SECCOMP_ERR SCMP_ACT_ERRNO(ENOSYS)
 int set_sigsys_handler(struct worker_st *ws)
 {
 	return 0;
 }
 #endif
 
-
 int disable_system_calls(struct worker_st *ws)
 {
 	int ret;
 	scmp_filter_ctx ctx;
 
-	if (set_sigsys_handler(ws))
-	{
+	if (set_sigsys_handler(ws)) {
 		oclog(ws, LOG_ERR, "set_sigsys_handler");
 		return -1;
 	}
@@ -84,15 +84,18 @@ int disable_system_calls(struct worker_st *ws)
 		return -1;
 	}
 
-#define ADD_SYSCALL(name, ...) \
-	do { \
-		ret = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(name), __VA_ARGS__); \
+#define ADD_SYSCALL(name, ...)                                                 \
+	do {                                                                   \
+		ret = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(name),    \
+				       __VA_ARGS__);                           \
 		/* libseccomp returns EDOM for pseudo-syscalls due to a bug */ \
-		if (ret < 0 && ret != -EDOM) { \
-			oclog(ws, LOG_DEBUG, "could not add " #name " to seccomp filter: %s", strerror(-ret)); \
-			ret = -1; \
-			goto fail; \
-		} \
+		if (ret < 0 && ret != -EDOM) {                                 \
+			oclog(ws, LOG_DEBUG,                                   \
+			      "could not add " #name " to seccomp filter: %s", \
+			      strerror(-ret));                                 \
+			ret = -1;                                              \
+			goto fail;                                             \
+		}                                                              \
 	} while (0)
 
 	/* These seem to be called by libc or some other dependent library;

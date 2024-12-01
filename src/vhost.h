@@ -38,7 +38,7 @@ typedef struct vhost_cfg_st {
 
 	tls_st creds;
 	/* set to non-zero if authentication/accounting is initialized */
-	unsigned auth_init;
+	unsigned int auth_init;
 
 	/* vhost is pool by itself on current implementation,
 	 * but made explicit to avoid future breakage due to changes */
@@ -52,7 +52,7 @@ typedef struct vhost_cfg_st {
 	struct config_mod_st *config_module;
 
 	gnutls_privkey_t *key;
-	unsigned key_size;
+	unsigned int key_size;
 
 	/* temporary values used during config loading
 	 */
@@ -61,7 +61,7 @@ typedef struct vhost_cfg_st {
 	size_t auth_size;
 	char **eauth;
 	size_t eauth_size;
-	unsigned expose_iroutes;
+	unsigned int expose_iroutes;
 #ifdef HAVE_GSSAPI
 	char **urlfw;
 	size_t urlfw_size;
@@ -73,35 +73,39 @@ typedef struct vhost_cfg_st {
 /* macros to retrieve the default vhost configuration; they
  * are non-null as there is always a configured host. */
 #ifdef __clang_analyzer__
-static volatile void *v = (void*)0xffffffff;
+static volatile void *v = (void *)0xffffffff;
 
-static inline vhost_cfg_st *default_vhost(void * s) __attribute__((returns_nonnull));
-static inline vhost_cfg_st *default_vhost(void * s)
+static inline vhost_cfg_st *default_vhost(void *s)
+	__attribute__((returns_nonnull));
+static inline vhost_cfg_st *default_vhost(void *s)
 {
-       return v;
+	return v;
 }
 
-static inline struct vhost_cfg_st *GETVHOST(void *s) __attribute__((returns_nonnull));
+static inline struct vhost_cfg_st *GETVHOST(void *s)
+	__attribute__((returns_nonnull));
 static inline struct vhost_cfg_st *GETVHOST(void *s)
 {
 	return v;
 }
 
-static inline struct cfg_st *GETCONFIG(void *s) __attribute__((returns_nonnull));
+static inline struct cfg_st *GETCONFIG(void *s)
+	__attribute__((returns_nonnull));
 static inline struct cfg_st *GETCONFIG(void *s)
 {
 	return v;
 }
 
-static inline struct perm_cfg_st* GETPCONFIG(void *s) __attribute__((returns_nonnull));
-static inline struct perm_cfg_st* GETPCONFIG(void *s)
+static inline struct perm_cfg_st *GETPCONFIG(void *s)
+	__attribute__((returns_nonnull));
+static inline struct perm_cfg_st *GETPCONFIG(void *s)
 {
 	return v;
 }
 #else
-# define GETVHOST(s) default_vhost((s)->vconfig)
-# define GETCONFIG(s) GETVHOST(s)->perm_config.config
-# define GETPCONFIG(s) (&(GETVHOST(s)->perm_config))
+#define GETVHOST(s) default_vhost((s)->vconfig)
+#define GETCONFIG(s) GETVHOST(s)->perm_config.config
+#define GETPCONFIG(s) (&(GETVHOST(s)->perm_config))
 
 inline static vhost_cfg_st *default_vhost(struct list_head *vconfig)
 {
@@ -109,18 +113,28 @@ inline static vhost_cfg_st *default_vhost(struct list_head *vconfig)
 }
 #endif
 
-#define VHOSTNAME(vhost) (vhost!=NULL)?(vhost->name?vhost->name:DEFAULT_VHOST_NAME):("unknown")
-#define PREFIX_VHOST(vhost) (vhost!=NULL)?(vhost->name?_vhost_prefix(vhost->name):""):("")
-#define HAVE_VHOSTS(s) (list_tail(s->vconfig, struct vhost_cfg_st, list) == list_top(s->vconfig, struct vhost_cfg_st, list))?0:1
+#define VHOSTNAME(vhost)                                                     \
+	(vhost != NULL) ? (vhost->name ? vhost->name : DEFAULT_VHOST_NAME) : \
+			  ("unknown")
+#define PREFIX_VHOST(vhost) \
+	(vhost != NULL) ? (vhost->name ? _vhost_prefix(vhost->name) : "") : ("")
+#define HAVE_VHOSTS(s)                                       \
+	(list_tail(s->vconfig, struct vhost_cfg_st, list) == \
+	 list_top(s->vconfig, struct vhost_cfg_st, list)) ?  \
+		0 :                                          \
+		1
 
 /* always returns a vhost */
-inline static vhost_cfg_st *find_vhost(struct list_head *vconfig, const char *name)
+inline static vhost_cfg_st *find_vhost(struct list_head *vconfig,
+				       const char *name)
 {
 	vhost_cfg_st *vhost = NULL;
+
 	if (name == NULL)
 		return default_vhost(vconfig);
 
-	list_for_each(vconfig, vhost, list) {
+	list_for_each(vconfig, vhost, list)
+	{
 		if (vhost->name != NULL && strcasecmp(vhost->name, name) == 0)
 			return vhost;
 	}

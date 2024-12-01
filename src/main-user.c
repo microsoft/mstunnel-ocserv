@@ -34,7 +34,7 @@
 #include <gnutls/crypto.h>
 #include <tlslib.h>
 #ifdef HAVE_LIBUTIL
-# include <utmpx.h>
+#include <utmpx.h>
 #endif
 #include <gettime.h>
 
@@ -49,13 +49,14 @@
 
 #define OCSERV_FW_SCRIPT "/usr/libexec/ocserv-fw"
 
-#define APPEND_TO_STR(str, val) \
-	do { \
-		ret = str_append_str(str, val); \
-		if (ret < 0) { \
-			mslog(s, proc, LOG_ERR, "could not append value to environment\n"); \
-			exit(EXIT_FAILURE); \
-		} \
+#define APPEND_TO_STR(str, val)                                           \
+	do {                                                              \
+		ret = str_append_str(str, val);                           \
+		if (ret < 0) {                                            \
+			mslog(s, proc, LOG_ERR,                           \
+			      "could not append value to environment\n"); \
+			exit(EXIT_FAILURE);                               \
+		}                                                         \
 	} while (0)
 
 typedef enum script_type_t {
@@ -64,14 +65,14 @@ typedef enum script_type_t {
 	SCRIPT_DISCONNECT
 } script_type_t;
 
-static const char * const type_name[] = {"up", "host-update", "down"};
+static const char *const type_name[] = { "up", "host-update", "down" };
 
-static void export_fw_info(main_server_st *s, struct proc_st* proc)
+static void export_fw_info(main_server_st *s, struct proc_st *proc)
 {
 	str_st str4;
 	str_st str6;
 	str_st str_common;
-	unsigned i, negate = 0;
+	unsigned int i, negate = 0;
 	int ret;
 
 	str_init(&str4, proc);
@@ -82,7 +83,7 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 	 * with legacy software such as iptables and ip6tables. */
 
 	/* append custom routes to str */
-	for (i=0;i<proc->config->n_routes;i++) {
+	for (i = 0; i < proc->config->n_routes; i++) {
 		APPEND_TO_STR(&str_common, proc->config->routes[i]);
 		APPEND_TO_STR(&str_common, " ");
 
@@ -95,17 +96,20 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 		}
 	}
 
-	if (str4.length > 0 && setenv("OCSERV_ROUTES4", (char*)str4.data, 1) == -1) {
+	if (str4.length > 0 &&
+	    setenv("OCSERV_ROUTES4", (char *)str4.data, 1) == -1) {
 		mslog(s, proc, LOG_ERR, "could not export routes\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (str6.length > 0 && setenv("OCSERV_ROUTES6", (char*)str6.data, 1) == -1) {
+	if (str6.length > 0 &&
+	    setenv("OCSERV_ROUTES6", (char *)str6.data, 1) == -1) {
 		mslog(s, proc, LOG_ERR, "could not export routes\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (str_common.length > 0 && setenv("OCSERV_ROUTES", (char*)str_common.data, 1) == -1) {
+	if (str_common.length > 0 &&
+	    setenv("OCSERV_ROUTES", (char *)str_common.data, 1) == -1) {
 		mslog(s, proc, LOG_ERR, "could not export routes\n");
 		exit(EXIT_FAILURE);
 	}
@@ -117,7 +121,7 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 	str_reset(&str_common);
 
 	/* append custom no_routes to str */
-	for (i=0;i<proc->config->n_no_routes;i++) {
+	for (i = 0; i < proc->config->n_no_routes; i++) {
 		APPEND_TO_STR(&str_common, proc->config->no_routes[i]);
 		APPEND_TO_STR(&str_common, " ");
 
@@ -130,24 +134,28 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 		}
 	}
 
-	if (str4.length > 0 && setenv("OCSERV_NO_ROUTES4", (char*)str4.data, 1) == -1) {
+	if (str4.length > 0 &&
+	    setenv("OCSERV_NO_ROUTES4", (char *)str4.data, 1) == -1) {
 		mslog(s, proc, LOG_ERR, "could not export no-routes\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (str6.length > 0 && setenv("OCSERV_NO_ROUTES6", (char*)str6.data, 1) == -1) {
+	if (str6.length > 0 &&
+	    setenv("OCSERV_NO_ROUTES6", (char *)str6.data, 1) == -1) {
 		mslog(s, proc, LOG_ERR, "could not export no-routes\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (str_common.length > 0 && setenv("OCSERV_NO_ROUTES", (char*)str_common.data, 1) == -1) {
+	if (str_common.length > 0 &&
+	    setenv("OCSERV_NO_ROUTES", (char *)str_common.data, 1) == -1) {
 		mslog(s, proc, LOG_ERR, "could not export no-routes\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (proc->config->restrict_user_to_routes) {
 		if (setenv("OCSERV_RESTRICT_TO_ROUTES", "1", 1) == -1) {
-			mslog(s, proc, LOG_ERR, "could not export OCSERV_RESTRICT_TO_ROUTES\n");
+			mslog(s, proc, LOG_ERR,
+			      "could not export OCSERV_RESTRICT_TO_ROUTES\n");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -158,7 +166,7 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 	str_reset(&str_common);
 
 	if (proc->config->n_dns > 0) {
-		for (i=0;i<proc->config->n_dns;i++) {
+		for (i = 0; i < proc->config->n_dns; i++) {
 			APPEND_TO_STR(&str_common, proc->config->dns[i]);
 			APPEND_TO_STR(&str_common, " ");
 
@@ -172,17 +180,20 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 		}
 	}
 
-	if (str4.length > 0 && setenv("OCSERV_DNS4", (char*)str4.data, 1) == -1) {
+	if (str4.length > 0 &&
+	    setenv("OCSERV_DNS4", (char *)str4.data, 1) == -1) {
 		mslog(s, proc, LOG_ERR, "could not export DNS servers\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (str6.length > 0 && setenv("OCSERV_DNS6", (char*)str6.data, 1) == -1) {
+	if (str6.length > 0 &&
+	    setenv("OCSERV_DNS6", (char *)str6.data, 1) == -1) {
 		mslog(s, proc, LOG_ERR, "could not export DNS servers\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (str_common.length > 0 && setenv("OCSERV_DNS", (char*)str_common.data, 1) == -1) {
+	if (str_common.length > 0 &&
+	    setenv("OCSERV_DNS", (char *)str_common.data, 1) == -1) {
 		mslog(s, proc, LOG_ERR, "could not export DNS servers\n");
 		exit(EXIT_FAILURE);
 	}
@@ -196,35 +207,45 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 	str_reset(&str_common);
 
 	if (proc->config->n_fw_ports > 0) {
-		for (i=0;i<proc->config->n_fw_ports;i++) {
+		for (i = 0; i < proc->config->n_fw_ports; i++) {
 			if (proc->config->fw_ports[i]->negate)
 				negate = 1;
 
 			switch (proc->config->fw_ports[i]->proto) {
 			case PROTO_UDP:
-				ret = str_append_printf(&str_common, "udp %u ", proc->config->fw_ports[i]->port);
+				ret = str_append_printf(
+					&str_common, "udp %u ",
+					proc->config->fw_ports[i]->port);
 				break;
 			case PROTO_TCP:
-				ret = str_append_printf(&str_common, "tcp %u ", proc->config->fw_ports[i]->port);
+				ret = str_append_printf(
+					&str_common, "tcp %u ",
+					proc->config->fw_ports[i]->port);
 				break;
 			case PROTO_SCTP:
-				ret = str_append_printf(&str_common, "sctp %u ", proc->config->fw_ports[i]->port);
+				ret = str_append_printf(
+					&str_common, "sctp %u ",
+					proc->config->fw_ports[i]->port);
 				break;
 			case PROTO_ICMP:
-				ret = str_append_printf(&str_common, "icmp all ");
+				ret = str_append_printf(&str_common,
+							"icmp all ");
 				break;
 			case PROTO_ESP:
-				ret = str_append_printf(&str_common, "esp all ");
+				ret = str_append_printf(&str_common,
+							"esp all ");
 				break;
 			case PROTO_ICMPv6:
-				ret = str_append_printf(&str_common, "icmpv6 all ");
+				ret = str_append_printf(&str_common,
+							"icmpv6 all ");
 				break;
 			default:
 				ret = -1;
 			}
 
 			if (ret < 0) {
-				mslog(s, proc, LOG_ERR, "could not append value to environment\n");
+				mslog(s, proc, LOG_ERR,
+				      "could not append value to environment\n");
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -232,13 +253,17 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 
 	if (str_common.length > 0) {
 		if (negate) {
-			if (setenv("OCSERV_DENY_PORTS", (char*)str_common.data, 1) == -1) {
-				mslog(s, proc, LOG_ERR, "could not export DENY_PORTS\n");
+			if (setenv("OCSERV_DENY_PORTS", (char *)str_common.data,
+				   1) == -1) {
+				mslog(s, proc, LOG_ERR,
+				      "could not export DENY_PORTS\n");
 				exit(EXIT_FAILURE);
 			}
 		} else {
-			if (setenv("OCSERV_ALLOW_PORTS", (char*)str_common.data, 1) == -1) {
-				mslog(s, proc, LOG_ERR, "could not export ALLOW_PORTS\n");
+			if (setenv("OCSERV_ALLOW_PORTS",
+				   (char *)str_common.data, 1) == -1) {
+				mslog(s, proc, LOG_ERR,
+				      "could not export ALLOW_PORTS\n");
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -247,12 +272,12 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 	str_clear(&str_common);
 }
 
-static
-int call_script(main_server_st *s, struct proc_st* proc, script_type_t type)
+static int call_script(main_server_st *s, struct proc_st *proc,
+		       script_type_t type)
 {
-pid_t pid;
-int ret;
-const char* script, *next_script = NULL;
+	pid_t pid;
+	int ret;
+	const char *script, *next_script = NULL;
 
 	if (type == SCRIPT_CONNECT)
 		script = GETCONFIG(s)->connect_script;
@@ -262,7 +287,8 @@ const char* script, *next_script = NULL;
 		script = GETCONFIG(s)->disconnect_script;
 
 	if (type != SCRIPT_HOST_UPDATE) {
-		if (proc->config->restrict_user_to_routes || proc->config->n_fw_ports > 0) {
+		if (proc->config->restrict_user_to_routes ||
+		    proc->config->n_fw_ports > 0) {
 			next_script = script;
 			script = OCSERV_FW_SCRIPT;
 		}
@@ -279,20 +305,32 @@ const char* script, *next_script = NULL;
 
 		sigprocmask(SIG_SETMASK, &sig_default_set, NULL);
 
-		snprintf(real, sizeof(real), "%u", (unsigned)proc->pid);
+		snprintf(real, sizeof(real), "%u", (unsigned int)proc->pid);
 		setenv("ID", real, 1);
 
 		if (proc->remote_addr_len > 0) {
-			if ((ret=getnameinfo((void*)&proc->remote_addr, proc->remote_addr_len, real, sizeof(real), NULL, 0, NI_NUMERICHOST)) != 0) {
-				mslog(s, proc, LOG_DEBUG, "cannot determine peer address: %s; script failed", gai_strerror(ret));
+			ret = getnameinfo((void *)&proc->remote_addr,
+					  proc->remote_addr_len, real,
+					  sizeof(real), NULL, 0,
+					  NI_NUMERICHOST);
+			if (ret != 0) {
+				mslog(s, proc, LOG_DEBUG,
+				      "cannot determine peer address: %s; script failed",
+				      gai_strerror(ret));
 				exit(EXIT_FAILURE);
 			}
 			setenv("IP_REAL", real, 1);
 		}
 
 		if (proc->our_addr_len > 0) {
-			if ((ret=getnameinfo((void*)&proc->our_addr, proc->our_addr_len, real, sizeof(real), NULL, 0, NI_NUMERICHOST)) != 0) {
-				mslog(s, proc, LOG_DEBUG, "cannot determine our address: %s", gai_strerror(ret));
+			ret = getnameinfo((void *)&proc->our_addr,
+					  proc->our_addr_len, real,
+					  sizeof(real), NULL, 0,
+					  NI_NUMERICHOST);
+			if (ret != 0) {
+				mslog(s, proc, LOG_DEBUG,
+				      "cannot determine our address: %s",
+				      gai_strerror(ret));
 			} else {
 				setenv("IP_REAL_LOCAL", real, 1);
 			}
@@ -300,16 +338,24 @@ const char* script, *next_script = NULL;
 
 		if (proc->ipv4 != NULL || proc->ipv6 != NULL) {
 			if (proc->ipv4 && proc->ipv4->lip_len > 0) {
-				if (getnameinfo((void*)&proc->ipv4->lip, proc->ipv4->lip_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0) {
-					mslog(s, proc, LOG_DEBUG, "cannot determine local VPN address; script failed");
+				if (getnameinfo((void *)&proc->ipv4->lip,
+						proc->ipv4->lip_len, local,
+						sizeof(local), NULL, 0,
+						NI_NUMERICHOST) != 0) {
+					mslog(s, proc, LOG_DEBUG,
+					      "cannot determine local VPN address; script failed");
 					exit(EXIT_FAILURE);
 				}
 				setenv("IP_LOCAL", local, 1);
 			}
 
 			if (proc->ipv6 && proc->ipv6->lip_len > 0) {
-				if (getnameinfo((void*)&proc->ipv6->lip, proc->ipv6->lip_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0) {
-					mslog(s, proc, LOG_DEBUG, "cannot determine local VPN PtP address; script failed");
+				if (getnameinfo((void *)&proc->ipv6->lip,
+						proc->ipv6->lip_len, local,
+						sizeof(local), NULL, 0,
+						NI_NUMERICHOST) != 0) {
+					mslog(s, proc, LOG_DEBUG,
+					      "cannot determine local VPN PtP address; script failed");
 					exit(EXIT_FAILURE);
 				}
 				if (local[0] == 0)
@@ -318,22 +364,31 @@ const char* script, *next_script = NULL;
 			}
 
 			if (proc->ipv4 && proc->ipv4->rip_len > 0) {
-				if (getnameinfo((void*)&proc->ipv4->rip, proc->ipv4->rip_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0) {
-					mslog(s, proc, LOG_DEBUG, "cannot determine local VPN address; script failed");
+				if (getnameinfo((void *)&proc->ipv4->rip,
+						proc->ipv4->rip_len, remote,
+						sizeof(remote), NULL, 0,
+						NI_NUMERICHOST) != 0) {
+					mslog(s, proc, LOG_DEBUG,
+					      "cannot determine local VPN address; script failed");
 					exit(EXIT_FAILURE);
 				}
 				setenv("IP_REMOTE", remote, 1);
 			}
 			if (proc->ipv6 && proc->ipv6->rip_len > 0) {
-				if (getnameinfo((void*)&proc->ipv6->rip, proc->ipv6->rip_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0) {
-					mslog(s, proc, LOG_DEBUG, "cannot determine local VPN PtP address; script failed");
+				if (getnameinfo((void *)&proc->ipv6->rip,
+						proc->ipv6->rip_len, remote,
+						sizeof(remote), NULL, 0,
+						NI_NUMERICHOST) != 0) {
+					mslog(s, proc, LOG_DEBUG,
+					      "cannot determine local VPN PtP address; script failed");
 					exit(EXIT_FAILURE);
 				}
 				if (remote[0] == 0)
 					setenv("IP_REMOTE", remote, 1);
 				setenv("IPV6_REMOTE", remote, 1);
 
-				snprintf(remote, sizeof(remote), "%u", proc->ipv6->prefix);
+				snprintf(remote, sizeof(remote), "%u",
+					 proc->ipv6->prefix);
 				setenv("IPV6_PREFIX", remote, 1);
 			}
 		}
@@ -355,12 +410,16 @@ const char* script, *next_script = NULL;
 			setenv("REASON", "host-update", 1);
 		} else if (type == SCRIPT_DISCONNECT) {
 			/* use remote as temp buffer */
-			snprintf(remote, sizeof(remote), "%lu", (unsigned long)proc->bytes_in);
+			snprintf(remote, sizeof(remote), "%lu",
+				 (unsigned long)proc->bytes_in);
 			setenv("STATS_BYTES_IN", remote, 1);
-			snprintf(remote, sizeof(remote), "%lu", (unsigned long)proc->bytes_out);
+			snprintf(remote, sizeof(remote), "%lu",
+				 (unsigned long)proc->bytes_out);
 			setenv("STATS_BYTES_OUT", remote, 1);
 			if (proc->conn_time > 0) {
-				snprintf(remote, sizeof(remote), "%lu", (unsigned long)(time(NULL)-proc->conn_time));
+				snprintf(remote, sizeof(remote), "%lu",
+					 (unsigned long)(time(NULL) -
+							 proc->conn_time));
 				setenv("STATS_DURATION", remote, 1);
 			}
 			setenv("REASON", "disconnect", 1);
@@ -372,18 +431,25 @@ const char* script, *next_script = NULL;
 		/* set stdout to be stderr to avoid confusing scripts - note we have stdout closed */
 		if (dup2(STDERR_FILENO, STDOUT_FILENO) < 0) {
 			int e = errno;
-			mslog(s, proc, LOG_INFO, "cannot dup2(STDERR_FILENO, STDOUT_FILENO): %s", strerror(e));
+
+			mslog(s, proc, LOG_INFO,
+			      "cannot dup2(STDERR_FILENO, STDOUT_FILENO): %s",
+			      strerror(e));
 		}
 
 		if (next_script) {
 			setenv("OCSERV_NEXT_SCRIPT", next_script, 1);
-			mslog(s, proc, LOG_DEBUG, "executing script %s %s (next: %s)", type_name[type], script, next_script);
+			mslog(s, proc, LOG_DEBUG,
+			      "executing script %s %s (next: %s)",
+			      type_name[type], script, next_script);
 		} else
-			mslog(s, proc, LOG_DEBUG, "executing script %s %s", type_name[type], script);
+			mslog(s, proc, LOG_DEBUG, "executing script %s %s",
+			      type_name[type], script);
 
 		ret = execl(script, script, NULL);
 		if (ret == -1) {
-			mslog(s, proc, LOG_ERR, "Could not execute script %s", script);
+			mslog(s, proc, LOG_ERR, "Could not execute script %s",
+			      script);
 			exit(EXIT_FAILURE);
 		}
 
@@ -404,8 +470,7 @@ const char* script, *next_script = NULL;
 	}
 }
 
-static void
-add_utmp_entry(main_server_st *s, struct proc_st* proc)
+static void add_utmp_entry(main_server_st *s, struct proc_st *proc)
 {
 #ifdef HAVE_LIBUTIL
 	struct utmpx entry;
@@ -421,15 +486,19 @@ add_utmp_entry(main_server_st *s, struct proc_st* proc)
 	strlcpy(entry.ut_user, proc->username, sizeof(entry.ut_user));
 #ifdef __linux__
 	if (proc->remote_addr_len == sizeof(struct sockaddr_in))
-		memcpy(entry.ut_addr_v6, SA_IN_P(&proc->remote_addr), sizeof(struct in_addr));
+		memcpy(entry.ut_addr_v6, SA_IN_P(&proc->remote_addr),
+		       sizeof(struct in_addr));
 	else
-		memcpy(entry.ut_addr_v6, SA_IN6_P(&proc->remote_addr), sizeof(struct in6_addr));
+		memcpy(entry.ut_addr_v6, SA_IN6_P(&proc->remote_addr),
+		       sizeof(struct in6_addr));
 #endif
 
 	gettime(&tv);
 	entry.ut_tv.tv_sec = tv.tv_sec;
 	entry.ut_tv.tv_usec = tv.tv_nsec / 1000;
-	getnameinfo((void*)&proc->remote_addr, proc->remote_addr_len, entry.ut_host, sizeof(entry.ut_host), NULL, 0, NI_NUMERICHOST);
+	getnameinfo((void *)&proc->remote_addr, proc->remote_addr_len,
+		    entry.ut_host, sizeof(entry.ut_host), NULL, 0,
+		    NI_NUMERICHOST);
 
 	setutxent();
 	pututxline(&entry);
@@ -443,7 +512,7 @@ add_utmp_entry(main_server_st *s, struct proc_st* proc)
 #endif
 }
 
-static void remove_utmp_entry(main_server_st *s, struct proc_st* proc)
+static void remove_utmp_entry(main_server_st *s, struct proc_st *proc)
 {
 #ifdef HAVE_LIBUTIL
 	struct utmpx entry;
@@ -457,7 +526,8 @@ static void remove_utmp_entry(main_server_st *s, struct proc_st* proc)
 	memset(&entry, 0, sizeof(entry));
 	entry.ut_type = DEAD_PROCESS;
 	if (proc->tun_lease.name[0] != 0)
-		strlcpy(entry.ut_line, proc->tun_lease.name, sizeof(entry.ut_line));
+		strlcpy(entry.ut_line, proc->tun_lease.name,
+			sizeof(entry.ut_line));
 	entry.ut_pid = proc->pid;
 
 	setutxent();
@@ -474,11 +544,11 @@ static void remove_utmp_entry(main_server_st *s, struct proc_st* proc)
 #endif
 }
 
-int user_connected(main_server_st *s, struct proc_st* proc)
+int user_connected(main_server_st *s, struct proc_st *proc)
 {
-int ret;
+	int ret;
 
-	ctl_handler_notify(s,proc, 1);
+	ctl_handler_notify(s, proc, 1);
 	add_utmp_entry(s, proc);
 
 	ret = call_script(s, proc, SCRIPT_CONNECT);
@@ -488,7 +558,7 @@ int ret;
 	return 0;
 }
 
-void user_hostname_update(main_server_st *s, struct proc_st* proc)
+void user_hostname_update(main_server_st *s, struct proc_st *proc)
 {
 	if (proc->host_updated != 0)
 		return;
@@ -496,9 +566,9 @@ void user_hostname_update(main_server_st *s, struct proc_st* proc)
 	proc->host_updated = 1;
 }
 
-void user_disconnected(main_server_st *s, struct proc_st* proc)
+void user_disconnected(main_server_st *s, struct proc_st *proc)
 {
-	ctl_handler_notify(s,proc, 0);
+	ctl_handler_notify(s, proc, 0);
 	remove_utmp_entry(s, proc);
 	call_script(s, proc, SCRIPT_DISCONNECT);
 }

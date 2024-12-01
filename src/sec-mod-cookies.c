@@ -32,11 +32,13 @@ static void send_empty_reply(void *pool, int fd, sec_mod_st *sec)
 	SecmListCookiesReplyMsg msg = SECM_LIST_COOKIES_REPLY_MSG__INIT;
 	int ret;
 
-	ret = send_msg(pool, fd, CMD_SECM_LIST_COOKIES_REPLY, &msg,
-		(pack_size_func) secm_list_cookies_reply_msg__get_packed_size,
-		(pack_func) secm_list_cookies_reply_msg__pack);
+	ret = send_msg(
+		pool, fd, CMD_SECM_LIST_COOKIES_REPLY, &msg,
+		(pack_size_func)secm_list_cookies_reply_msg__get_packed_size,
+		(pack_func)secm_list_cookies_reply_msg__pack);
 	if (ret < 0) {
-		seclog(sec, LOG_ERR, "Error sending empty show cookies reply to main");
+		seclog(sec, LOG_ERR,
+		       "Error sending empty show cookies reply to main");
 	}
 }
 
@@ -57,13 +59,13 @@ void handle_secm_list_cookies_reply(void *pool, int fd, sec_mod_st *sec)
 
 	seclog(sec, LOG_DEBUG, "sending list cookies reply to main");
 
-	msg.cookies = talloc_size(pool, sizeof(CookieIntMsg*)*db->elems);
+	msg.cookies = talloc_size(pool, sizeof(CookieIntMsg *) * db->elems);
 	if (msg.cookies == NULL) {
 		send_empty_reply(pool, fd, sec);
 		return;
 	}
 
-	cookies = talloc_size(pool, sizeof(CookieIntMsg)*db->elems);
+	cookies = talloc_size(pool, sizeof(CookieIntMsg) * db->elems);
 	if (cookies == NULL) {
 		send_empty_reply(pool, fd, sec);
 		return;
@@ -71,15 +73,17 @@ void handle_secm_list_cookies_reply(void *pool, int fd, sec_mod_st *sec)
 
 	t = htable_first(db, &iter);
 	while (t != NULL) {
-		if IS_CLIENT_ENTRY_EXPIRED(sec, t, now)
+		if IS_CLIENT_ENTRY_EXPIRED (sec, t, now)
 			goto cont;
 
 		if (msg.n_cookies >= db->elems)
 			break;
 
 		cookie_int_msg__init(&cookies[msg.n_cookies]);
-		cookies[msg.n_cookies].safe_id.data = (void*)t->acct_info.safe_id;
-		cookies[msg.n_cookies].safe_id.len = sizeof(t->acct_info.safe_id);
+		cookies[msg.n_cookies].safe_id.data =
+			(void *)t->acct_info.safe_id;
+		cookies[msg.n_cookies].safe_id.len =
+			sizeof(t->acct_info.safe_id);
 
 		cookies[msg.n_cookies].session_is_open = t->session_is_open;
 		cookies[msg.n_cookies].tls_auth_ok = t->tls_auth_ok;
@@ -105,15 +109,17 @@ void handle_secm_list_cookies_reply(void *pool, int fd, sec_mod_st *sec)
 		msg.cookies[msg.n_cookies] = &cookies[msg.n_cookies];
 		msg.n_cookies++;
 
- cont:
+cont:
 		t = htable_next(db, &iter);
 	}
 
-	ret = send_msg(pool, fd, CMD_SECM_LIST_COOKIES_REPLY, &msg,
-		(pack_size_func) secm_list_cookies_reply_msg__get_packed_size,
-		(pack_func) secm_list_cookies_reply_msg__pack);
+	ret = send_msg(
+		pool, fd, CMD_SECM_LIST_COOKIES_REPLY, &msg,
+		(pack_size_func)secm_list_cookies_reply_msg__get_packed_size,
+		(pack_func)secm_list_cookies_reply_msg__pack);
 	if (ret < 0) {
-		seclog(sec, LOG_ERR, "Error sending show cookies reply to main");
+		seclog(sec, LOG_ERR,
+		       "Error sending show cookies reply to main");
 	}
 
 	talloc_free(msg.cookies);

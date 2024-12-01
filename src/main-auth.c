@@ -46,7 +46,7 @@
 #include <common.h>
 
 /* Puts the provided PIN into the config's cgroup */
-void put_into_cgroup(main_server_st * s, const char *_cgroup, pid_t pid)
+void put_into_cgroup(main_server_st *s, const char *_cgroup, pid_t pid)
 {
 #ifdef __linux__
 	char *name, *p, *savep;
@@ -72,8 +72,8 @@ void put_into_cgroup(main_server_st * s, const char *_cgroup, pid_t pid)
 	p = strtok_r(cgroup, ",", &savep);
 	while (p != NULL) {
 		mslog(s, NULL, LOG_DEBUG,
-		      "putting process %u to cgroup '%s:%s'", (unsigned)pid, p,
-		      name);
+		      "putting process %u to cgroup '%s:%s'", (unsigned int)pid,
+		      p, name);
 
 		snprintf(file, sizeof(file), "/sys/fs/cgroup/%s/%s/tasks", p,
 			 name);
@@ -84,7 +84,7 @@ void put_into_cgroup(main_server_st * s, const char *_cgroup, pid_t pid)
 			return;
 		}
 
-		if (fprintf(fd, "%u", (unsigned)pid) <= 0) {
+		if (fprintf(fd, "%u", (unsigned int)pid) <= 0) {
 			mslog(s, NULL, LOG_ERR, "could not write to: %s", file);
 		}
 		fclose(fd);
@@ -99,8 +99,7 @@ void put_into_cgroup(main_server_st * s, const char *_cgroup, pid_t pid)
 #endif
 }
 
-int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
-			AUTHREP r)
+int send_cookie_auth_reply(main_server_st *s, struct proc_st *proc, AUTHREP r)
 {
 	AuthCookieReplyMsg msg = AUTH_COOKIE_REPLY_MSG__INIT;
 	int ret;
@@ -126,36 +125,43 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 		msg.group_name = proc->groupname;
 
 		if (proc->ipv4 && proc->ipv4->rip_len > 0) {
-			msg.ipv4 = human_addr2((struct sockaddr*)&proc->ipv4->rip, proc->ipv4->rip_len,
-					ipv4, sizeof(ipv4), 0);
-			msg.ipv4_local = human_addr2((struct sockaddr*)&proc->ipv4->lip, proc->ipv4->lip_len,
-					ipv4_local, sizeof(ipv4_local), 0);
+			msg.ipv4 = human_addr2(
+				(struct sockaddr *)&proc->ipv4->rip,
+				proc->ipv4->rip_len, ipv4, sizeof(ipv4), 0);
+			msg.ipv4_local =
+				human_addr2((struct sockaddr *)&proc->ipv4->lip,
+					    proc->ipv4->lip_len, ipv4_local,
+					    sizeof(ipv4_local), 0);
 		}
 
 		if (proc->ipv6 && proc->ipv6->rip_len > 0) {
-			msg.ipv6 = human_addr2((struct sockaddr*)&proc->ipv6->rip, proc->ipv6->rip_len,
-					ipv6, sizeof(ipv6), 0);
-			msg.ipv6_local = human_addr2((struct sockaddr*)&proc->ipv6->lip, proc->ipv6->lip_len,
-					ipv6_local, sizeof(ipv6_local), 0);
+			msg.ipv6 = human_addr2(
+				(struct sockaddr *)&proc->ipv6->rip,
+				proc->ipv6->rip_len, ipv6, sizeof(ipv6), 0);
+			msg.ipv6_local =
+				human_addr2((struct sockaddr *)&proc->ipv6->lip,
+					    proc->ipv6->lip_len, ipv6_local,
+					    sizeof(ipv6_local), 0);
 		}
 
 		msg.config = proc->config;
 
-		ret = send_socket_msg_to_worker(s, proc, AUTH_COOKIE_REP, proc->tun_lease.fd,
-			 &msg,
-			 (pack_size_func)auth_cookie_reply_msg__get_packed_size,
-			 (pack_func)auth_cookie_reply_msg__pack);
+		ret = send_socket_msg_to_worker(
+			s, proc, AUTH_COOKIE_REP, proc->tun_lease.fd, &msg,
+			(pack_size_func)auth_cookie_reply_msg__get_packed_size,
+			(pack_func)auth_cookie_reply_msg__pack);
 	} else {
 		msg.reply = AUTH__REP__FAILED;
 
-		ret = send_msg_to_worker(s, proc, AUTH_COOKIE_REP,
-			 &msg,
-			 (pack_size_func)auth_cookie_reply_msg__get_packed_size,
-			 (pack_func)auth_cookie_reply_msg__pack);
+		ret = send_msg_to_worker(
+			s, proc, AUTH_COOKIE_REP, &msg,
+			(pack_size_func)auth_cookie_reply_msg__get_packed_size,
+			(pack_func)auth_cookie_reply_msg__pack);
 	}
 
 	if (ret < 0) {
 		int e = errno;
+
 		mslog(s, proc, LOG_ERR, "send_msg: %s", strerror(e));
 		return ret;
 	}
@@ -163,10 +169,11 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 	return 0;
 }
 
-int handle_auth_cookie_req(sec_mod_instance_st * sec_mod_instance, struct proc_st* proc,
-			   const AuthCookieRequestMsg * req)
+int handle_auth_cookie_req(sec_mod_instance_st *sec_mod_instance,
+			   struct proc_st *proc,
+			   const AuthCookieRequestMsg *req)
 {
-	main_server_st * s = sec_mod_instance->server;
+	main_server_st *s = sec_mod_instance->server;
 	int ret;
 	struct proc_st *old_proc;
 
@@ -175,7 +182,8 @@ int handle_auth_cookie_req(sec_mod_instance_st * sec_mod_instance, struct proc_s
 
 	/* generate a new DTLS session ID for each connection, to allow
 	 * openconnect of distinguishing when the DTLS key has switched. */
-	ret = gnutls_rnd(GNUTLS_RND_NONCE, proc->dtls_session_id, sizeof(proc->dtls_session_id));
+	ret = gnutls_rnd(GNUTLS_RND_NONCE, proc->dtls_session_id,
+			 sizeof(proc->dtls_session_id));
 	if (ret < 0)
 		return -1;
 	proc->dtls_session_id_size = sizeof(proc->dtls_session_id);
@@ -184,13 +192,15 @@ int handle_auth_cookie_req(sec_mod_instance_st * sec_mod_instance, struct proc_s
 	old_proc = proc_search_sid(s, req->cookie.data);
 	if (old_proc != NULL) {
 		if (old_proc->invalidated != 0) {
-			mslog(s, proc, LOG_ERR, "the reused session has been invalidated");
+			mslog(s, proc, LOG_ERR,
+			      "the reused session has been invalidated");
 			return -1;
 		}
 	}
 
 	/* loads sup config and basic proc info (e.g., username) */
-	ret = session_open(sec_mod_instance, proc, req->cookie.data, req->cookie.len);
+	ret = session_open(sec_mod_instance, proc, req->cookie.data,
+			   req->cookie.len);
 	if (ret < 0) {
 		mslog(s, proc, LOG_INFO, "could not open session");
 		return -1;
@@ -204,12 +214,14 @@ int handle_auth_cookie_req(sec_mod_instance_st * sec_mod_instance, struct proc_s
 	/* disconnect and reuse previous session's IPs*/
 	if (old_proc != NULL) {
 		if (strcmp(proc->username, old_proc->username) != 0) {
-			mslog(s, old_proc, LOG_ERR, "the user of the new session doesn't match the old (new: %s)",
+			mslog(s, old_proc, LOG_ERR,
+			      "the user of the new session doesn't match the old (new: %s)",
 			      proc->username);
 			return -1;
 		}
 
-		mslog(s, old_proc, LOG_INFO, "disconnecting previous user session due to session reuse");
+		mslog(s, old_proc, LOG_INFO,
+		      "disconnecting previous user session due to session reuse");
 
 		/* steal its leases */
 		steal_ip_leases(old_proc, proc);
@@ -248,20 +260,22 @@ int handle_auth_cookie_req(sec_mod_instance_st * sec_mod_instance, struct proc_s
  * used had been reused before, and then disconnect the old session
  * (cookies are unique).
  */
-int check_multiple_users(main_server_st *s, struct proc_st* proc)
+int check_multiple_users(main_server_st *s, struct proc_st *proc)
 {
 	struct proc_st *ctmp = NULL, *cpos;
 	unsigned int entries = 1; /* that one */
-	unsigned max;
+	unsigned int max;
 
 	max = proc->config->max_same_clients;
 
 	if (max == 0)
 		return 0;
 
-	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
+	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list)
+	{
 		if (ctmp != proc && ctmp->pid != -1) {
-			if (!ctmp->pid_killed && strcmp(proc->username, ctmp->username) == 0) {
+			if (!ctmp->pid_killed &&
+			    strcmp(proc->username, ctmp->username) == 0) {
 				entries++;
 
 				if (entries > max)

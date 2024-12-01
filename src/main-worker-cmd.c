@@ -56,7 +56,7 @@
 #include <main-ban.h>
 #include <ccan/list/list.h>
 
-int set_tun_mtu(main_server_st * s, struct proc_st *proc, unsigned mtu)
+int set_tun_mtu(main_server_st *s, struct proc_st *proc, unsigned int mtu)
 {
 	int fd, ret, e;
 	struct ifreq ifr;
@@ -79,15 +79,15 @@ int set_tun_mtu(main_server_st * s, struct proc_st *proc, unsigned mtu)
 	ret = ioctl(fd, SIOCSIFMTU, &ifr);
 	if (ret != 0) {
 		e = errno;
-		mslog(s, proc, LOG_INFO, "ioctl SIOCSIFMTU(%d) error: %s",
-		      mtu, strerror(e));
+		mslog(s, proc, LOG_INFO, "ioctl SIOCSIFMTU(%d) error: %s", mtu,
+		      strerror(e));
 		ret = -1;
 		goto fail;
 	}
 	proc->mtu = mtu;
 
 	ret = 0;
- fail:
+fail:
 	close(fd);
 	return ret;
 }
@@ -119,8 +119,7 @@ int handle_script_exit(main_server_st *s, struct proc_st *proc, int code)
 		mslog(s, proc, LOG_INFO,
 		      "failed authentication attempt for user '%s'",
 		      proc->username);
-		ret =
-		    send_cookie_auth_reply(s, proc, AUTH__REP__FAILED);
+		ret = send_cookie_auth_reply(s, proc, AUTH__REP__FAILED);
 		if (ret < 0) {
 			mslog(s, proc, LOG_ERR,
 			      "could not send reply auth cmd.");
@@ -130,7 +129,7 @@ int handle_script_exit(main_server_st *s, struct proc_st *proc, int code)
 	}
 	ret = 0;
 
- fail:
+fail:
 	/* we close the lease tun fd both on success and failure.
 	 * The parent doesn't need to keep the tunfd, and if it does,
 	 * it causes issues to client.
@@ -143,7 +142,8 @@ int handle_script_exit(main_server_st *s, struct proc_st *proc, int code)
 }
 
 /* This is the function after which proc is populated */
-static int accept_user(main_server_st * s, struct proc_st *proc, unsigned cmd)
+static int accept_user(main_server_st *s, struct proc_st *proc,
+		       unsigned int cmd)
 {
 	int ret;
 	const char *group;
@@ -169,8 +169,7 @@ static int accept_user(main_server_st * s, struct proc_st *proc, unsigned cmd)
 
 	if (cmd == AUTH_COOKIE_REQ) {
 		mslog(s, proc, LOG_DEBUG,
-		      "user of group '%s' authenticated (using cookie)",
-		      group);
+		      "user of group '%s' authenticated (using cookie)", group);
 	} else {
 		mslog(s, proc, LOG_INFO,
 		      "user of group '%s' authenticated but from unknown state! rejecting.",
@@ -194,7 +193,7 @@ static int accept_user(main_server_st * s, struct proc_st *proc, unsigned cmd)
  * @result: the auth result
  */
 static int handle_cookie_auth_res(main_server_st *s, struct proc_st *proc,
-			   unsigned cmd, int result)
+				  unsigned int cmd, int result)
 {
 	int ret;
 
@@ -214,7 +213,7 @@ static int handle_cookie_auth_res(main_server_st *s, struct proc_st *proc,
 		ret = ERR_BAD_COMMAND;
 	}
 
- finished:
+finished:
 	if (ret == ERR_WAIT_FOR_SCRIPT) {
 		/* we will wait for script termination to send our reply.
 		 * The notification of peer will be done in handle_script_exit().
@@ -230,20 +229,20 @@ static int handle_cookie_auth_res(main_server_st *s, struct proc_st *proc,
 	return ret;
 }
 
-int handle_worker_commands(main_server_st * s, struct proc_st *proc)
+int handle_worker_commands(main_server_st *s, struct proc_st *proc)
 {
 	uint8_t cmd;
 	AuthCookieRequestMsg *auth_cookie_req;
 	size_t length;
 	uint8_t *raw;
 	int ret, raw_len, e;
+
 	PROTOBUF_ALLOCATOR(pa, proc);
 
 	ret = recv_msg_headers(proc->fd, &cmd, MAX_WAIT_SECS);
 	if (ret < 0) {
 		if (ret == ERR_PEER_TERMINATED)
-			mslog(s, proc, LOG_DEBUG,
-			      "worker terminated");
+			mslog(s, proc, LOG_DEBUG, "worker terminated");
 		else
 			mslog(s, proc, LOG_DEBUG,
 			      "cannot obtain metadata from worker's command socket");
@@ -253,14 +252,15 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 	length = ret;
 
 	if (length > MAX_MSG_SIZE) {
-		mslog(s, proc, LOG_DEBUG,
-		      "received too big message (%d)", (int)length);
+		mslog(s, proc, LOG_DEBUG, "received too big message (%d)",
+		      (int)length);
 		ret = ERR_BAD_COMMAND;
 		return ret;
 	}
 
-	mslog(s, proc, LOG_DEBUG, "main received worker's message '%s' of %u bytes\n",
-	      cmd_request_to_str(cmd), (unsigned)length);
+	mslog(s, proc, LOG_DEBUG,
+	      "main received worker's message '%s' of %u bytes\n",
+	      cmd_request_to_str(cmd), (unsigned int)length);
 
 	raw = talloc_size(proc, length);
 	if (raw == NULL) {
@@ -279,138 +279,145 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 	}
 
 	switch (cmd) {
-	case CMD_BAN_IP:{
-			BanIpMsg *tmsg;
-			BanIpReplyMsg reply = BAN_IP_REPLY_MSG__INIT;
-			char remote_address[MAX_IP_STR];
+	case CMD_BAN_IP: {
+		BanIpMsg *tmsg;
+		BanIpReplyMsg reply = BAN_IP_REPLY_MSG__INIT;
+		char remote_address[MAX_IP_STR];
 
-			tmsg = ban_ip_msg__unpack(&pa, raw_len, raw);
-			if (tmsg == NULL) {
-				mslog(s, NULL, LOG_ERR, "error unpacking worker data");
-				ret = ERR_BAD_COMMAND;
-				goto cleanup;
-			}
-
-			human_addr2((struct sockaddr *)&proc->remote_addr, proc->remote_addr_len, remote_address, sizeof(remote_address), 0);
-
-			ret = add_str_ip_to_ban_list(s, remote_address, tmsg->score);
-
-			if (tmsg->has_discon_reason) {
-				proc->discon_reason = tmsg->discon_reason;
-			}
-
-			ban_ip_msg__free_unpacked(tmsg, &pa);
-
-			if (ret < 0) {
-				reply.reply =
-				    AUTH__REP__FAILED;
-			} else {
-				reply.reply =
-				    AUTH__REP__OK;
-			}
-
-			ret =
-			    send_msg_to_worker(s, proc, CMD_BAN_IP_REPLY, &reply,
-					       (pack_size_func)
-					       ban_ip_reply_msg__get_packed_size,
-					       (pack_func)
-					       ban_ip_reply_msg__pack);
-
-			if (ret < 0) {
-				mslog(s, NULL, LOG_ERR,
-				      "could not send reply cmd %d.",
-				      (unsigned)cmd);
-				ret = ERR_BAD_COMMAND;
-				goto cleanup;
-			}
-		}
-		break;
-	case CMD_TUN_MTU:{
-			TunMtuMsg *tmsg;
-			unsigned minimum_mtu = RFC_791_MTU;
-			unsigned maximum_mtu =
-			    proc->vhost->perm_config.config->default_mtu != 0 ?
-			    proc->vhost->perm_config.config->default_mtu :
-			    MAX_DTLS_MTU;
-
-			if (proc->status != PS_AUTH_COMPLETED) {
-				mslog(s, proc, LOG_ERR,
-				      "received TUN MTU in unauthenticated state.");
-				ret = ERR_BAD_COMMAND;
-				goto cleanup;
-			}
-
-			tmsg = tun_mtu_msg__unpack(&pa, raw_len, raw);
-			if (tmsg == NULL) {
-				mslog(s, proc, LOG_ERR, "error unpacking data");
-				ret = ERR_BAD_COMMAND;
-				goto cleanup;
-			}
-
-			if (tmsg->mtu < minimum_mtu || tmsg->mtu > maximum_mtu) {
-				mslog(s, proc, LOG_ERR,
-				      "worker process invalid MTU %d", (int)tmsg->mtu);
-				ret = ERR_BAD_COMMAND;
-				goto cleanup;
-			}
-
-			set_tun_mtu(s, proc, tmsg->mtu);
-
-			tun_mtu_msg__free_unpacked(tmsg, &pa);
+		tmsg = ban_ip_msg__unpack(&pa, raw_len, raw);
+		if (tmsg == NULL) {
+			mslog(s, NULL, LOG_ERR, "error unpacking worker data");
+			ret = ERR_BAD_COMMAND;
+			goto cleanup;
 		}
 
-		break;
-	case CMD_SESSION_INFO:{
-			SessionInfoMsg *tmsg;
+		human_addr2((struct sockaddr *)&proc->remote_addr,
+			    proc->remote_addr_len, remote_address,
+			    sizeof(remote_address), 0);
 
-			tmsg = session_info_msg__unpack(&pa, raw_len, raw);
-			if (tmsg == NULL) {
-				mslog(s, proc, LOG_ERR, "error unpacking session info data");
-				ret = ERR_BAD_COMMAND;
-				goto cleanup;
-			}
+		ret = add_str_ip_to_ban_list(s, remote_address, tmsg->score);
 
-			if (tmsg->tls_ciphersuite)
-				strlcpy(proc->tls_ciphersuite, tmsg->tls_ciphersuite,
-					 sizeof(proc->tls_ciphersuite));
-			if (tmsg->dtls_ciphersuite)
-				strlcpy(proc->dtls_ciphersuite, tmsg->dtls_ciphersuite,
-					 sizeof(proc->dtls_ciphersuite));
-			if (tmsg->cstp_compr)
-				strlcpy(proc->cstp_compr, tmsg->cstp_compr,
-					 sizeof(proc->cstp_compr));
-			if (tmsg->dtls_compr)
-				strlcpy(proc->dtls_compr, tmsg->dtls_compr,
-					 sizeof(proc->dtls_compr));
+		if (tmsg->has_discon_reason) {
+			proc->discon_reason = tmsg->discon_reason;
+		}
 
-			if (proc->hostname[0] != 0) {
-				user_hostname_update(s, proc);
-			}
+		ban_ip_msg__free_unpacked(tmsg, &pa);
 
-			if (GETCONFIG(s)->listen_proxy_proto) {
-				if (tmsg->has_remote_addr && tmsg->remote_addr.len <= sizeof(struct sockaddr_storage)) {
-					proc_table_update_ip(s, proc, (struct sockaddr_storage*)tmsg->remote_addr.data, tmsg->remote_addr.len);
+		if (ret < 0) {
+			reply.reply = AUTH__REP__FAILED;
+		} else {
+			reply.reply = AUTH__REP__OK;
+		}
 
-					/* If the address is in the BAN list, terminate it */
-					if (check_if_banned(s, &proc->remote_addr, proc->remote_addr_len) != 0) {
-						if (proc->pid != -1 && proc->pid != 0) {
-							kill_proc(proc);
-						}
+		ret = send_msg_to_worker(
+			s, proc, CMD_BAN_IP_REPLY, &reply,
+			(pack_size_func)ban_ip_reply_msg__get_packed_size,
+			(pack_func)ban_ip_reply_msg__pack);
+
+		if (ret < 0) {
+			mslog(s, NULL, LOG_ERR, "could not send reply cmd %d.",
+			      (unsigned int)cmd);
+			ret = ERR_BAD_COMMAND;
+			goto cleanup;
+		}
+	} break;
+	case CMD_TUN_MTU: {
+		TunMtuMsg *tmsg;
+		unsigned int minimum_mtu = RFC_791_MTU;
+		unsigned int maximum_mtu =
+			proc->vhost->perm_config.config->default_mtu != 0 ?
+				proc->vhost->perm_config.config->default_mtu :
+				MAX_DTLS_MTU;
+
+		if (proc->status != PS_AUTH_COMPLETED) {
+			mslog(s, proc, LOG_ERR,
+			      "received TUN MTU in unauthenticated state.");
+			ret = ERR_BAD_COMMAND;
+			goto cleanup;
+		}
+
+		tmsg = tun_mtu_msg__unpack(&pa, raw_len, raw);
+		if (tmsg == NULL) {
+			mslog(s, proc, LOG_ERR, "error unpacking data");
+			ret = ERR_BAD_COMMAND;
+			goto cleanup;
+		}
+
+		if (tmsg->mtu < minimum_mtu || tmsg->mtu > maximum_mtu) {
+			mslog(s, proc, LOG_ERR, "worker process invalid MTU %d",
+			      (int)tmsg->mtu);
+			ret = ERR_BAD_COMMAND;
+			goto cleanup;
+		}
+
+		set_tun_mtu(s, proc, tmsg->mtu);
+
+		tun_mtu_msg__free_unpacked(tmsg, &pa);
+	}
+
+	break;
+	case CMD_SESSION_INFO: {
+		SessionInfoMsg *tmsg;
+
+		tmsg = session_info_msg__unpack(&pa, raw_len, raw);
+		if (tmsg == NULL) {
+			mslog(s, proc, LOG_ERR,
+			      "error unpacking session info data");
+			ret = ERR_BAD_COMMAND;
+			goto cleanup;
+		}
+
+		if (tmsg->tls_ciphersuite)
+			strlcpy(proc->tls_ciphersuite, tmsg->tls_ciphersuite,
+				sizeof(proc->tls_ciphersuite));
+		if (tmsg->dtls_ciphersuite)
+			strlcpy(proc->dtls_ciphersuite, tmsg->dtls_ciphersuite,
+				sizeof(proc->dtls_ciphersuite));
+		if (tmsg->cstp_compr)
+			strlcpy(proc->cstp_compr, tmsg->cstp_compr,
+				sizeof(proc->cstp_compr));
+		if (tmsg->dtls_compr)
+			strlcpy(proc->dtls_compr, tmsg->dtls_compr,
+				sizeof(proc->dtls_compr));
+
+		if (proc->hostname[0] != 0) {
+			user_hostname_update(s, proc);
+		}
+
+		if (GETCONFIG(s)->listen_proxy_proto) {
+			if (tmsg->has_remote_addr &&
+			    tmsg->remote_addr.len <=
+				    sizeof(struct sockaddr_storage)) {
+				proc_table_update_ip(
+					s, proc,
+					(struct sockaddr_storage *)
+						tmsg->remote_addr.data,
+					tmsg->remote_addr.len);
+
+				/* If the address is in the BAN list, terminate it */
+				if (check_if_banned(s, &proc->remote_addr,
+						    proc->remote_addr_len) !=
+				    0) {
+					if (proc->pid != -1 && proc->pid != 0) {
+						kill_proc(proc);
 					}
 				}
-
-				if (tmsg->has_our_addr && tmsg->our_addr.len <= sizeof(struct sockaddr_storage) &&
-				    tmsg->our_addr.len > 0) {
-					memcpy(&proc->our_addr, tmsg->our_addr.data, tmsg->our_addr.len);
-					proc->our_addr_len = tmsg->our_addr.len;
-				}
-
 			}
 
-			session_info_msg__free_unpacked(tmsg, &pa);
+			if (tmsg->has_our_addr &&
+			    tmsg->our_addr.len <=
+				    sizeof(struct sockaddr_storage) &&
+			    tmsg->our_addr.len > 0) {
+				memcpy(&proc->our_addr, tmsg->our_addr.data,
+				       tmsg->our_addr.len);
+				proc->our_addr_len = tmsg->our_addr.len;
+			}
 		}
 
-		break;
+		session_info_msg__free_unpacked(tmsg, &pa);
+	}
+
+	break;
 	case AUTH_COOKIE_REQ:
 		if (proc->status != PS_AUTH_INACTIVE) {
 			mslog(s, proc, LOG_ERR,
@@ -420,19 +427,23 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 		}
 
 		auth_cookie_req =
-		    auth_cookie_request_msg__unpack(&pa, raw_len, raw);
+			auth_cookie_request_msg__unpack(&pa, raw_len, raw);
 		if (auth_cookie_req == NULL) {
 			mslog(s, proc, LOG_ERR, "error unpacking cookie data");
 			ret = ERR_BAD_COMMAND;
 			goto cleanup;
 		}
 
-		proc->sec_mod_instance_index = auth_cookie_req->cookie.data[0] % s->sec_mod_instance_count;
+		proc->sec_mod_instance_index = auth_cookie_req->cookie.data[0] %
+					       s->sec_mod_instance_count;
 
-		ret = handle_auth_cookie_req(&s->sec_mod_instances[proc->sec_mod_instance_index], proc, auth_cookie_req);
+		ret = handle_auth_cookie_req(
+			&s->sec_mod_instances[proc->sec_mod_instance_index],
+			proc, auth_cookie_req);
 
 		safe_memset(raw, 0, raw_len);
-		safe_memset(auth_cookie_req->cookie.data, 0, auth_cookie_req->cookie.len);
+		safe_memset(auth_cookie_req->cookie.data, 0,
+			    auth_cookie_req->cookie.len);
 
 		auth_cookie_request_msg__free_unpacked(auth_cookie_req, &pa);
 
@@ -444,39 +455,41 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 		break;
 
 #if defined(CAPTURE_LATENCY_SUPPORT)
-	case CMD_LATENCY_STATS_DELTA:{
-			LatencyStatsDelta * tmsg;
+	case CMD_LATENCY_STATS_DELTA: {
+		LatencyStatsDelta *tmsg;
 
-			if (proc->status != PS_AUTH_COMPLETED) {
-				mslog(s, proc, LOG_ERR,
-					"received LATENCY STATS DELTA in unauthenticated state.");
-				ret = ERR_BAD_COMMAND;
-				goto cleanup;
-			}
-
-			tmsg = latency_stats_delta__unpack(&pa, raw_len, raw);
-			if (tmsg == NULL) {
-				mslog(s, proc, LOG_ERR, "error unpacking latency stats delta data");
-				ret = ERR_BAD_COMMAND;
-				goto cleanup;
-			}
-
-			s->stats.delta_latency_stats.median_total += tmsg->median_delta;
-			s->stats.delta_latency_stats.rms_total += tmsg->rms_delta;
-			s->stats.delta_latency_stats.sample_count += tmsg->sample_count_delta;
-
-			latency_stats_delta__free_unpacked(tmsg, &pa);
+		if (proc->status != PS_AUTH_COMPLETED) {
+			mslog(s, proc, LOG_ERR,
+			      "received LATENCY STATS DELTA in unauthenticated state.");
+			ret = ERR_BAD_COMMAND;
+			goto cleanup;
 		}
-		break;
+
+		tmsg = latency_stats_delta__unpack(&pa, raw_len, raw);
+		if (tmsg == NULL) {
+			mslog(s, proc, LOG_ERR,
+			      "error unpacking latency stats delta data");
+			ret = ERR_BAD_COMMAND;
+			goto cleanup;
+		}
+
+		s->stats.delta_latency_stats.median_total += tmsg->median_delta;
+		s->stats.delta_latency_stats.rms_total += tmsg->rms_delta;
+		s->stats.delta_latency_stats.sample_count +=
+			tmsg->sample_count_delta;
+
+		latency_stats_delta__free_unpacked(tmsg, &pa);
+	} break;
 #endif
 	default:
-		mslog(s, proc, LOG_ERR, "unknown CMD from worker: 0x%x", (unsigned)cmd);
+		mslog(s, proc, LOG_ERR, "unknown CMD from worker: 0x%x",
+		      (unsigned int)cmd);
 		ret = ERR_BAD_COMMAND;
 		goto cleanup;
 	}
 
 	ret = 0;
- cleanup:
+cleanup:
 	talloc_free(raw);
 
 	return ret;

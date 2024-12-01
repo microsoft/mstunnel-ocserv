@@ -29,20 +29,20 @@ int main(void)
 {
 	char str[64];
 
-	strcpy(str, STR1"     ");
+	strcpy(str, STR1 "     ");
 
 	trim_trailing_whitespace(str);
 
-	if (strncmp(str, STR1, sizeof(STR1)-1) != 0) {
+	if (strncmp(str, STR1, sizeof(STR1) - 1) != 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}
 
-	strcpy(str, STR1" ");
+	strcpy(str, STR1 " ");
 
 	trim_trailing_whitespace(str);
 
-	if (strncmp(str, STR1, sizeof(STR1)-1) != 0) {
+	if (strncmp(str, STR1, sizeof(STR1) - 1) != 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}
@@ -51,16 +51,16 @@ int main(void)
 
 	trim_trailing_whitespace(str);
 
-	if (strncmp(str, STR1, sizeof(STR1)-1) != 0) {
+	if (strncmp(str, STR1, sizeof(STR1) - 1) != 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}
 
-	strcpy(str, "  "STR1);
+	strcpy(str, "  " STR1);
 
 	trim_trailing_whitespace(str);
 
-	if (strncmp(str, "  "STR1, sizeof("  "STR1)-1) != 0) {
+	if (strncmp(str, "  " STR1, sizeof("  " STR1) - 1) != 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}
@@ -69,7 +69,7 @@ int main(void)
 
 	trim_trailing_whitespace(str);
 
-	if (strncmp(str, "", sizeof("")-1) != 0) {
+	if (strncmp(str, "", sizeof("") - 1) != 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}

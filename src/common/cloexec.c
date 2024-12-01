@@ -35,49 +35,44 @@
    open or pipe2 that accept flags like O_CLOEXEC to create DESC
    non-inheritable in the first place.  */
 
-int
-set_cloexec_flag (int desc, bool value)
+int set_cloexec_flag(int desc, bool value)
 {
 #ifdef F_SETFD
 
-  int flags = fcntl (desc, F_GETFD, 0);
+	int flags = fcntl(desc, F_GETFD, 0);
 
-  if (0 <= flags)
-    {
-      int newflags = (value ? flags | FD_CLOEXEC : flags & ~FD_CLOEXEC);
+	if (flags >= 0) {
+		int newflags =
+			(value ? flags | FD_CLOEXEC : flags & ~FD_CLOEXEC);
 
-      if (flags == newflags
-          || fcntl (desc, F_SETFD, newflags) != -1)
-        return 0;
-    }
+		if (flags == newflags || fcntl(desc, F_SETFD, newflags) != -1)
+			return 0;
+	}
 
-  return -1;
+	return -1;
 
 #else /* !F_SETFD */
 
-  /* Use dup2 to reject invalid file descriptors; the cloexec flag
+	/* Use dup2 to reject invalid file descriptors; the cloexec flag
      will be unaffected.  */
-  if (desc < 0)
-    {
-      errno = EBADF;
-      return -1;
-    }
-  if (dup2 (desc, desc) < 0)
-    /* errno is EBADF here.  */
-    return -1;
+	if (desc < 0) {
+		errno = EBADF;
+		return -1;
+	}
+	if (dup2(desc, desc) < 0)
+		/* errno is EBADF here.  */
+		return -1;
 
-  /* There is nothing we can do on this kind of platform.  Punt.  */
-  return 0;
+	/* There is nothing we can do on this kind of platform.  Punt.  */
+	return 0;
 #endif /* !F_SETFD */
 }
-
 
 /* Duplicates a file handle FD, while marking the copy to be closed
    prior to exec or spawn.  Returns -1 and sets errno if FD could not
    be duplicated.  */
 
-int
-dup_cloexec (int fd)
+int dup_cloexec(int fd)
 {
-  return fcntl (fd, F_DUPFD_CLOEXEC, 0);
+	return fcntl(fd, F_DUPFD_CLOEXEC, 0);
 }

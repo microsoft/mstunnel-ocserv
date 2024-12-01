@@ -31,15 +31,15 @@
 #include "sec-mod.h"
 #include "log.h"
 
-void __attribute__ ((format(printf, 3, 4)))
-    _oclog(const worker_st * ws, int priority, const char *fmt, ...)
+void __attribute__((format(printf, 3, 4)))
+_oclog(const worker_st *ws, int priority, const char *fmt, ...)
 {
 	char buf[512];
-	char name[MAX_USERNAME_SIZE+MAX_HOSTNAME_SIZE+3];
-	const char* ip;
+	char name[MAX_USERNAME_SIZE + MAX_HOSTNAME_SIZE + 3];
+	const char *ip;
 	va_list args;
 	int log_prio;
-	unsigned have_vhosts;
+	unsigned int have_vhosts;
 	int syslog_prio;
 
 	if (ws->vhost)
@@ -59,24 +59,28 @@ void __attribute__ ((format(printf, 3, 4)))
 	have_vhosts = HAVE_VHOSTS(ws);
 
 	if (have_vhosts && ws->username[0] != 0) {
-		snprintf(name, sizeof(name), "[%s%s]", PREFIX_VHOST(ws->vhost), ws->username);
-	} else if (have_vhosts && ws->username[0] == 0 && ws->vhost && ws->vhost->name) {
-		snprintf(name, sizeof(name), "[vhost:%s]", VHOSTNAME(ws->vhost));
+		snprintf(name, sizeof(name), "[%s%s]", PREFIX_VHOST(ws->vhost),
+			 ws->username);
+	} else if (have_vhosts && ws->username[0] == 0 && ws->vhost &&
+		   ws->vhost->name) {
+		snprintf(name, sizeof(name), "[vhost:%s]",
+			 VHOSTNAME(ws->vhost));
 	} else if (ws->username[0] != 0) {
 		snprintf(name, sizeof(name), "[%s]", ws->username);
 	} else
 		name[0] = 0;
 
-	_oc_syslog(syslog_prio, "worker%s: %s %s", name, ip?ip:"[unknown]", buf);
+	_oc_syslog(syslog_prio, "worker%s: %s %s", name, ip ? ip : "[unknown]",
+		   buf);
 }
 
-void  oclog_hex(const worker_st* ws, int priority,
-		const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64)
+void oclog_hex(const worker_st *ws, int priority, const char *prefix,
+	       uint8_t *bin, unsigned int bin_size, unsigned int b64)
 {
 	char buf[512];
 	int ret;
 	size_t buf_size;
-	gnutls_datum_t data = {bin, bin_size};
+	gnutls_datum_t data = { bin, bin_size };
 	int log_prio;
 
 	if (ws->vhost)
@@ -88,7 +92,8 @@ void  oclog_hex(const worker_st* ws, int priority,
 		return;
 
 	if (b64) {
-		oc_base64_encode((char*)bin, bin_size, (char*)buf, sizeof(buf));
+		oc_base64_encode((char *)bin, bin_size, (char *)buf,
+				 sizeof(buf));
 	} else {
 		buf_size = sizeof(buf);
 		ret = gnutls_hex_encode(&data, buf, &buf_size);
@@ -98,4 +103,3 @@ void  oclog_hex(const worker_st* ws, int priority,
 
 	_oclog(ws, priority, "%s %s", prefix, buf);
 }
-

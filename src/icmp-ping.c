@@ -74,7 +74,7 @@
 #include <main.h>
 #include <net/if.h>
 #ifdef HAVE_NETINET_IN_SYSTM_H
-# include <netinet/in_systm.h>
+#include <netinet/in_systm.h>
 #endif
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
@@ -89,11 +89,11 @@
 #include <poll.h>
 
 #ifndef ICMP_DEST_UNREACH
-# ifdef ICMP_UNREACH
-#  define ICMP_DEST_UNREACH ICMP_UNREACH
-# else
-#  define ICMP_DEST_UNREACH 3
-# endif
+#ifdef ICMP_UNREACH
+#define ICMP_DEST_UNREACH ICMP_UNREACH
+#else
+#define ICMP_DEST_UNREACH 3
+#endif
 #endif
 
 /* I see RENUMBERED constants in bits/in.h - !!?
@@ -110,7 +110,7 @@ enum {
 	MAXPACKET = 65468,
 	MAX_DUP_CHK = (8 * 128),
 	MAXWAIT = 10,
-	PINGINTERVAL = 1,	/* 1 second */
+	PINGINTERVAL = 1, /* 1 second */
 };
 
 /* common routines */
@@ -128,7 +128,7 @@ static int in_cksum(unsigned short *buf, int sz)
 	}
 
 	if (nleft == 1) {
-		*(unsigned char *) (&ans) = *(unsigned char *) w;
+		*(unsigned char *)(&ans) = *(unsigned char *)w;
 		sum += ans;
 	}
 
@@ -148,29 +148,26 @@ inline static int retry(int e)
 
 #define PING_TIMEOUT 3
 
-static
-ssize_t recvfrom_timeout(int sockfd, void *buf, size_t len, int flags,
-			 struct sockaddr *src_addr, socklen_t * addrlen)
+static ssize_t recvfrom_timeout(int sockfd, void *buf, size_t len, int flags,
+				struct sockaddr *src_addr, socklen_t *addrlen)
 {
 	int ret;
-    struct pollfd pfd;
+	struct pollfd pfd;
 
-    pfd.fd = sockfd;
-    pfd.events = POLLIN;
-    pfd.revents = 0;
+	pfd.fd = sockfd;
+	pfd.events = POLLIN;
+	pfd.revents = 0;
 
-    ret = poll(&pfd, 1, 250);
+	ret = poll(&pfd, 1, 250);
 	if (ret == -1)
 		return -1;
 	else if (ret > 0)
 		return recvfrom(sockfd, buf, len, 0, src_addr, addrlen);
 	else
 		return -1;
-
-
 }
 
-int icmp_ping4(main_server_st * s, struct sockaddr_in *addr1)
+int icmp_ping4(main_server_st *s, struct sockaddr_in *addr1)
 {
 	struct icmp *pkt;
 	int pingsock, c, e;
@@ -178,14 +175,15 @@ int icmp_ping4(main_server_st * s, struct sockaddr_in *addr1)
 	char buf1[64];
 	time_t now;
 	uint16_t id1;
-	unsigned gotreply = 0, unreachable = 0;
+	unsigned int gotreply = 0, unreachable = 0;
 
 	if (GETCONFIG(s)->ping_leases == 0)
 		return 0;
 
-	if ((e=gnutls_rnd(GNUTLS_RND_NONCE, &id1, sizeof(id1))) < 0) {
-		mslog(s, NULL, LOG_ERR,
-		      "error in the random generator: %s", gnutls_strerror(e));
+	e = gnutls_rnd(GNUTLS_RND_NONCE, &id1, sizeof(id1));
+	if (e < 0) {
+		mslog(s, NULL, LOG_ERR, "error in the random generator: %s",
+		      gnutls_strerror(e));
 		return 0;
 	}
 
@@ -197,47 +195,51 @@ int icmp_ping4(main_server_st * s, struct sockaddr_in *addr1)
 		return 0;
 	}
 
-	pkt = (struct icmp *) packet1;
+	pkt = (struct icmp *)packet1;
 	memset(pkt, 0, sizeof(packet1));
 	pkt->icmp_type = ICMP_ECHO;
 	pkt->icmp_id = id1;
-	pkt->icmp_cksum =
-	    in_cksum((unsigned short *) pkt, sizeof(packet1));
+	pkt->icmp_cksum = in_cksum((unsigned short *)pkt, sizeof(packet1));
 
 	while (sendto(pingsock, packet1, DEFDATALEN + ICMP_MINLEN, 0,
-		      (struct sockaddr *) addr1,
-		      sizeof(*addr1) == -1) && retry(errno));
+		      (struct sockaddr *)addr1, sizeof(*addr1) == -1) &&
+	       retry(errno))
+		;
 	/* listen for replies */
 
 	now = time(NULL);
-	while (time(NULL) - now < PING_TIMEOUT
-	       && (unreachable + gotreply) < 2) {
+	while (time(NULL) - now < PING_TIMEOUT &&
+	       (unreachable + gotreply) < 2) {
 		struct sockaddr_in from;
 		socklen_t fromlen = sizeof(from);
 
 		c = recvfrom_timeout(pingsock, packet1, sizeof(packet1), 0,
-				     (struct sockaddr *) &from, &fromlen);
+				     (struct sockaddr *)&from, &fromlen);
 
 		if (c < 0) {
 			continue;
-		} else if (c >= 76 && fromlen == sizeof(struct sockaddr_in)) {	/* icmp6_hdr */
-			if (memcmp
-			    (SA_IN_P(&from), SA_IN_P(addr1),
-			     SA_IN_SIZE(sizeof(*addr1))) == 0) {
-
+		} else if (c >= 76 &&
+			   fromlen ==
+				   sizeof(struct sockaddr_in)) { /* icmp6_hdr */
+			if (memcmp(SA_IN_P(&from), SA_IN_P(addr1),
+				   SA_IN_SIZE(sizeof(*addr1))) == 0) {
 #ifdef HAVE_STRUCT_IPHDR_IHL
-				struct iphdr *iphdr =
-				    (struct iphdr *) packet1;
-				pkt = (struct icmp *) (packet1 + (iphdr->ihl << 2));	/* skip ip hdr */
+				struct iphdr *iphdr = (struct iphdr *)packet1;
+				pkt = (struct icmp *)(packet1 +
+						      (iphdr->ihl
+						       << 2)); /* skip ip hdr */
 #else
-				pkt = (struct icmp *) (packet1 + ((packet1[0] & 0x0f) << 2));	/* skip ip hdr */
+				pkt = (struct icmp *)(packet1 +
+						      ((packet1[0] & 0x0f)
+						       << 2)); /* skip ip hdr */
 #endif
 				if (pkt->icmp_id == id1) {
 					if (pkt->icmp_type == ICMP_ECHOREPLY)
 						gotreply++;
-					else if (pkt->icmp_type == ICMP_DEST_UNREACH)
+					else if (pkt->icmp_type ==
+						 ICMP_DEST_UNREACH)
 						unreachable++;
-                                }
+				}
 			}
 		}
 	}
@@ -245,24 +247,19 @@ int icmp_ping4(main_server_st * s, struct sockaddr_in *addr1)
 	close(pingsock);
 
 	if (gotreply > 0) {
-		mslog(s, NULL, LOG_INFO,
-		      "pinged %s and is in use",
-		      human_addr((void *) addr1,
-				 sizeof(struct sockaddr_in), buf1,
-				 sizeof(buf1)));
+		mslog(s, NULL, LOG_INFO, "pinged %s and is in use",
+		      human_addr((void *)addr1, sizeof(struct sockaddr_in),
+				 buf1, sizeof(buf1)));
 		return gotreply;
 	} else {
-		mslog(s, NULL, LOG_INFO,
-		      "pinged %s and is not in use",
-		      human_addr((void *) addr1,
-				 sizeof(struct sockaddr_in), buf1,
-				 sizeof(buf1)));
+		mslog(s, NULL, LOG_INFO, "pinged %s and is not in use",
+		      human_addr((void *)addr1, sizeof(struct sockaddr_in),
+				 buf1, sizeof(buf1)));
 		return 0;
 	}
 }
 
-int icmp_ping6(main_server_st * s,
-	       struct sockaddr_in6 *addr1)
+int icmp_ping6(main_server_st *s, struct sockaddr_in6 *addr1)
 {
 	struct icmp6_hdr *pkt;
 	char buf1[64];
@@ -272,15 +269,16 @@ int icmp_ping6(main_server_st * s,
 #endif
 	char packet1[DEFDATALEN + MAXIPLEN + MAXICMPLEN];
 	uint16_t id1;
-	unsigned gotreply = 0, unreachable = 0;
+	unsigned int gotreply = 0, unreachable = 0;
 	time_t now;
 
 	if (GETCONFIG(s)->ping_leases == 0)
 		return 0;
 
-	if ((e=gnutls_rnd(GNUTLS_RND_NONCE, &id1, sizeof(id1))) < 0) {
-		mslog(s, NULL, LOG_ERR,
-		      "error in the random generator: %s", gnutls_strerror(e));
+	e = gnutls_rnd(GNUTLS_RND_NONCE, &id1, sizeof(id1));
+	if (e < 0) {
+		mslog(s, NULL, LOG_ERR, "error in the random generator: %s",
+		      gnutls_strerror(e));
 		return 0;
 	}
 
@@ -292,43 +290,42 @@ int icmp_ping6(main_server_st * s,
 		return 0;
 	}
 
-	pkt = (struct icmp6_hdr *) packet1;
+	pkt = (struct icmp6_hdr *)packet1;
 	memset(pkt, 0, sizeof(packet1));
 	pkt->icmp6_type = ICMP6_ECHO_REQUEST;
 	pkt->icmp6_id = id1;
 
 #if defined(SOL_RAW) && defined(IPV6_CHECKSUM)
 	sockopt = offsetof(struct icmp6_hdr, icmp6_cksum);
-	setsockopt(pingsock, SOL_RAW, IPV6_CHECKSUM,
-		   &sockopt, sizeof(sockopt));
+	setsockopt(pingsock, SOL_RAW, IPV6_CHECKSUM, &sockopt, sizeof(sockopt));
 #endif
-	while (sendto(pingsock, packet1,
-		      DEFDATALEN + sizeof(struct icmp6_hdr), 0,
-		      (struct sockaddr *) addr1,
-		      sizeof(*addr1) == -1) && retry(errno));
+	while (sendto(pingsock, packet1, DEFDATALEN + sizeof(struct icmp6_hdr),
+		      0, (struct sockaddr *)addr1, sizeof(*addr1) == -1) &&
+	       retry(errno))
+		;
 
 	/* listen for replies */
 	now = time(NULL);
-	while (time(NULL) - now < PING_TIMEOUT
-	       && (unreachable + gotreply) < 2) {
+	while (time(NULL) - now < PING_TIMEOUT &&
+	       (unreachable + gotreply) < 2) {
 		struct sockaddr_in6 from;
 		socklen_t fromlen = sizeof(from);
-		c = recvfrom_timeout(pingsock, packet1,
-				     sizeof(packet1), 0,
-				     (struct sockaddr *)
-				     &from, &fromlen);
+
+		c = recvfrom_timeout(pingsock, packet1, sizeof(packet1), 0,
+				     (struct sockaddr *)&from, &fromlen);
 		if (c < 0) {
 			continue;
-		} else if (c >= 8 && fromlen == sizeof(struct sockaddr_in6)) {	/* icmp6_hdr */
-			if (memcmp
-			    (SA_IN6_P(&from), SA_IN6_P(addr1),
-			     SA_IN_SIZE(sizeof(*addr1))) == 0) {
-
-				pkt = (struct icmp6_hdr *) packet1;
+		} else if (c >= 8 &&
+			   fromlen ==
+				   sizeof(struct sockaddr_in6)) { /* icmp6_hdr */
+			if (memcmp(SA_IN6_P(&from), SA_IN6_P(addr1),
+				   SA_IN_SIZE(sizeof(*addr1))) == 0) {
+				pkt = (struct icmp6_hdr *)packet1;
 				if (pkt->icmp6_id == id1) {
 					if (pkt->icmp6_type == ICMP6_ECHO_REPLY)
 						gotreply++;
-					else if (pkt->icmp6_type == ICMP6_DST_UNREACH)
+					else if (pkt->icmp6_type ==
+						 ICMP6_DST_UNREACH)
 						unreachable++;
 				}
 			}
@@ -338,18 +335,14 @@ int icmp_ping6(main_server_st * s,
 	close(pingsock);
 
 	if (gotreply > 0) {
-		mslog(s, NULL, LOG_INFO,
-		      "pinged %s and is in use",
-		      human_addr((void *) addr1,
-				 sizeof(struct sockaddr_in6), buf1,
-				 sizeof(buf1)));
+		mslog(s, NULL, LOG_INFO, "pinged %s and is in use",
+		      human_addr((void *)addr1, sizeof(struct sockaddr_in6),
+				 buf1, sizeof(buf1)));
 		return gotreply;
 	} else {
-		mslog(s, NULL, LOG_INFO,
-		      "pinged %s and is not in use",
-		      human_addr((void *) addr1,
-				 sizeof(struct sockaddr_in6), buf1,
-				 sizeof(buf1)));
+		mslog(s, NULL, LOG_INFO, "pinged %s and is not in use",
+		      human_addr((void *)addr1, sizeof(struct sockaddr_in6),
+				 buf1, sizeof(buf1)));
 		return 0;
 	}
 }

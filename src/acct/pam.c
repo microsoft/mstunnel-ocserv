@@ -38,21 +38,22 @@
 #include "auth/pam.h"
 
 static int ocserv_conv(int msg_size, const struct pam_message **msg,
-		struct pam_response **resp, void *uptr)
+		       struct pam_response **resp, void *uptr)
 {
 	*resp = NULL;
 	return PAM_SUCCESS;
 }
 
-static int pam_acct_open_session(void *vctx, unsigned auth_method, const struct common_acct_info_st *ai, const void *sid, unsigned sid_size)
+static int pam_acct_open_session(void *vctx, unsigned int auth_method,
+				 const struct common_acct_info_st *ai,
+				 const void *sid, unsigned int sid_size)
 {
-int pret;
-pam_handle_t *ph;
-struct pam_conv dc;
+	int pret;
+	pam_handle_t *ph;
+	struct pam_conv dc;
 
 	if (ai->username[0] == 0) {
-		oc_syslog(LOG_NOTICE,
-		       "PAM-acct: no username present");
+		oc_syslog(LOG_NOTICE, "PAM-acct: no username present");
 		return ERR_AUTH_FAIL;
 	}
 
@@ -60,13 +61,15 @@ struct pam_conv dc;
 	dc.appdata_ptr = NULL;
 	pret = pam_start(PACKAGE, ai->username, &dc, &ph);
 	if (pret != PAM_SUCCESS) {
-		oc_syslog(LOG_NOTICE, "PAM-acct init: %s", pam_strerror(ph, pret));
+		oc_syslog(LOG_NOTICE, "PAM-acct init: %s",
+			  pam_strerror(ph, pret));
 		goto fail1;
 	}
 
 	pret = pam_acct_mgmt(ph, PAM_DISALLOW_NULL_AUTHTOK);
 	if (pret != PAM_SUCCESS) {
-		oc_syslog(LOG_INFO, "PAM-acct account error: %s", pam_strerror(ph, pret));
+		oc_syslog(LOG_INFO, "PAM-acct account error: %s",
+			  pam_strerror(ph, pret));
 		goto fail2;
 	}
 
@@ -77,18 +80,19 @@ fail2:
 	pam_end(ph, pret);
 fail1:
 	return -1;
-
 }
 
-static void pam_acct_close_session(void *vctx, unsigned auth_method, const struct common_acct_info_st *ai, stats_st *stats, unsigned status)
+static void pam_acct_close_session(void *vctx, unsigned int auth_method,
+				   const struct common_acct_info_st *ai,
+				   stats_st *stats, unsigned int status)
 {
 }
 
 const struct acct_mod_st pam_acct_funcs = {
-  .type = ACCT_TYPE_PAM,
-  .auth_types = ALL_AUTH_TYPES,
-  .open_session = pam_acct_open_session,
-  .close_session = pam_acct_close_session,
+	.type = ACCT_TYPE_PAM,
+	.auth_types = ALL_AUTH_TYPES,
+	.open_session = pam_acct_open_session,
+	.close_session = pam_acct_close_session,
 };
 
 #endif

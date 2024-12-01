@@ -30,23 +30,23 @@
 
 #ifdef HAVE_GEOIP
 
-# include <GeoIP.h>
-# include <GeoIPCity.h>
+#include <GeoIP.h>
+#include <GeoIPCity.h>
 
 extern void _GeoIP_setup_dbfilename(void);
-# define p_GeoIP_setup_dbfilename _GeoIP_setup_dbfilename
-# define pGeoIP_open_type GeoIP_open_type
-# define pGeoIP_country_name_by_id GeoIP_country_name_by_id
-# define pGeoIP_delete GeoIP_delete
-# define pGeoIP_record_by_ipnum GeoIP_record_by_ipnum
-# define pGeoIP_id_by_ipnum GeoIP_id_by_ipnum
-# define pGeoIP_id_by_ipnum_v6 GeoIP_id_by_ipnum_v6
-# define pGeoIP_record_by_ipnum_v6 GeoIP_record_by_ipnum_v6
-# define pGeoIP_code_by_id GeoIP_code_by_id
+#define p_GeoIP_setup_dbfilename _GeoIP_setup_dbfilename
+#define pGeoIP_open_type GeoIP_open_type
+#define pGeoIP_country_name_by_id GeoIP_country_name_by_id
+#define pGeoIP_delete GeoIP_delete
+#define pGeoIP_record_by_ipnum GeoIP_record_by_ipnum
+#define pGeoIP_id_by_ipnum GeoIP_id_by_ipnum
+#define pGeoIP_id_by_ipnum_v6 GeoIP_id_by_ipnum_v6
+#define pGeoIP_record_by_ipnum_v6 GeoIP_record_by_ipnum_v6
+#define pGeoIP_code_by_id GeoIP_code_by_id
 
 int geo_setup(void)
 {
-	static unsigned init = 0;
+	static unsigned int init;
 
 	if (init == 0) {
 		p_GeoIP_setup_dbfilename();
@@ -56,7 +56,8 @@ int geo_setup(void)
 	return 0;
 }
 
-void geo_ipv4_lookup(struct in_addr ip, char **country, char **city, char **coord)
+void geo_ipv4_lookup(struct in_addr ip, char **country, char **city,
+		     char **coord)
 {
 	GeoIP *gi;
 	GeoIPRecord *gir;
@@ -68,7 +69,8 @@ void geo_ipv4_lookup(struct in_addr ip, char **country, char **city, char **coor
 
 	ip.s_addr = ntohl(ip.s_addr);
 
-	gi = pGeoIP_open_type(GEOIP_COUNTRY_EDITION, GEOIP_STANDARD | GEOIP_SILENCE);
+	gi = pGeoIP_open_type(GEOIP_COUNTRY_EDITION,
+			      GEOIP_STANDARD | GEOIP_SILENCE);
 	if (gi != NULL) {
 		gi->charset = GEOIP_CHARSET_UTF8;
 
@@ -83,7 +85,8 @@ void geo_ipv4_lookup(struct in_addr ip, char **country, char **city, char **coor
 		pGeoIP_delete(gi);
 	}
 
-	gi = pGeoIP_open_type(GEOIP_CITY_EDITION_REV1, GEOIP_STANDARD | GEOIP_SILENCE);
+	gi = pGeoIP_open_type(GEOIP_CITY_EDITION_REV1,
+			      GEOIP_STANDARD | GEOIP_SILENCE);
 	if (gi != NULL) {
 		gi->charset = GEOIP_CHARSET_UTF8;
 
@@ -93,12 +96,14 @@ void geo_ipv4_lookup(struct in_addr ip, char **country, char **city, char **coor
 			*city = strdup(gir->city);
 
 		if (gir && gir->longitude != 0 && gir->longitude != 0)
-			if (asprintf(coord, "%f,%f", gir->latitude, gir->longitude) < 0)
+			if (asprintf(coord, "%f,%f", gir->latitude,
+				     gir->longitude) < 0)
 				*coord = NULL;
 
 		pGeoIP_delete(gi);
 	} else {
-		gi = pGeoIP_open_type(GEOIP_CITY_EDITION_REV0, GEOIP_STANDARD | GEOIP_SILENCE);
+		gi = pGeoIP_open_type(GEOIP_CITY_EDITION_REV0,
+				      GEOIP_STANDARD | GEOIP_SILENCE);
 		if (gi != NULL) {
 			gi->charset = GEOIP_CHARSET_UTF8;
 
@@ -108,7 +113,8 @@ void geo_ipv4_lookup(struct in_addr ip, char **country, char **city, char **coor
 				*city = strdup(gir->city);
 
 			if (gir && gir->longitude != 0 && gir->longitude != 0)
-				if (asprintf(coord, "%f,%f", gir->latitude, gir->longitude) < 0)
+				if (asprintf(coord, "%f,%f", gir->latitude,
+					     gir->longitude) < 0)
 					*coord = NULL;
 
 			pGeoIP_delete(gi);
@@ -116,7 +122,8 @@ void geo_ipv4_lookup(struct in_addr ip, char **country, char **city, char **coor
 	}
 }
 
-void geo_ipv6_lookup(struct in6_addr *ip, char **country, char **city, char **coord)
+void geo_ipv6_lookup(struct in6_addr *ip, char **country, char **city,
+		     char **coord)
 {
 	GeoIP *gi;
 	GeoIPRecord *gir;
@@ -126,7 +133,8 @@ void geo_ipv6_lookup(struct in6_addr *ip, char **country, char **city, char **co
 	if (geo_setup() != 0)
 		return;
 
-	gi = pGeoIP_open_type(GEOIP_COUNTRY_EDITION_V6, GEOIP_STANDARD | GEOIP_SILENCE);
+	gi = pGeoIP_open_type(GEOIP_COUNTRY_EDITION_V6,
+			      GEOIP_STANDARD | GEOIP_SILENCE);
 	if (gi != NULL) {
 		gi->charset = GEOIP_CHARSET_UTF8;
 
@@ -141,7 +149,8 @@ void geo_ipv6_lookup(struct in6_addr *ip, char **country, char **city, char **co
 		pGeoIP_delete(gi);
 	}
 
-	gi = pGeoIP_open_type(GEOIP_CITY_EDITION_REV1_V6, GEOIP_STANDARD | GEOIP_SILENCE);
+	gi = pGeoIP_open_type(GEOIP_CITY_EDITION_REV1_V6,
+			      GEOIP_STANDARD | GEOIP_SILENCE);
 	if (gi != NULL) {
 		gi->charset = GEOIP_CHARSET_UTF8;
 
@@ -151,12 +160,14 @@ void geo_ipv6_lookup(struct in6_addr *ip, char **country, char **city, char **co
 			*city = strdup(gir->city);
 
 		if (gir && gir->longitude != 0 && gir->longitude != 0)
-			if (asprintf(coord, "%f,%f", gir->latitude, gir->longitude) < 0)
+			if (asprintf(coord, "%f,%f", gir->latitude,
+				     gir->longitude) < 0)
 				*coord = NULL;
 
 		pGeoIP_delete(gi);
 	} else {
-		gi = pGeoIP_open_type(GEOIP_CITY_EDITION_REV0_V6, GEOIP_STANDARD | GEOIP_SILENCE);
+		gi = pGeoIP_open_type(GEOIP_CITY_EDITION_REV0_V6,
+				      GEOIP_STANDARD | GEOIP_SILENCE);
 		if (gi != NULL) {
 			gi->charset = GEOIP_CHARSET_UTF8;
 
@@ -166,7 +177,8 @@ void geo_ipv6_lookup(struct in6_addr *ip, char **country, char **city, char **co
 				*city = strdup(gir->city);
 
 			if (gir && gir->longitude != 0 && gir->longitude != 0)
-				if (asprintf(coord, "%f,%f", gir->latitude, gir->longitude) < 0)
+				if (asprintf(coord, "%f,%f", gir->latitude,
+					     gir->longitude) < 0)
 					*coord = NULL;
 
 			pGeoIP_delete(gi);
@@ -174,7 +186,7 @@ void geo_ipv6_lookup(struct in6_addr *ip, char **country, char **city, char **co
 	}
 }
 
-char *geo_lookup(const char *ip, char *buf, unsigned buf_size)
+char *geo_lookup(const char *ip, char *buf, unsigned int buf_size)
 {
 	char *country = NULL;
 	char *city = NULL;
@@ -209,7 +221,7 @@ char *geo_lookup(const char *ip, char *buf, unsigned buf_size)
 
 	return buf;
 
- fail:
+fail:
 	free(country);
 	free(city);
 	free(coord);
@@ -218,7 +230,7 @@ char *geo_lookup(const char *ip, char *buf, unsigned buf_size)
 }
 
 #else
-char * geo_lookup(const char *ip, char *buf, unsigned buf_size)
+char *geo_lookup(const char *ip, char *buf, unsigned int buf_size)
 {
 	return "unknown";
 }

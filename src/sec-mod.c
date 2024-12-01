@@ -51,41 +51,41 @@
 
 #define MAINTAINANCE_TIME 310
 
-static int need_maintainance = 0;
-static int need_reload = 0;
-static int need_exit = 0;
+static int need_maintainance;
+static int need_reload;
+static int need_exit;
 
 static void reload_server(sec_mod_st *sec);
 
-static int load_keys(sec_mod_st *sec, unsigned force);
+static int load_keys(sec_mod_st *sec, unsigned int force);
 
-static
-int pin_callback(void *user, int attempt, const char *token_url,
-		 const char *token_label, unsigned int flags, char *pin,
-		 size_t pin_max)
+static int pin_callback(void *user, int attempt, const char *token_url,
+			const char *token_label, unsigned int flags, char *pin,
+			size_t pin_max)
 {
 	struct pin_st *ps = user;
 	int srk = 0;
 	const char *p;
-	unsigned len;
+	unsigned int len;
 
 	if (flags & GNUTLS_PIN_FINAL_TRY) {
-		oc_syslog(LOG_ERR,
-		       "PIN callback: final try before locking; not attempting to unlock");
+		oc_syslog(
+			LOG_ERR,
+			"PIN callback: final try before locking; not attempting to unlock");
 		return -1;
 	}
 
 	if (flags & GNUTLS_PIN_WRONG) {
 		oc_syslog(LOG_ERR,
-		       "PIN callback: wrong PIN was entered for '%s' (%s)",
-		       token_label, token_url);
+			  "PIN callback: wrong PIN was entered for '%s' (%s)",
+			  token_label, token_url);
 		return -1;
 	}
 
 	if (ps->pin[0] == 0) {
 		oc_syslog(LOG_ERR,
-		       "PIN required for '%s' but pin-file was not set",
-		       token_label);
+			  "PIN required for '%s' but pin-file was not set",
+			  token_label);
 		return -1;
 	}
 
@@ -98,8 +98,8 @@ int pin_callback(void *user, int attempt, const char *token_url,
 
 	if (srk != 0 && ps->srk_pin[0] == 0) {
 		oc_syslog(LOG_ERR,
-		       "PIN required for '%s' but srk-pin-file was not set",
-		       token_label);
+			  "PIN required for '%s' but srk-pin-file was not set",
+			  token_label);
 		return -1;
 	}
 
@@ -115,8 +115,7 @@ int pin_callback(void *user, int attempt, const char *token_url,
 	return 0;
 }
 
-static
-int load_pins(struct perm_cfg_st *config, struct pin_st *s)
+static int load_pins(struct perm_cfg_st *config, struct pin_st *s)
 {
 	int fd, ret;
 
@@ -127,7 +126,7 @@ int load_pins(struct perm_cfg_st *config, struct pin_st *s)
 		fd = open(config->srk_pin_file, O_RDONLY);
 		if (fd < 0) {
 			oc_syslog(LOG_ERR, "could not open SRK PIN file '%s'",
-			       config->srk_pin_file);
+				  config->srk_pin_file);
 			return -1;
 		}
 
@@ -135,7 +134,7 @@ int load_pins(struct perm_cfg_st *config, struct pin_st *s)
 		close(fd);
 		if (ret <= 1) {
 			oc_syslog(LOG_ERR, "could not read from PIN file '%s'",
-			       config->srk_pin_file);
+				  config->srk_pin_file);
 			return -1;
 		}
 
@@ -148,7 +147,7 @@ int load_pins(struct perm_cfg_st *config, struct pin_st *s)
 		fd = open(config->pin_file, O_RDONLY);
 		if (fd < 0) {
 			oc_syslog(LOG_ERR, "could not open PIN file '%s'",
-			       config->pin_file);
+				  config->pin_file);
 			return -1;
 		}
 
@@ -156,7 +155,7 @@ int load_pins(struct perm_cfg_st *config, struct pin_st *s)
 		close(fd);
 		if (ret <= 1) {
 			oc_syslog(LOG_ERR, "could not read from PIN file '%s'",
-			       config->pin_file);
+				  config->pin_file);
 			return -1;
 		}
 
@@ -176,8 +175,8 @@ int load_pins(struct perm_cfg_st *config, struct pin_st *s)
 	return 0;
 }
 
-static int handle_op(void *pool, int cfd, sec_mod_st * sec, uint8_t type, uint8_t * rep,
-		     size_t rep_size)
+static int handle_op(void *pool, int cfd, sec_mod_st *sec, uint8_t type,
+		     uint8_t *rep, size_t rep_size)
 {
 	SecOpMsg msg = SEC_OP_MSG__INIT;
 	int ret;
@@ -186,8 +185,8 @@ static int handle_op(void *pool, int cfd, sec_mod_st * sec, uint8_t type, uint8_
 	msg.data.len = rep_size;
 
 	ret = send_msg(pool, cfd, type, &msg,
-		       (pack_size_func) sec_op_msg__get_packed_size,
-		       (pack_func) sec_op_msg__pack);
+		       (pack_size_func)sec_op_msg__get_packed_size,
+		       (pack_func)sec_op_msg__pack);
 	if (ret < 0) {
 		seclog(sec, LOG_WARNING, "sec-mod error in sending reply");
 	}
@@ -195,17 +194,17 @@ static int handle_op(void *pool, int cfd, sec_mod_st * sec, uint8_t type, uint8_
 	return 0;
 }
 
-static
-int process_worker_packet(void *pool, int cfd, pid_t pid, sec_mod_st *sec, cmd_request_t cmd,
-		   uint8_t * buffer, size_t buffer_size)
+static int process_worker_packet(void *pool, int cfd, pid_t pid,
+				 sec_mod_st *sec, cmd_request_t cmd,
+				 uint8_t *buffer, size_t buffer_size)
 {
-	unsigned i;
+	unsigned int i;
 	gnutls_datum_t data, out;
 	int ret;
 	SecOpMsg *op;
 	vhost_cfg_st *vhost;
 #if GNUTLS_VERSION_NUMBER >= 0x030600
-	unsigned bits;
+	unsigned int bits;
 	SecGetPkMsg *pkm;
 #endif
 	PROTOBUF_ALLOCATOR(pa, pool);
@@ -231,7 +230,8 @@ int process_worker_packet(void *pool, int cfd, pid_t pid, sec_mod_st *sec, cmd_r
 		i = pkm->key_idx;
 		if (i >= vhost->key_size) {
 			seclog(sec, LOG_INFO,
-			       "%sreceived out-of-bounds key index (%d); have %d keys", PREFIX_VHOST(vhost), i, vhost->key_size);
+			       "%sreceived out-of-bounds key index (%d); have %d keys",
+			       PREFIX_VHOST(vhost), i, vhost->key_size);
 			return -1;
 		}
 
@@ -239,8 +239,8 @@ int process_worker_packet(void *pool, int cfd, pid_t pid, sec_mod_st *sec, cmd_r
 		pkm->bits = bits;
 
 		ret = send_msg(pool, cfd, CMD_SEC_GET_PK, pkm,
-			       (pack_size_func) sec_get_pk_msg__get_packed_size,
-			       (pack_func) sec_get_pk_msg__pack);
+			       (pack_size_func)sec_get_pk_msg__get_packed_size,
+			       (pack_func)sec_get_pk_msg__pack);
 
 		sec_get_pk_msg__free_unpacked(pkm, &pa);
 
@@ -266,7 +266,8 @@ int process_worker_packet(void *pool, int cfd, pid_t pid, sec_mod_st *sec, cmd_r
 		i = op->key_idx;
 		if (op->has_key_idx == 0 || i >= vhost->key_size) {
 			seclog(sec, LOG_INFO,
-			       "%sreceived out-of-bounds key index (%d); have %d keys", PREFIX_VHOST(vhost), i, vhost->key_size);
+			       "%sreceived out-of-bounds key index (%d); have %d keys",
+			       PREFIX_VHOST(vhost), i, vhost->key_size);
 			return -1;
 		}
 
@@ -274,9 +275,11 @@ int process_worker_packet(void *pool, int cfd, pid_t pid, sec_mod_st *sec, cmd_r
 		data.size = op->data.len;
 
 		if (cmd == CMD_SEC_SIGN_DATA) {
-			ret = gnutls_privkey_sign_data2(vhost->key[i], op->sig, 0, &data, &out);
+			ret = gnutls_privkey_sign_data2(vhost->key[i], op->sig,
+							0, &data, &out);
 		} else {
-			ret = gnutls_privkey_sign_hash2(vhost->key[i], op->sig, 0, &data, &out);
+			ret = gnutls_privkey_sign_hash2(vhost->key[i], op->sig,
+							0, &data, &out);
 		}
 		sec_op_msg__free_unpacked(op, &pa);
 
@@ -305,7 +308,8 @@ int process_worker_packet(void *pool, int cfd, pid_t pid, sec_mod_st *sec, cmd_r
 		i = op->key_idx;
 		if (op->has_key_idx == 0 || i >= vhost->key_size) {
 			seclog(sec, LOG_INFO,
-			       "%sreceived out-of-bounds key index (%d); have %d keys", PREFIX_VHOST(vhost), i, vhost->key_size);
+			       "%sreceived out-of-bounds key index (%d); have %d keys",
+			       PREFIX_VHOST(vhost), i, vhost->key_size);
 			return -1;
 		}
 
@@ -313,14 +317,12 @@ int process_worker_packet(void *pool, int cfd, pid_t pid, sec_mod_st *sec, cmd_r
 		data.size = op->data.len;
 
 		if (cmd == CMD_SEC_DECRYPT) {
-			ret =
-			    gnutls_privkey_decrypt_data(vhost->key[i], 0, &data,
-							&out);
+			ret = gnutls_privkey_decrypt_data(vhost->key[i], 0,
+							  &data, &out);
 		} else {
-			ret =
-			    gnutls_privkey_sign_hash(vhost->key[i], 0,
-						     GNUTLS_PRIVKEY_SIGN_FLAG_TLS1_RSA,
-						     &data, &out);
+			ret = gnutls_privkey_sign_hash(
+				vhost->key[i], 0,
+				GNUTLS_PRIVKEY_SIGN_FLAG_TLS1_RSA, &data, &out);
 		}
 		sec_op_msg__free_unpacked(op, &pa);
 
@@ -335,144 +337,134 @@ int process_worker_packet(void *pool, int cfd, pid_t pid, sec_mod_st *sec, cmd_r
 
 		return ret;
 
-	case CMD_SEC_CLI_STATS:{
-			CliStatsMsg *tmsg;
+	case CMD_SEC_CLI_STATS: {
+		CliStatsMsg *tmsg;
 
-			tmsg = cli_stats_msg__unpack(&pa, data.size, data.data);
-			if (tmsg == NULL) {
-				seclog(sec, LOG_ERR, "error unpacking data");
-				return -1;
-			}
-
-			ret = handle_sec_auth_stats_cmd(sec, tmsg, pid);
-			cli_stats_msg__free_unpacked(tmsg, &pa);
-			return ret;
-		}
-		break;
-
-	case CMD_SEC_AUTH_INIT:{
-			SecAuthInitMsg *auth_init;
-
-			auth_init =
-			    sec_auth_init_msg__unpack(&pa, data.size,
-						      data.data);
-			if (auth_init == NULL) {
-				seclog(sec, LOG_INFO, "error unpacking auth init\n");
-				return -1;
-			}
-
-			ret = handle_sec_auth_init(cfd, sec, auth_init, pid);
-			sec_auth_init_msg__free_unpacked(auth_init, &pa);
-			return ret;
-		}
-	case CMD_SEC_AUTH_CONT:{
-			SecAuthContMsg *auth_cont;
-
-			auth_cont =
-			    sec_auth_cont_msg__unpack(&pa, data.size,
-						      data.data);
-			if (auth_cont == NULL) {
-				seclog(sec, LOG_INFO, "error unpacking auth cont\n");
-				return -1;
-			}
-
-			ret = handle_sec_auth_cont(cfd, sec, auth_cont);
-			sec_auth_cont_msg__free_unpacked(auth_cont, &pa);
-			return ret;
-		}
-	case RESUME_STORE_REQ:{
-			SessionResumeStoreReqMsg *smsg;
-
-			smsg =
-			    session_resume_store_req_msg__unpack(&pa, buffer_size,
-								 buffer);
-			if (smsg == NULL) {
-				seclog(sec, LOG_ERR, "error unpacking data");
-				return ERR_BAD_COMMAND;
-			}
-
-			ret = handle_resume_store_req(sec, smsg);
-
-			/* zeroize the data */
-			safe_memset(buffer, 0, buffer_size);
-			safe_memset(smsg->session_data.data, 0, smsg->session_data.len);
-
-			session_resume_store_req_msg__free_unpacked(smsg, &pa);
-
-			if (ret < 0) {
-				seclog(sec, LOG_DEBUG,
-				      "could not store resumption data");
-			}
+		tmsg = cli_stats_msg__unpack(&pa, data.size, data.data);
+		if (tmsg == NULL) {
+			seclog(sec, LOG_ERR, "error unpacking data");
+			return -1;
 		}
 
-		break;
+		ret = handle_sec_auth_stats_cmd(sec, tmsg, pid);
+		cli_stats_msg__free_unpacked(tmsg, &pa);
+		return ret;
+	} break;
 
-	case RESUME_DELETE_REQ:{
-			SessionResumeFetchMsg *fmsg;
+	case CMD_SEC_AUTH_INIT: {
+		SecAuthInitMsg *auth_init;
 
-			fmsg =
-			    session_resume_fetch_msg__unpack(&pa, buffer_size,
-							     buffer);
-			if (fmsg == NULL) {
-				seclog(sec, LOG_ERR, "error unpacking data");
-				return ERR_BAD_COMMAND;
-			}
-
-			ret = handle_resume_delete_req(sec, fmsg);
-
-			session_resume_fetch_msg__free_unpacked(fmsg, &pa);
-
-			if (ret < 0) {
-				seclog(sec, LOG_DEBUG,
-				      "could not delete resumption data.");
-			}
+		auth_init =
+			sec_auth_init_msg__unpack(&pa, data.size, data.data);
+		if (auth_init == NULL) {
+			seclog(sec, LOG_INFO, "error unpacking auth init\n");
+			return -1;
 		}
 
-		break;
-	case RESUME_FETCH_REQ:{
-			SessionResumeReplyMsg msg =
-			    SESSION_RESUME_REPLY_MSG__INIT;
-			SessionResumeFetchMsg *fmsg;
+		ret = handle_sec_auth_init(cfd, sec, auth_init, pid);
+		sec_auth_init_msg__free_unpacked(auth_init, &pa);
+		return ret;
+	}
+	case CMD_SEC_AUTH_CONT: {
+		SecAuthContMsg *auth_cont;
 
-			fmsg =
-			    session_resume_fetch_msg__unpack(&pa, buffer_size,
-							     buffer);
-			if (fmsg == NULL) {
-				seclog(sec, LOG_ERR, "error unpacking data");
-				return ERR_BAD_COMMAND;
-			}
-
-			ret = handle_resume_fetch_req(sec, fmsg, &msg);
-
-			session_resume_fetch_msg__free_unpacked(fmsg, &pa);
-
-			if (ret < 0) {
-				msg.reply =
-				    SESSION_RESUME_REPLY_MSG__RESUME__REP__FAILED;
-				seclog(sec, LOG_DEBUG,
-				      "could not fetch resumption data.");
-			} else {
-				msg.reply =
-				    SESSION_RESUME_REPLY_MSG__RESUME__REP__OK;
-			}
-
-			ret =
-			    send_msg(pool, cfd, RESUME_FETCH_REP, &msg,
-					       (pack_size_func)
-					       session_resume_reply_msg__get_packed_size,
-					       (pack_func)
-					       session_resume_reply_msg__pack);
-
-			if (ret < 0) {
-				seclog(sec, LOG_ERR,
-				      "could not send reply cmd %d.",
-				      (unsigned)cmd);
-				return ERR_BAD_COMMAND;
-			}
-
+		auth_cont =
+			sec_auth_cont_msg__unpack(&pa, data.size, data.data);
+		if (auth_cont == NULL) {
+			seclog(sec, LOG_INFO, "error unpacking auth cont\n");
+			return -1;
 		}
 
-		break;
+		ret = handle_sec_auth_cont(cfd, sec, auth_cont);
+		sec_auth_cont_msg__free_unpacked(auth_cont, &pa);
+		return ret;
+	}
+	case RESUME_STORE_REQ: {
+		SessionResumeStoreReqMsg *smsg;
+
+		smsg = session_resume_store_req_msg__unpack(&pa, buffer_size,
+							    buffer);
+		if (smsg == NULL) {
+			seclog(sec, LOG_ERR, "error unpacking data");
+			return ERR_BAD_COMMAND;
+		}
+
+		ret = handle_resume_store_req(sec, smsg);
+
+		/* zeroize the data */
+		safe_memset(buffer, 0, buffer_size);
+		safe_memset(smsg->session_data.data, 0, smsg->session_data.len);
+
+		session_resume_store_req_msg__free_unpacked(smsg, &pa);
+
+		if (ret < 0) {
+			seclog(sec, LOG_DEBUG,
+			       "could not store resumption data");
+		}
+	}
+
+	break;
+
+	case RESUME_DELETE_REQ: {
+		SessionResumeFetchMsg *fmsg;
+
+		fmsg = session_resume_fetch_msg__unpack(&pa, buffer_size,
+							buffer);
+		if (fmsg == NULL) {
+			seclog(sec, LOG_ERR, "error unpacking data");
+			return ERR_BAD_COMMAND;
+		}
+
+		ret = handle_resume_delete_req(sec, fmsg);
+
+		session_resume_fetch_msg__free_unpacked(fmsg, &pa);
+
+		if (ret < 0) {
+			seclog(sec, LOG_DEBUG,
+			       "could not delete resumption data.");
+		}
+	}
+
+	break;
+	case RESUME_FETCH_REQ: {
+		SessionResumeReplyMsg msg = SESSION_RESUME_REPLY_MSG__INIT;
+		SessionResumeFetchMsg *fmsg;
+
+		fmsg = session_resume_fetch_msg__unpack(&pa, buffer_size,
+							buffer);
+		if (fmsg == NULL) {
+			seclog(sec, LOG_ERR, "error unpacking data");
+			return ERR_BAD_COMMAND;
+		}
+
+		ret = handle_resume_fetch_req(sec, fmsg, &msg);
+
+		session_resume_fetch_msg__free_unpacked(fmsg, &pa);
+
+		if (ret < 0) {
+			msg.reply =
+				SESSION_RESUME_REPLY_MSG__RESUME__REP__FAILED;
+			seclog(sec, LOG_DEBUG,
+			       "could not fetch resumption data.");
+		} else {
+			msg.reply = SESSION_RESUME_REPLY_MSG__RESUME__REP__OK;
+		}
+
+		ret = send_msg(
+			pool, cfd, RESUME_FETCH_REP, &msg,
+			(pack_size_func)
+				session_resume_reply_msg__get_packed_size,
+			(pack_func)session_resume_reply_msg__pack);
+
+		if (ret < 0) {
+			seclog(sec, LOG_ERR, "could not send reply cmd %d.",
+			       (unsigned int)cmd);
+			return ERR_BAD_COMMAND;
+		}
+
+	}
+
+	break;
 
 	default:
 		seclog(sec, LOG_WARNING, "unknown type 0x%.2x", cmd);
@@ -482,12 +474,13 @@ int process_worker_packet(void *pool, int cfd, pid_t pid, sec_mod_st *sec, cmd_r
 	return 0;
 }
 
-static
-int process_packet_from_main(void *pool, int fd, sec_mod_st * sec, cmd_request_t cmd,
-		   uint8_t * buffer, size_t buffer_size)
+static int process_packet_from_main(void *pool, int fd, sec_mod_st *sec,
+				    cmd_request_t cmd, uint8_t *buffer,
+				    size_t buffer_size)
 {
 	gnutls_datum_t data;
 	int ret;
+
 	PROTOBUF_ALLOCATOR(pa, pool);
 
 	seclog(sec, LOG_DEBUG, "cmd [size=%d] %s\n", (int)buffer_size,
@@ -499,10 +492,11 @@ int process_packet_from_main(void *pool, int fd, sec_mod_st * sec, cmd_request_t
 	case CMD_SECM_RELOAD:
 		reload_server(sec);
 
-		ret = send_msg(pool, fd, CMD_SECM_RELOAD_REPLY, NULL,
-			       NULL, NULL);
+		ret = send_msg(pool, fd, CMD_SECM_RELOAD_REPLY, NULL, NULL,
+			       NULL);
 		if (ret < 0) {
-			seclog(sec, LOG_ERR, "could not send reload reply to main!\n");
+			seclog(sec, LOG_ERR,
+			       "could not send reload reply to main!\n");
 			return ERR_BAD_COMMAND;
 		}
 		break;
@@ -510,14 +504,13 @@ int process_packet_from_main(void *pool, int fd, sec_mod_st * sec, cmd_request_t
 		handle_secm_list_cookies_reply(pool, fd, sec);
 
 		return 0;
-	case CMD_SECM_BAN_IP_REPLY:{
+	case CMD_SECM_BAN_IP_REPLY: {
 		BanIpReplyMsg *msg = NULL;
 
-		msg =
-		    ban_ip_reply_msg__unpack(&pa, data.size,
-					     data.data);
+		msg = ban_ip_reply_msg__unpack(&pa, data.size, data.data);
 		if (msg == NULL) {
-			seclog(sec, LOG_INFO, "error unpacking auth ban ip reply\n");
+			seclog(sec, LOG_INFO,
+			       "error unpacking auth ban ip reply\n");
 			return ERR_BAD_COMMAND;
 		}
 
@@ -526,38 +519,35 @@ int process_packet_from_main(void *pool, int fd, sec_mod_st * sec, cmd_request_t
 
 		return 0;
 	}
-	case CMD_SECM_SESSION_OPEN:{
-			SecmSessionOpenMsg *msg;
+	case CMD_SECM_SESSION_OPEN: {
+		SecmSessionOpenMsg *msg;
 
-			msg =
-			    secm_session_open_msg__unpack(&pa, data.size,
-						      data.data);
-			if (msg == NULL) {
-				seclog(sec, LOG_INFO, "error unpacking session open\n");
-				return ERR_BAD_COMMAND;
-			}
-
-			ret = handle_secm_session_open_cmd(sec, fd, msg);
-			secm_session_open_msg__free_unpacked(msg, &pa);
-
-			return ret;
+		msg = secm_session_open_msg__unpack(&pa, data.size, data.data);
+		if (msg == NULL) {
+			seclog(sec, LOG_INFO, "error unpacking session open\n");
+			return ERR_BAD_COMMAND;
 		}
-	case CMD_SECM_SESSION_CLOSE:{
-			SecmSessionCloseMsg *msg;
 
-			msg =
-			    secm_session_close_msg__unpack(&pa, data.size,
-						      data.data);
-			if (msg == NULL) {
-				seclog(sec, LOG_INFO, "error unpacking session close\n");
-				return ERR_BAD_COMMAND;
-			}
+		ret = handle_secm_session_open_cmd(sec, fd, msg);
+		secm_session_open_msg__free_unpacked(msg, &pa);
 
-			ret = handle_secm_session_close_cmd(sec, fd, msg);
-			secm_session_close_msg__free_unpacked(msg, &pa);
+		return ret;
+	}
+	case CMD_SECM_SESSION_CLOSE: {
+		SecmSessionCloseMsg *msg;
 
-			return ret;
+		msg = secm_session_close_msg__unpack(&pa, data.size, data.data);
+		if (msg == NULL) {
+			seclog(sec, LOG_INFO,
+			       "error unpacking session close\n");
+			return ERR_BAD_COMMAND;
 		}
+
+		ret = handle_secm_session_close_cmd(sec, fd, msg);
+		secm_session_close_msg__free_unpacked(msg, &pa);
+
+		return ret;
+	}
 	default:
 		seclog(sec, LOG_WARNING, "unknown type 0x%.2x", cmd);
 		return ERR_BAD_COMMAND;
@@ -603,8 +593,8 @@ static void send_stats_to_main(sec_mod_st *sec)
 	msg.secmod_tlsdb_entries = sec->tls_db.entries;
 
 	ret = send_msg(sec, sec->cmd_fd, CMD_SECM_STATS, &msg,
-			(pack_size_func) secm_stats_msg__get_packed_size,
-			(pack_func) secm_stats_msg__pack);
+		       (pack_size_func)secm_stats_msg__get_packed_size,
+		       (pack_func)secm_stats_msg__pack);
 	if (ret < 0) {
 		seclog(sec, LOG_ERR, "error in sending statistics to main");
 		return;
@@ -619,7 +609,8 @@ static void reload_server(sec_mod_st *sec)
 	reload_cfg_file(sec, sec->vconfig, 1);
 	load_keys(sec, 0);
 
-	list_for_each(sec->vconfig, vhost, list) {
+	list_for_each(sec->vconfig, vhost, list)
+	{
 		sec_auth_init(vhost);
 	}
 	sup_config_init(sec);
@@ -632,9 +623,10 @@ static void check_other_work(sec_mod_st *sec)
 	vhost_cfg_st *vhost = NULL;
 
 	if (need_exit) {
-		unsigned i;
+		unsigned int i;
 
-		list_for_each(sec->vconfig, vhost, list) {
+		list_for_each(sec->vconfig, vhost, list)
+		{
 			for (i = 0; i < vhost->key_size; i++) {
 				gnutls_privkey_deinit(vhost->key[i]);
 				vhost->key[i] = NULL;
@@ -659,14 +651,14 @@ static void check_other_work(sec_mod_st *sec)
 		expire_tls_sessions(sec);
 		send_stats_to_main(sec);
 		seclog(sec, LOG_DEBUG, "active sessions %d",
-			sec_mod_client_db_elems(sec));
+		       sec_mod_client_db_elems(sec));
 		alarm(MAINTAINANCE_TIME);
 		need_maintainance = 0;
 	}
 }
 
-static
-int serve_request_main(sec_mod_st *sec, int fd, uint8_t *buffer, unsigned buffer_size)
+static int serve_request_main(sec_mod_st *sec, int fd, uint8_t *buffer,
+			      unsigned int buffer_size)
 {
 	int ret, e;
 	uint8_t cmd;
@@ -685,13 +677,15 @@ int serve_request_main(sec_mod_st *sec, int fd, uint8_t *buffer, unsigned buffer
 
 	seclog(sec, LOG_DEBUG, "received request %s", cmd_request_to_str(cmd));
 	if (cmd <= MIN_SECM_CMD || cmd >= MAX_SECM_CMD) {
-		seclog(sec, LOG_ERR, "received invalid message from main of %u bytes (cmd: %u)\n",
-		      (unsigned)length, (unsigned)cmd);
+		seclog(sec, LOG_ERR,
+		       "received invalid message from main of %u bytes (cmd: %u)\n",
+		       (unsigned int)length, (unsigned int)cmd);
 		return ERR_BAD_COMMAND;
 	}
 
 	if (length > buffer_size) {
-		seclog(sec, LOG_ERR, "received too big message (%d)", (int)length);
+		seclog(sec, LOG_ERR, "received too big message (%d)",
+		       (int)length);
 		ret = ERR_BAD_COMMAND;
 		goto leave;
 	}
@@ -700,23 +694,26 @@ int serve_request_main(sec_mod_st *sec, int fd, uint8_t *buffer, unsigned buffer
 	ret = force_read_timeout(fd, buffer, length, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		e = errno;
-		seclog(sec, LOG_ERR, "error receiving msg body of cmd %u with length %u: %s",
-		       cmd, (unsigned)length, strerror(e));
+		seclog(sec, LOG_ERR,
+		       "error receiving msg body of cmd %u with length %u: %s",
+		       cmd, (unsigned int)length, strerror(e));
 		ret = ERR_BAD_COMMAND;
 		goto leave;
 	}
 
 	ret = process_packet_from_main(pool, fd, sec, cmd, buffer, ret);
 	if (ret < 0) {
-		seclog(sec, LOG_ERR, "error processing data for '%s' command (%d)", cmd_request_to_str(cmd), ret);
+		seclog(sec, LOG_ERR,
+		       "error processing data for '%s' command (%d)",
+		       cmd_request_to_str(cmd), ret);
 	}
 
- leave:
+leave:
 	return ret;
 }
 
-static
-int serve_request_worker(sec_mod_st *sec, int cfd, pid_t pid, uint8_t *buffer, unsigned buffer_size)
+static int serve_request_worker(sec_mod_st *sec, int cfd, pid_t pid,
+				uint8_t *buffer, unsigned int buffer_size)
 {
 	int ret, e;
 	uint8_t cmd;
@@ -750,24 +747,33 @@ int serve_request_worker(sec_mod_st *sec, int cfd, pid_t pid, uint8_t *buffer, u
 
 	ret = process_worker_packet(pool, cfd, pid, sec, cmd, buffer, ret);
 	if (ret < 0) {
-		seclog(sec, LOG_DEBUG, "error processing '%s' command (%d)", cmd_request_to_str(cmd), ret);
+		seclog(sec, LOG_DEBUG, "error processing '%s' command (%d)",
+		       cmd_request_to_str(cmd), ret);
 	}
 
- leave:
+leave:
 	return ret;
 }
 
-#define CHECK_LOOP_ERR(x) { \
-	if (force != 0) { GNUTLS_FATAL_ERR(x); } \
-	else { if (ret < 0) { \
-		seclog(sec, LOG_ERR, "could not reload key %s", vhost->perm_config.key[i]); \
-		continue; } \
-	}}
+#define CHECK_LOOP_ERR(x)                                          \
+	{                                                          \
+		if (force != 0) {                                  \
+			GNUTLS_FATAL_ERR(x);                       \
+		} else {                                           \
+			if (ret < 0) {                             \
+				seclog(sec, LOG_ERR,               \
+				       "could not reload key %s",  \
+				       vhost->perm_config.key[i]); \
+				continue;                          \
+			}                                          \
+		}                                                  \
+	}
 
-static void read_private_key(sec_mod_st *sec, vhost_cfg_st *vhost, unsigned force)
+static void read_private_key(sec_mod_st *sec, vhost_cfg_st *vhost,
+			     unsigned int force)
 {
 	int ret;
-	unsigned i;
+	unsigned int i;
 
 	/* read private keys */
 	for (i = 0; i < vhost->key_size; i++) {
@@ -778,33 +784,33 @@ static void read_private_key(sec_mod_st *sec, vhost_cfg_st *vhost, unsigned forc
 
 		/* load the private key */
 		if (gnutls_url_is_supported(vhost->perm_config.key[i]) != 0) {
-			gnutls_privkey_set_pin_function(p,
-							pin_callback, &vhost->pins);
-			ret =
-			    gnutls_privkey_import_url(p,
-						      vhost->perm_config.key[i], 0);
+			gnutls_privkey_set_pin_function(p, pin_callback,
+							&vhost->pins);
+			ret = gnutls_privkey_import_url(
+				p, vhost->perm_config.key[i], 0);
 			CHECK_LOOP_ERR(ret);
 		} else {
 			gnutls_datum_t data;
-			ret = gnutls_load_file(vhost->perm_config.key[i], &data);
+
+			ret = gnutls_load_file(vhost->perm_config.key[i],
+					       &data);
 			if (ret < 0) {
 				seclog(sec, LOG_ERR, "error loading file '%s'",
 				       vhost->perm_config.key[i]);
 				CHECK_LOOP_ERR(ret);
 			}
 
-			ret =
-			    gnutls_privkey_import_x509_raw(p, &data,
-							   GNUTLS_X509_FMT_PEM,
-							   NULL, 0);
+			ret = gnutls_privkey_import_x509_raw(
+				p, &data, GNUTLS_X509_FMT_PEM, NULL, 0);
 			/* GnuTLS 3.7.3 introduces a backwards incompatible change and
 			 * GNUTLS_E_PKCS11_PIN_ERROR is returned when an encrypted
 			 * file is loaded https://gitlab.com/gnutls/gnutls/-/issues/1321 */
-			if ((ret == GNUTLS_E_DECRYPTION_FAILED || ret == GNUTLS_E_PKCS11_PIN_ERROR) && vhost->pins.pin[0]) {
-				ret =
-				    gnutls_privkey_import_x509_raw(p, &data,
-								   GNUTLS_X509_FMT_PEM,
-								   vhost->pins.pin, 0);
+			if ((ret == GNUTLS_E_DECRYPTION_FAILED ||
+			     ret == GNUTLS_E_PKCS11_PIN_ERROR) &&
+			    vhost->pins.pin[0]) {
+				ret = gnutls_privkey_import_x509_raw(
+					p, &data, GNUTLS_X509_FMT_PEM,
+					vhost->pins.pin, 0);
 			}
 			CHECK_LOOP_ERR(ret);
 			gnutls_free(data.data);
@@ -815,21 +821,25 @@ static void read_private_key(sec_mod_st *sec, vhost_cfg_st *vhost, unsigned forc
 		}
 		vhost->key[i] = p;
 	}
-	seclog(sec, LOG_DEBUG, "%sloaded %d keys\n", PREFIX_VHOST(vhost), vhost->key_size);
+	seclog(sec, LOG_DEBUG, "%sloaded %d keys\n", PREFIX_VHOST(vhost),
+	       vhost->key_size);
 }
 
-static int load_keys(sec_mod_st *sec, unsigned force)
+static int load_keys(sec_mod_st *sec, unsigned int force)
 {
-	unsigned i, reload_file;
+	unsigned int i, reload_file;
 	int ret;
 	vhost_cfg_st *vhost = NULL;
 
-	list_for_each_rev(sec->vconfig, vhost, list) {
+	list_for_each_rev(sec->vconfig, vhost, list)
+	{
 		if (force == 0) {
 			reload_file = 0;
 
 			for (i = 0; i < vhost->perm_config.key_size; i++) {
-				if (need_file_reload(vhost->perm_config.key[i], vhost->cert_last_access) != 0) {
+				if (need_file_reload(vhost->perm_config.key[i],
+						     vhost->cert_last_access) !=
+				    0) {
 					reload_file = 1;
 					break;
 				}
@@ -851,9 +861,12 @@ static int load_keys(sec_mod_st *sec, unsigned force)
 		 */
 		if (vhost->key == NULL) {
 			vhost->key_size = vhost->perm_config.key_size;
-			vhost->key = talloc_zero_size(sec, sizeof(*vhost->key) * vhost->perm_config.key_size);
+			vhost->key = talloc_zero_size(
+				sec, sizeof(*vhost->key) *
+					     vhost->perm_config.key_size);
 			if (vhost->key == NULL) {
-				seclog(sec, LOG_ERR, "error in memory allocation");
+				seclog(sec, LOG_ERR,
+				       "error in memory allocation");
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -892,15 +905,15 @@ static int load_keys(sec_mod_st *sec, unsigned force)
  * clients fast without becoming a bottleneck due to private
  * key operations.
  */
-void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfig,
-		    const char *socket_file, int cmd_fd, int cmd_fd_sync,
-		    size_t  hmac_key_length, const uint8_t * hmac_key,
-			const uint8_t instance_id)
+void sec_mod_server(void *main_pool, void *config_pool,
+		    struct list_head *vconfig, const char *socket_file,
+		    int cmd_fd, int cmd_fd_sync, size_t hmac_key_length,
+		    const uint8_t *hmac_key, const uint8_t instance_id)
 {
 	struct sockaddr_un sa;
 	socklen_t sa_len;
 	int cfd, ret, e, n;
-	unsigned buffer_size;
+	unsigned int buffer_size;
 	uid_t uid;
 	uint8_t *buffer;
 	int sd;
@@ -941,7 +954,7 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 	sec->vconfig = vconfig;
 	sec->config_pool = config_pool;
 	sec->sec_mod_pool = sec_mod_pool;
-	memcpy((uint8_t*)sec->hmac_key, hmac_key, hmac_key_length);
+	memcpy((uint8_t *)sec->hmac_key, hmac_key, hmac_key_length);
 	sec->sec_mod_instance_id = instance_id;
 
 	tls_cache_init(sec, &sec->tls_db);
@@ -962,7 +975,8 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 	ocsignal(SIGTERM, handle_sigterm);
 	ocsignal(SIGALRM, handle_alarm);
 
-	list_for_each(sec->vconfig, vhost, list) {
+	list_for_each(sec->vconfig, vhost, list)
+	{
 		sec_auth_init(vhost);
 	}
 
@@ -977,8 +991,8 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 	sd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sd == -1) {
 		e = errno;
-		seclog(sec, LOG_ERR, "could not create socket '%s': %s", SOCKET_FILE,
-		       strerror(e));
+		seclog(sec, LOG_ERR, "could not create socket '%s': %s",
+		       SOCKET_FILE, strerror(e));
 		exit(EXIT_FAILURE);
 	}
 	set_cloexec_flag(sd, 1);
@@ -987,16 +1001,16 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 	ret = bind(sd, (struct sockaddr *)&sa, SUN_LEN(&sa));
 	if (ret == -1) {
 		e = errno;
-		seclog(sec, LOG_ERR, "could not bind socket '%s': %s", SOCKET_FILE,
-		       strerror(e));
+		seclog(sec, LOG_ERR, "could not bind socket '%s': %s",
+		       SOCKET_FILE, strerror(e));
 		exit(EXIT_FAILURE);
 	}
 
 	ret = chown(SOCKET_FILE, GETPCONFIG(sec)->uid, GETPCONFIG(sec)->gid);
 	if (ret == -1) {
 		e = errno;
-		seclog(sec, LOG_INFO, "could not chown socket '%s': %s", SOCKET_FILE,
-		       strerror(e));
+		seclog(sec, LOG_INFO, "could not chown socket '%s': %s",
+		       SOCKET_FILE, strerror(e));
 	}
 
 	ret = listen(sd, 1024);
@@ -1016,7 +1030,6 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 	sigprocmask(SIG_BLOCK, &blockset, &sig_default_set);
 	alarm(MAINTAINANCE_TIME);
 	seclog(sec, LOG_INFO, "sec-mod initialized (socket: %s)", SOCKET_FILE);
-
 
 	for (;;) {
 		check_other_work(sec);
@@ -1067,17 +1080,21 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 		 * ping-pong communication where each request is answered immediately. The
 		 * async is for messages sent back and forth in no particular order */
 		if (FD_ISSET(cmd_fd_sync, &rd_set)) {
-			ret = serve_request_main(sec, cmd_fd_sync, buffer, buffer_size);
+			ret = serve_request_main(sec, cmd_fd_sync, buffer,
+						 buffer_size);
 			if (ret < 0 && ret == ERR_BAD_COMMAND) {
-				seclog(sec, LOG_ERR, "error processing sync command from main");
+				seclog(sec, LOG_ERR,
+				       "error processing sync command from main");
 				exit(EXIT_FAILURE);
 			}
 		}
 
 		if (FD_ISSET(cmd_fd, &rd_set)) {
-			ret = serve_request_main(sec, cmd_fd, buffer, buffer_size);
+			ret = serve_request_main(sec, cmd_fd, buffer,
+						 buffer_size);
 			if (ret < 0 && ret == ERR_BAD_COMMAND) {
-				seclog(sec, LOG_ERR, "error processing async command from main");
+				seclog(sec, LOG_ERR,
+				       "error processing async command from main");
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -1094,22 +1111,25 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 					goto cont;
 				}
 			}
-			set_cloexec_flag (cfd, 1);
+			set_cloexec_flag(cfd, 1);
 
 			/* do not allow unauthorized processes to issue commands
 			 */
-			ret = check_upeer_id("sec-mod", GETPCONFIG(sec)->log_level, cfd,
-					     GETPCONFIG(sec)->uid, GETPCONFIG(sec)->gid,
-					     &uid, &pid);
+			ret = check_upeer_id("sec-mod",
+					     GETPCONFIG(sec)->log_level, cfd,
+					     GETPCONFIG(sec)->uid,
+					     GETPCONFIG(sec)->gid, &uid, &pid);
 			if (ret < 0) {
-				seclog(sec, LOG_INFO, "rejected unauthorized connection");
+				seclog(sec, LOG_INFO,
+				       "rejected unauthorized connection");
 			} else {
 				memset(buffer, 0, buffer_size);
-				serve_request_worker(sec, cfd, pid, buffer, buffer_size);
+				serve_request_worker(sec, cfd, pid, buffer,
+						     buffer_size);
 			}
 			close(cfd);
 		}
- cont:
+cont:
 		talloc_free(buffer);
 #ifdef DEBUG_LEAKS
 		talloc_report_full(sec, stderr);

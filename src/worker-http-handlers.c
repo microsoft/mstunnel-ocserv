@@ -41,58 +41,60 @@
 #define HTML_404 "<html><body><h1>404 Not Found</h1></body></html>\r\n"
 #define HTML_401 "<html><body><h1>401 Unauthorized</h1></body></html>\r\n"
 
-int response_404(worker_st *ws, unsigned http_ver)
+int response_404(worker_st *ws, unsigned int http_ver)
 {
 	if (cstp_printf(ws, "HTTP/1.%u 404 Not found\r\n", http_ver) < 0 ||
-	    cstp_printf(ws, "Content-Length: %u\r\n", (unsigned)(sizeof(HTML_404) - 1)) < 0 ||
-	    cstp_puts  (ws, "Connection: close\r\n\r\n") < 0 ||
-	    cstp_puts  (ws, HTML_404) < 0)
+	    cstp_printf(ws, "Content-Length: %u\r\n",
+			(unsigned int)(sizeof(HTML_404) - 1)) < 0 ||
+	    cstp_puts(ws, "Connection: close\r\n\r\n") < 0 ||
+	    cstp_puts(ws, HTML_404) < 0)
 		return -1;
 	return 0;
 }
 
-int response_401(worker_st *ws, unsigned http_ver, char* realm)
+int response_401(worker_st *ws, unsigned int http_ver, char *realm)
 {
 	if (cstp_printf(ws, "HTTP/1.%u 401 Unauthorized\r\n", http_ver) < 0 ||
-	    cstp_printf(ws, "WWW-Authenticate: Basic realm=\"%s\"\r\n", realm) < 0 ||
-	    cstp_printf(ws, "Content-Length: %u\r\n", (unsigned)(sizeof(HTML_401) - 1)) < 0 ||
-	    cstp_puts  (ws, "Connection: close\r\n\r\n") < 0 ||
-	    cstp_puts  (ws, HTML_401) < 0)
-	    return -1;
-	return 0;
-}
-
-static int send_headers(worker_st *ws, unsigned http_ver, const char *content_type,
-			unsigned content_length)
-{
-	if (cstp_printf(ws, "HTTP/1.%u 200 OK\r\n", http_ver) < 0 ||
-	    cstp_puts  (ws, "Connection: Keep-Alive\r\n") < 0 ||
-	    cstp_printf(ws, "Content-Type: %s\r\n", content_type) < 0 ||
-	    cstp_puts  (ws, "X-Transcend-Version: 1\r\n") < 0 ||
-	    cstp_printf(ws, "Content-Length: %u\r\n", content_length) < 0 ||
-		add_owasp_headers(ws) < 0 ||
-	    cstp_puts  (ws, "\r\n") < 0)
+	    cstp_printf(ws, "WWW-Authenticate: Basic realm=\"%s\"\r\n", realm) <
+		    0 ||
+	    cstp_printf(ws, "Content-Length: %u\r\n",
+			(unsigned int)(sizeof(HTML_401) - 1)) < 0 ||
+	    cstp_puts(ws, "Connection: close\r\n\r\n") < 0 ||
+	    cstp_puts(ws, HTML_401) < 0)
 		return -1;
 	return 0;
 }
 
-static int send_data(worker_st *ws, unsigned http_ver, const char *content_type,
-		       const char *data, int content_length)
+static int send_headers(worker_st *ws, unsigned int http_ver,
+			const char *content_type, unsigned int content_length)
+{
+	if (cstp_printf(ws, "HTTP/1.%u 200 OK\r\n", http_ver) < 0 ||
+	    cstp_puts(ws, "Connection: Keep-Alive\r\n") < 0 ||
+	    cstp_printf(ws, "Content-Type: %s\r\n", content_type) < 0 ||
+	    cstp_puts(ws, "X-Transcend-Version: 1\r\n") < 0 ||
+	    cstp_printf(ws, "Content-Length: %u\r\n", content_length) < 0 ||
+	    add_owasp_headers(ws) < 0 || cstp_puts(ws, "\r\n") < 0)
+		return -1;
+	return 0;
+}
+
+static int send_data(worker_st *ws, unsigned int http_ver,
+		     const char *content_type, const char *data,
+		     int content_length)
 {
 	/* don't bother uncorking on error - the connection will be closed anyway */
 	cstp_cork(ws);
 	if (send_headers(ws, http_ver, content_type, content_length) < 0 ||
-	    cstp_send(ws, data, content_length) < 0 ||
-	    cstp_uncork(ws) < 0)
+	    cstp_send(ws, data, content_length) < 0 || cstp_uncork(ws) < 0)
 		return -1;
 	return 0;
 }
 
-int get_cert_handler(worker_st * ws, unsigned http_ver)
+int get_cert_handler(worker_st *ws, unsigned int http_ver)
 {
 	if (ws->conn_type != SOCK_TYPE_UNIX) { /* we have TLS */
 		const gnutls_datum_t *certs;
-		gnutls_datum_t out = {NULL, 0};
+		gnutls_datum_t out = { NULL, 0 };
 		int ret;
 
 		oclog(ws, LOG_DEBUG, "requested server certificate");
@@ -102,11 +104,13 @@ int get_cert_handler(worker_st * ws, unsigned http_ver)
 			return -1;
 		}
 
-		ret = gnutls_pem_base64_encode_alloc("CERTIFICATE", &certs[0], &out);
+		ret = gnutls_pem_base64_encode_alloc("CERTIFICATE", &certs[0],
+						     &out);
 		if (ret < 0)
 			return -1;
 
-		ret = send_data(ws, http_ver, "application/x-pem-file", (char*)out.data, out.size);
+		ret = send_data(ws, http_ver, "application/x-pem-file",
+				(char *)out.data, out.size);
 		gnutls_free(out.data);
 
 		return ret;
@@ -114,7 +118,7 @@ int get_cert_handler(worker_st * ws, unsigned http_ver)
 		return -1;
 	}
 }
-int get_cert_der_handler(worker_st * ws, unsigned http_ver)
+int get_cert_der_handler(worker_st *ws, unsigned int http_ver)
 {
 	if (ws->conn_type != SOCK_TYPE_UNIX) { /* we have TLS */
 		const gnutls_datum_t *certs;
@@ -126,20 +130,19 @@ int get_cert_der_handler(worker_st * ws, unsigned http_ver)
 			return -1;
 		}
 
-		return send_data(ws, http_ver, "application/pkix-cert", (char*)certs[0].data, certs[0].size);
+		return send_data(ws, http_ver, "application/pkix-cert",
+				 (char *)certs[0].data, certs[0].size);
 	} else {
 		return -1;
 	}
 }
 
-
-static
-int ca_handler(worker_st * ws, unsigned http_ver, unsigned der)
+static int ca_handler(worker_st *ws, unsigned int http_ver, unsigned int der)
 {
 	if (ws->conn_type != SOCK_TYPE_UNIX) { /* we have TLS */
 		const gnutls_datum_t *certs;
-		gnutls_datum_t out = {NULL, 0}, tmpca;
-		unsigned i;
+		gnutls_datum_t out = { NULL, 0 }, tmpca;
+		unsigned int i;
 		int ret;
 		gnutls_x509_crt_t issuer = NULL, crt = NULL;
 
@@ -164,32 +167,41 @@ int ca_handler(worker_st * ws, unsigned http_ver, unsigned der)
 			goto cleanup;
 		}
 
-		ret = gnutls_x509_crt_import(crt, &certs[0], GNUTLS_X509_FMT_DER);
+		ret = gnutls_x509_crt_import(crt, &certs[0],
+					     GNUTLS_X509_FMT_DER);
 		if (ret < 0) {
 			ret = -1;
 			oclog(ws, LOG_DEBUG, "could not import our cert");
 			goto cleanup;
 		}
 
-		for (i=0;i<8;i++) {
-			ret = gnutls_certificate_get_crt_raw(WSCREDS(ws)->xcred, i, 1, &tmpca);
+		for (i = 0; i < 8; i++) {
+			ret = gnutls_certificate_get_crt_raw(WSCREDS(ws)->xcred,
+							     i, 1, &tmpca);
 			if (ret < 0) {
 				goto cleanup;
 			}
 
-			ret = gnutls_x509_crt_import(issuer, &tmpca, GNUTLS_X509_FMT_DER);
+			ret = gnutls_x509_crt_import(issuer, &tmpca,
+						     GNUTLS_X509_FMT_DER);
 			if (ret < 0) {
 				ret = -1;
-				oclog(ws, LOG_DEBUG, "could not import issuer cert");
+				oclog(ws, LOG_DEBUG,
+				      "could not import issuer cert");
 				goto cleanup;
 			}
 
 			ret = gnutls_x509_crt_check_issuer(crt, issuer);
 			if (ret != 0) {
-				ret = gnutls_x509_crt_export2(issuer, der?GNUTLS_X509_FMT_DER:GNUTLS_X509_FMT_PEM, &out);
+				ret = gnutls_x509_crt_export2(
+					issuer,
+					der ? GNUTLS_X509_FMT_DER :
+					      GNUTLS_X509_FMT_PEM,
+					&out);
 				if (ret < 0) {
 					ret = -1;
-					oclog(ws, LOG_DEBUG, "could not export issuer of cert");
+					oclog(ws, LOG_DEBUG,
+					      "could not export issuer of cert");
 					goto cleanup;
 				}
 				break;
@@ -199,11 +211,13 @@ int ca_handler(worker_st * ws, unsigned http_ver, unsigned der)
 			issuer = NULL;
 		}
 
-		ret = send_data(ws, http_ver, "application/pkix-cert", (char*)out.data, out.size);
+		ret = send_data(ws, http_ver, "application/pkix-cert",
+				(char *)out.data, out.size);
 
- cleanup:
+cleanup:
 		if (ret == GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE) {
-			oclog(ws, LOG_DEBUG, "could not get CA; does the server cert list contain the CA certificate?");
+			oclog(ws, LOG_DEBUG,
+			      "could not get CA; does the server cert list contain the CA certificate?");
 			ret = -1;
 		}
 
@@ -219,18 +233,18 @@ int ca_handler(worker_st * ws, unsigned http_ver, unsigned der)
 	}
 }
 
-int get_ca_handler(worker_st * ws, unsigned http_ver)
+int get_ca_handler(worker_st *ws, unsigned int http_ver)
 {
 	return ca_handler(ws, http_ver, 0);
 }
 
-int get_ca_der_handler(worker_st * ws, unsigned http_ver)
+int get_ca_der_handler(worker_st *ws, unsigned int http_ver)
 {
 	return ca_handler(ws, http_ver, 1);
 }
 
 #ifdef ANYCONNECT_CLIENT_COMPAT
-int get_config_handler(worker_st *ws, unsigned http_ver)
+int get_config_handler(worker_st *ws, unsigned int http_ver)
 {
 	int ret;
 	struct stat st;
@@ -240,26 +254,30 @@ int get_config_handler(worker_st *ws, unsigned http_ver)
 	cookie_authenticate_or_exit(ws);
 
 	if (ws->user_config->xml_config_file == NULL) {
-		oclog(ws, LOG_INFO, "requested config but no config file is set");
+		oclog(ws, LOG_INFO,
+		      "requested config but no config file is set");
 		response_404(ws, http_ver);
 		return -1;
 	}
 
 	ret = stat(ws->user_config->xml_config_file, &st);
 	if (ret == -1) {
-		oclog(ws, LOG_INFO, "cannot load config file '%s'", ws->user_config->xml_config_file);
+		oclog(ws, LOG_INFO, "cannot load config file '%s'",
+		      ws->user_config->xml_config_file);
 		response_404(ws, http_ver);
 		return -1;
 	}
 
 	cstp_cork(ws);
-	if (send_headers(ws, http_ver, "text/xml", (unsigned)st.st_size) < 0 ||
+	if (send_headers(ws, http_ver, "text/xml", (unsigned int)st.st_size) <
+		    0 ||
 	    cstp_uncork(ws) < 0)
 		return -1;
 
 	ret = cstp_send_file(ws, ws->user_config->xml_config_file);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "error sending file '%s': %s", ws->user_config->xml_config_file, gnutls_strerror(ret));
+		oclog(ws, LOG_ERR, "error sending file '%s': %s",
+		      ws->user_config->xml_config_file, gnutls_strerror(ret));
 		return -1;
 	}
 
@@ -267,36 +285,38 @@ int get_config_handler(worker_st *ws, unsigned http_ver)
 }
 
 #define VPN_VERSION "0,0,0000\n"
-#define XML_START "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<vpn rev=\"1.0\">\n</vpn>\n"
+#define XML_START \
+	"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<vpn rev=\"1.0\">\n</vpn>\n"
 
-int get_string_handler(worker_st *ws, unsigned http_ver)
+int get_string_handler(worker_st *ws, unsigned int http_ver)
 {
 	oclog(ws, LOG_HTTP_DEBUG, "requested fixed string: %s", ws->req.url);
 	if (!strcmp(ws->req.url, "/1/binaries/update.txt")) {
 		return send_data(ws, http_ver, "text/xml", VPN_VERSION,
-				   sizeof(VPN_VERSION) - 1);
+				 sizeof(VPN_VERSION) - 1);
 	} else {
 		return send_data(ws, http_ver, "text/xml", XML_START,
-				   sizeof(XML_START) - 1);
+				 sizeof(XML_START) - 1);
 	}
 }
 
-#define SH_SCRIPT "#!/bin/sh\n\n" \
+#define SH_SCRIPT       \
+	"#!/bin/sh\n\n" \
 	"exit 0"
 
-int get_dl_handler(worker_st *ws, unsigned http_ver)
+int get_dl_handler(worker_st *ws, unsigned int http_ver)
 {
 	oclog(ws, LOG_HTTP_DEBUG, "requested downloader: %s", ws->req.url);
 	return send_data(ws, http_ver, "application/x-shellscript", SH_SCRIPT,
-			   sizeof(SH_SCRIPT) - 1);
+			 sizeof(SH_SCRIPT) - 1);
 }
 
 #define EMPTY_MSG "<html></html>\n"
 
-int get_empty_handler(worker_st *ws, unsigned http_ver)
+int get_empty_handler(worker_st *ws, unsigned int http_ver)
 {
 	return send_data(ws, http_ver, "text/html", EMPTY_MSG,
-			   sizeof(EMPTY_MSG) - 1);
+			 sizeof(EMPTY_MSG) - 1);
 }
 
 #endif

@@ -20,7 +20,7 @@
  */
 
 #ifndef JSON_H
-# define JSON_H
-char *json_escape_val(char *tmp, unsigned tmp_size, const char *val);
+#define JSON_H
+char *json_escape_val(char *tmp, unsigned int tmp_size, const char *val);
 
 #endif

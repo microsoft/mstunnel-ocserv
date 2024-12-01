@@ -37,8 +37,8 @@
 #include "common/base64-helper.h"
 #include "log.h"
 
-int saved_argc = 0;
-char **saved_argv = NULL;
+int saved_argc;
+char **saved_argv;
 
 const char *_vhost_prefix(const char *name)
 {
@@ -50,7 +50,8 @@ const char *_vhost_prefix(const char *name)
 
 /* A hash of the input, to a 20-byte output. The goal is one-wayness.
  */
-static void safe_hash(const uint8_t *data, unsigned data_size, uint8_t output[20])
+static void safe_hash(const uint8_t *data, unsigned int data_size,
+		      uint8_t output[20])
 {
 	struct sha1_ctx ctx;
 
@@ -60,13 +61,13 @@ static void safe_hash(const uint8_t *data, unsigned data_size, uint8_t output[20
 	sha1_digest(&ctx, 20, output);
 }
 
-
-char *calc_safe_id(const uint8_t *data, unsigned size, char *output, unsigned output_size)
+char *calc_safe_id(const uint8_t *data, unsigned int size, char *output,
+		   unsigned int output_size)
 {
 	uint8_t safe_id[20];
 
 	safe_hash(data, size, safe_id);
-	oc_base64_encode((char*)safe_id, 20, output, output_size);
+	oc_base64_encode((char *)safe_id, 20, output, output_size);
 
 	return output;
 }
@@ -74,7 +75,7 @@ char *calc_safe_id(const uint8_t *data, unsigned size, char *output, unsigned ou
 /* Note that meaning slightly changes depending on whether we are
  * referring to the cookie or the session itself.
  */
-const char *ps_status_to_str(int status, unsigned cookie)
+const char *ps_status_to_str(int status, unsigned int cookie)
 {
 	switch (status) {
 	case PS_AUTH_COMPLETED:
@@ -94,7 +95,7 @@ const char *ps_status_to_str(int status, unsigned cookie)
 	}
 }
 
-const char *cmd_request_to_str(unsigned _cmd)
+const char *cmd_request_to_str(unsigned int _cmd)
 {
 	cmd_request_t cmd = _cmd;
 	static char tmp[32];
@@ -172,7 +173,7 @@ const char *cmd_request_to_str(unsigned _cmd)
 	}
 }
 
-const char *discon_reason_to_str(unsigned reason)
+const char *discon_reason_to_str(unsigned int reason)
 {
 	static char tmp[32];
 
@@ -271,7 +272,7 @@ ssize_t force_read(int sockfd, void *buf, size_t len)
 	return len;
 }
 
-ssize_t force_read_timeout(int sockfd, void *buf, size_t len, unsigned sec)
+ssize_t force_read_timeout(int sockfd, void *buf, size_t len, unsigned int sec)
 {
 	int left = len;
 	int ret;
@@ -325,6 +326,7 @@ void set_non_block(int fd)
 		 * https://patchwork.kernel.org/project/qemu-devel/patch/20200331133536.3328-1-linus.walleij@linaro.org/
 		 */
 		int e = errno;
+
 		oc_syslog(LOG_ERR, "set_non_block: %s", strerror(e));
 	}
 }
@@ -337,11 +339,12 @@ void set_block(int fd)
 	ret = fcntl(fd, F_SETFL, val & (~O_NONBLOCK));
 	if (ret == -1) {
 		int e = errno;
+
 		oc_syslog(LOG_ERR, "set_non_block: %s", strerror(e));
 	}
 }
 
-ssize_t recv_timeout(int sockfd, void *buf, size_t len, unsigned sec)
+ssize_t recv_timeout(int sockfd, void *buf, size_t len, unsigned int sec)
 {
 	int ret;
 	struct pollfd pfd;
@@ -362,8 +365,8 @@ ssize_t recv_timeout(int sockfd, void *buf, size_t len, unsigned sec)
 	return recv(sockfd, buf, len, 0);
 }
 
-ssize_t recvmsg_timeout(int sockfd, struct msghdr * msg, int flags,
-			unsigned sec)
+ssize_t recvmsg_timeout(int sockfd, struct msghdr *msg, int flags,
+			unsigned int sec)
 {
 	int ret;
 
@@ -391,7 +394,8 @@ ssize_t recvmsg_timeout(int sockfd, struct msghdr * msg, int flags,
 	return ret;
 }
 
-int forward_msg(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd, unsigned timeout)
+int forward_msg(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd,
+		unsigned int timeout)
 {
 	struct iovec iov[3];
 	char data[5];
@@ -414,8 +418,9 @@ int forward_msg(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd, unsign
 	ret = recvmsg_timeout(ifd, &hdr, 0, timeout);
 	if (ret == -1) {
 		int e = errno;
+
 		oc_syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
-		       strerror(e));
+			  strerror(e));
 		return ERR_BAD_COMMAND;
 	}
 
@@ -425,7 +430,7 @@ int forward_msg(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd, unsign
 
 	if (rcmd != icmd) {
 		oc_syslog(LOG_ERR, "%s:%u: expected %d, received %d", __FILE__,
-		       __LINE__, (int)rcmd, (int)icmd);
+			  __LINE__, (int)rcmd, (int)icmd);
 		return ERR_BAD_COMMAND;
 	}
 
@@ -436,7 +441,7 @@ int forward_msg(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd, unsign
 	ret = force_write(ofd, data, 5);
 	if (ret != 5) {
 		oc_syslog(LOG_ERR, "%s:%u: cannot send headers: %s", __FILE__,
-		       __LINE__, strerror(errno));
+			  __LINE__, strerror(errno));
 		return ERR_BAD_COMMAND;
 	}
 
@@ -449,15 +454,17 @@ int forward_msg(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd, unsign
 		if (ret == -1 || ret == 0) {
 			if (errno == EAGAIN || errno == EINTR)
 				continue;
-			oc_syslog(LOG_ERR, "%s:%u: cannot send between descriptors: %s", __FILE__,
-			       __LINE__, strerror(errno));
+			oc_syslog(LOG_ERR,
+				  "%s:%u: cannot send between descriptors: %s",
+				  __FILE__, __LINE__, strerror(errno));
 			return ERR_BAD_COMMAND;
 		}
 
 		ret = force_write(ofd, buf, ret);
 		if (ret == -1 || ret == 0) {
-			oc_syslog(LOG_ERR, "%s:%u: cannot send between descriptors: %s", __FILE__,
-			       __LINE__, strerror(errno));
+			oc_syslog(LOG_ERR,
+				  "%s:%u: cannot send between descriptors: %s",
+				  __FILE__, __LINE__, strerror(errno));
 			return ERR_BAD_COMMAND;
 		}
 
@@ -468,9 +475,8 @@ int forward_msg(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd, unsign
 }
 
 /* Sends message + socketfd */
-int send_socket_msg(void *pool, int fd, uint8_t cmd,
-		    int socketfd, const void *msg,
-		    pack_size_func get_size, pack_func pack)
+int send_socket_msg(void *pool, int fd, uint8_t cmd, int socketfd,
+		    const void *msg, pack_size_func get_size, pack_func pack)
 {
 	struct iovec iov[3];
 	struct msghdr hdr;
@@ -506,7 +512,7 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 		packed = talloc_size(pool, length);
 		if (packed == NULL) {
 			oc_syslog(LOG_ERR, "%s:%u: memory error", __FILE__,
-			       __LINE__);
+				  __LINE__);
 			return -1;
 		}
 
@@ -516,7 +522,7 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 		ret = pack(msg, packed);
 		if (ret == 0) {
 			oc_syslog(LOG_ERR, "%s:%u: packing error", __FILE__,
-			       __LINE__);
+				  __LINE__);
 			ret = -1;
 			goto cleanup;
 		}
@@ -540,17 +546,19 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 	} while (ret == -1 && errno == EINTR);
 	if (ret < 0) {
 		int e = errno;
-		oc_syslog(LOG_ERR, "%s:%u: %s", __FILE__, __LINE__, strerror(e));
+
+		oc_syslog(LOG_ERR, "%s:%u: %s", __FILE__, __LINE__,
+			  strerror(e));
 	}
 
- cleanup:
+cleanup:
 	if (length > 0)
 		safe_memset(packed, 0, length);
 	talloc_free(packed);
 	return ret;
 }
 
-int recv_msg_headers(int fd, uint8_t *cmd, unsigned timeout)
+int recv_msg_headers(int fd, uint8_t *cmd, unsigned int timeout)
 {
 	struct iovec iov[3];
 	char buffer[5];
@@ -568,8 +576,9 @@ int recv_msg_headers(int fd, uint8_t *cmd, unsigned timeout)
 	ret = recvmsg_timeout(fd, &hdr, 0, timeout);
 	if (ret == -1) {
 		int e = errno;
+
 		oc_syslog(LOG_WARNING, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
-		       strerror(e));
+			  strerror(e));
 		return ERR_BAD_COMMAND;
 	}
 
@@ -612,8 +621,9 @@ int recv_msg_data(int fd, uint8_t *cmd, uint8_t *data, size_t data_size,
 	ret = recvmsg_timeout(fd, &hdr, 0, MAIN_SEC_MOD_TIMEOUT);
 	if (ret == -1) {
 		int e = errno;
+
 		oc_syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
-		       strerror(e));
+			  strerror(e));
 		return ERR_BAD_COMMAND;
 	}
 
@@ -625,24 +635,28 @@ int recv_msg_data(int fd, uint8_t *cmd, uint8_t *data, size_t data_size,
 	if (received_fd != NULL) {
 		*received_fd = -1;
 
-		if ((cmptr = CMSG_FIRSTHDR(&hdr)) != NULL
-		    && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
-			if (cmptr->cmsg_level != SOL_SOCKET
-			    || cmptr->cmsg_type != SCM_RIGHTS) {
-				oc_syslog(LOG_ERR,
-				       "%s:%u: recvmsg returned invalid msg type",
-				       __FILE__, __LINE__);
+		if ((cmptr = CMSG_FIRSTHDR(&hdr)) != NULL &&
+		    cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
+			if (cmptr->cmsg_level != SOL_SOCKET ||
+			    cmptr->cmsg_type != SCM_RIGHTS) {
+				oc_syslog(
+					LOG_ERR,
+					"%s:%u: recvmsg returned invalid msg type",
+					__FILE__, __LINE__);
 				return ERR_BAD_COMMAND;
 			}
 
 			if (CMSG_DATA(cmptr))
-				memcpy(received_fd, CMSG_DATA(cmptr), sizeof(int));
+				memcpy(received_fd, CMSG_DATA(cmptr),
+				       sizeof(int));
 		}
 	}
 
 	if (l32 > data_size) {
-		oc_syslog(LOG_ERR, "%s:%u: recv_msg_data: received more data than expected", __FILE__,
-		       __LINE__);
+		oc_syslog(
+			LOG_ERR,
+			"%s:%u: recv_msg_data: received more data than expected",
+			__FILE__, __LINE__);
 		ret = ERR_BAD_COMMAND;
 		goto cleanup;
 	}
@@ -650,15 +664,16 @@ int recv_msg_data(int fd, uint8_t *cmd, uint8_t *data, size_t data_size,
 	ret = force_read_timeout(fd, data, l32, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < l32) {
 		int e = errno;
-		oc_syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__,
-		       __LINE__, strerror(e));
+
+		oc_syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
+			  strerror(e));
 		ret = ERR_BAD_COMMAND;
 		goto cleanup;
 	}
 
 	ret = l32;
 
- cleanup:
+cleanup:
 	if (ret < 0 && received_fd != NULL && *received_fd != -1) {
 		close(*received_fd);
 		*received_fd = -1;
@@ -666,9 +681,8 @@ int recv_msg_data(int fd, uint8_t *cmd, uint8_t *data, size_t data_size,
 	return ret;
 }
 
-int recv_socket_msg(void *pool, int fd, uint8_t cmd,
-		    int *socketfd, void **msg, unpack_func unpack,
-		    unsigned timeout)
+int recv_socket_msg(void *pool, int fd, uint8_t cmd, int *socketfd, void **msg,
+		    unpack_func unpack, unsigned int timeout)
 {
 	struct iovec iov[3];
 	uint32_t length;
@@ -681,6 +695,7 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 	} control_un;
 	struct cmsghdr *cmptr;
 	int ret;
+
 	PROTOBUF_ALLOCATOR(pa, pool);
 
 	iov[0].iov_base = &rcmd;
@@ -699,8 +714,9 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 	ret = recvmsg_timeout(fd, &hdr, 0, timeout);
 	if (ret == -1) {
 		int e = errno;
+
 		oc_syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
-		       strerror(e));
+			  strerror(e));
 		return ERR_BAD_COMMAND;
 	}
 
@@ -710,19 +726,20 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 
 	if (rcmd != cmd) {
 		oc_syslog(LOG_ERR, "%s:%u: expected %d, received %d", __FILE__,
-		       __LINE__, (int)rcmd, (int)cmd);
+			  __LINE__, (int)rcmd, (int)cmd);
 		return ERR_BAD_COMMAND;
 	}
 
 	/* try to receive socket (if any) */
 	if (socketfd != NULL) {
-		if ((cmptr = CMSG_FIRSTHDR(&hdr)) != NULL
-		    && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
-			if (cmptr->cmsg_level != SOL_SOCKET
-			    || cmptr->cmsg_type != SCM_RIGHTS) {
-				oc_syslog(LOG_ERR,
-				       "%s:%u: recvmsg returned invalid msg type",
-				       __FILE__, __LINE__);
+		if ((cmptr = CMSG_FIRSTHDR(&hdr)) != NULL &&
+		    cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
+			if (cmptr->cmsg_level != SOL_SOCKET ||
+			    cmptr->cmsg_type != SCM_RIGHTS) {
+				oc_syslog(
+					LOG_ERR,
+					"%s:%u: recvmsg returned invalid msg type",
+					__FILE__, __LINE__);
 				return ERR_BAD_COMMAND;
 			}
 
@@ -745,8 +762,9 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 		ret = force_read_timeout(fd, data, length, timeout);
 		if (ret < length) {
 			int e = errno;
+
 			oc_syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__,
-			       __LINE__, strerror(e));
+				  __LINE__, strerror(e));
 			ret = ERR_BAD_COMMAND;
 			goto cleanup;
 		}
@@ -754,7 +772,7 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 		*msg = unpack(&pa, length, data);
 		if (*msg == NULL) {
 			oc_syslog(LOG_ERR, "%s:%u: unpacking error", __FILE__,
-			       __LINE__);
+				  __LINE__);
 			ret = ERR_MEM;
 			goto cleanup;
 		}
@@ -762,7 +780,7 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 
 	ret = 0;
 
- cleanup:
+cleanup:
 	talloc_free(data);
 	if (ret < 0 && socketfd != NULL && *socketfd != -1) {
 		close(*socketfd);
@@ -770,7 +788,6 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 	}
 	return ret;
 }
-
 
 void _talloc_free2(void *ctx, void *ptr)
 {
@@ -788,8 +805,8 @@ void *_talloc_size2(void *ctx, size_t size)
  *   in our_addr.
  */
 ssize_t oc_recvfrom_at(int sockfd, void *buf, size_t len, int flags,
-		       struct sockaddr * src_addr, socklen_t * addrlen,
-		       struct sockaddr * our_addr, socklen_t * our_addrlen,
+		       struct sockaddr *src_addr, socklen_t *addrlen,
+		       struct sockaddr *our_addr, socklen_t *our_addrlen,
 		       int def_port)
 {
 	int ret;
@@ -816,13 +833,13 @@ ssize_t oc_recvfrom_at(int sockfd, void *buf, size_t len, int flags,
 	for (cmsg = CMSG_FIRSTHDR(&mh); cmsg != NULL;
 	     cmsg = CMSG_NXTHDR(&mh, cmsg)) {
 #if defined(IP_PKTINFO)
-		if (cmsg->cmsg_level == IPPROTO_IP
-		    && cmsg->cmsg_type == IP_PKTINFO) {
+		if (cmsg->cmsg_level == IPPROTO_IP &&
+		    cmsg->cmsg_type == IP_PKTINFO) {
 			struct in_pktinfo *pi = (void *)CMSG_DATA(cmsg);
 			struct sockaddr_in *a = (struct sockaddr_in *)our_addr;
 
-			if (*our_addrlen < sizeof(struct sockaddr_in)
-			    || pi == NULL)
+			if (*our_addrlen < sizeof(struct sockaddr_in) ||
+			    pi == NULL)
 				return -1;
 
 			a->sin_family = AF_INET;
@@ -833,13 +850,13 @@ ssize_t oc_recvfrom_at(int sockfd, void *buf, size_t len, int flags,
 			break;
 		}
 #elif defined(IP_RECVDSTADDR)
-		if (cmsg->cmsg_level == IPPROTO_IP
-		    && cmsg->cmsg_type == IP_RECVDSTADDR) {
+		if (cmsg->cmsg_level == IPPROTO_IP &&
+		    cmsg->cmsg_type == IP_RECVDSTADDR) {
 			struct in_addr *pi = (void *)CMSG_DATA(cmsg);
 			struct sockaddr_in *a = (struct sockaddr_in *)our_addr;
 
-			if (*our_addrlen < sizeof(struct sockaddr_in)
-			    || pi == NULL)
+			if (*our_addrlen < sizeof(struct sockaddr_in) ||
+			    pi == NULL)
 				return -1;
 
 			a->sin_family = AF_INET;
@@ -851,14 +868,14 @@ ssize_t oc_recvfrom_at(int sockfd, void *buf, size_t len, int flags,
 		}
 #endif
 #ifdef IPV6_RECVPKTINFO
-		if (cmsg->cmsg_level == IPPROTO_IPV6
-		    && cmsg->cmsg_type == IPV6_PKTINFO) {
+		if (cmsg->cmsg_level == IPPROTO_IPV6 &&
+		    cmsg->cmsg_type == IPV6_PKTINFO) {
 			struct in6_pktinfo *pi = (void *)CMSG_DATA(cmsg);
 			struct sockaddr_in6 *a =
-			    (struct sockaddr_in6 *)our_addr;
+				(struct sockaddr_in6 *)our_addr;
 
-			if (*our_addrlen < sizeof(struct sockaddr_in6)
-			    || pi == NULL)
+			if (*our_addrlen < sizeof(struct sockaddr_in6) ||
+			    pi == NULL)
 				return -1;
 
 			a->sin6_family = AF_INET6;
@@ -917,11 +934,12 @@ size_t oc_strlcpy(char *dst, char const *src, size_t siz)
 	/* Not enough room in dst, add NUL and traverse rest of src */
 	if (n == 0) {
 		if (siz != 0)
-			*d = '\0';	/* NUL-terminate dst */
-		while (*s++) ;
+			*d = '\0'; /* NUL-terminate dst */
+		while (*s++)
+			;
 	}
 
-	return (s - src - 1);	/* count does not include NUL */
+	return (s - src - 1); /* count does not include NUL */
 }
 
 #endif

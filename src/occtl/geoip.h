@@ -18,8 +18,8 @@
  */
 
 #ifndef GEOIP_H
-# define GEOIP_H
+#define GEOIP_H
 
-char * geo_lookup(const char *ip, char *buf, unsigned buf_size);
+char *geo_lookup(const char *ip, char *buf, unsigned int buf_size);
 
 #endif

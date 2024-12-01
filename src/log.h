@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #ifndef OC_LOG_H
-# define OC_LOG_H
+#define OC_LOG_H
 
 #include <stdint.h>
 #include <stdio.h>
@@ -31,9 +31,9 @@ extern int global_log_prio;
 
 /* For logging in the main process or sec-mod use the following:
  * mslog(const struct main_server_st * s, const struct proc_st* proc,
- *  	 int priority, const char *fmt, ...);
+ *	 int priority, const char *fmt, ...);
  * seclog(const struct sec_mod_st* sec, int priority, const char *fmt, ...);
- *   	  int priority, const char *fmt, ...);
+ *	  int priority, const char *fmt, ...);
  *
  * For logging in the worker process:
  * oclog(const struct worker_st * server, int priority, const char *fmt, ...);
@@ -47,28 +47,32 @@ extern int global_log_prio;
  */
 
 #ifdef __GNUC__
-# define _oc_syslog(prio, fmt, ...) do { \
-	if (syslog_open) { \
-		syslog(prio, fmt, ## __VA_ARGS__); \
-	} else { \
-		fprintf(stderr, fmt "\n", ## __VA_ARGS__); \
-	}} while(0)
+#define _oc_syslog(prio, fmt, ...)                                \
+	do {                                                      \
+		if (syslog_open) {                                \
+			syslog(prio, fmt, ##__VA_ARGS__);         \
+		} else {                                          \
+			fprintf(stderr, fmt "\n", ##__VA_ARGS__); \
+		}                                                 \
+	} while (0)
 #else
-# define _oc_syslog(prio, ...) do { \
-	if (syslog_open) { \
-		syslog(prio, __VA_ARGS__); \
-	} else { \
-		fprintf(stderr, __VA_ARGS__); \
-		fputc('\n', stderr); \
-	}} while(0)
+#define _oc_syslog(prio, ...)                         \
+	do {                                          \
+		if (syslog_open) {                    \
+			syslog(prio, __VA_ARGS__);    \
+		} else {                              \
+			fprintf(stderr, __VA_ARGS__); \
+			fputc('\n', stderr);          \
+		}                                     \
+	} while (0)
 #endif
 
 #ifdef UNDER_TEST
 /* for testing */
-# define mslog(...)
-# define oclog(...)
-# define seclog(...)
-# define oc_syslog _oc_syslog
+#define mslog(...)
+#define oclog(...)
+#define seclog(...)
+#define oc_syslog _oc_syslog
 
 #else
 
@@ -77,54 +81,56 @@ struct worker_st;
 struct proc_st;
 struct sec_mod_st;
 
-void
-__attribute__ ((format(printf, 4, 5)))
-    _mslog(const struct main_server_st * s, const struct proc_st* proc,
-    	int priority, const char *fmt, ...);
+void __attribute__((format(printf, 4, 5)))
+_mslog(const struct main_server_st *s, const struct proc_st *proc, int priority,
+       const char *fmt, ...);
 
-void __attribute__ ((format(printf, 3, 4)))
-    _oclog(const struct worker_st * server, int priority, const char *fmt, ...);
+void __attribute__((format(printf, 3, 4)))
+_oclog(const struct worker_st *server, int priority, const char *fmt, ...);
 
-void __attribute__ ((format(printf, 3, 4)))
-    _seclog(const struct sec_mod_st* sec, int priority, const char *fmt, ...);
+void __attribute__((format(printf, 3, 4)))
+_seclog(const struct sec_mod_st *sec, int priority, const char *fmt, ...);
 
-void __attribute__ ((format(printf, 2, 3)))
-    oc_syslog(int priority, const char *fmt, ...);
+void __attribute__((format(printf, 2, 3))) oc_syslog(int priority,
+						     const char *fmt, ...);
 
+#ifdef __GNUC__
+#define mslog(s, proc, prio, fmt, ...)                                     \
+	(prio == LOG_ERR) ? _mslog(s, proc, prio, "%s:%d: " fmt, __FILE__, \
+				   __LINE__, ##__VA_ARGS__) :              \
+			    _mslog(s, proc, prio, fmt, ##__VA_ARGS__)
 
-# ifdef __GNUC__
-#  define mslog(s, proc, prio, fmt, ...) \
-	(prio==LOG_ERR)?_mslog(s, proc, prio, "%s:%d: "fmt, __FILE__, __LINE__, ##__VA_ARGS__): \
-	_mslog(s, proc, prio, fmt, ##__VA_ARGS__)
+#define oclog(server, prio, fmt, ...)                                     \
+	(prio == LOG_ERR) ? _oclog(server, prio, "%s:%d: " fmt, __FILE__, \
+				   __LINE__, ##__VA_ARGS__) :             \
+			    _oclog(server, prio, fmt, ##__VA_ARGS__)
 
-#  define oclog(server, prio, fmt, ...) \
-	(prio==LOG_ERR)?_oclog(server, prio, "%s:%d: "fmt, __FILE__, __LINE__, ##__VA_ARGS__): \
-	_oclog(server, prio, fmt, ##__VA_ARGS__)
+#define seclog(sec, prio, fmt, ...)                                     \
+	(prio == LOG_ERR) ? _seclog(sec, prio, "%s:%d: " fmt, __FILE__, \
+				    __LINE__, ##__VA_ARGS__) :          \
+			    _seclog(sec, prio, fmt, ##__VA_ARGS__)
+#else
+#define mslog _mslog
+#define seclog _seclog
+#define oclog _oclog
+#endif
 
-#  define seclog(sec, prio, fmt, ...) \
-	(prio==LOG_ERR)?_seclog(sec, prio, "%s:%d: "fmt, __FILE__, __LINE__, ##__VA_ARGS__): \
-	_seclog(sec, prio, fmt, ##__VA_ARGS__)
-# else
-#  define mslog _mslog
-#  define seclog _seclog
-#  define oclog _oclog
-# endif
+void mslog_hex(const struct main_server_st *s, const struct proc_st *proc,
+	       int priority, const char *prefix, uint8_t *bin,
+	       unsigned int bin_size, unsigned int b64);
 
-void mslog_hex(const struct main_server_st * s, const struct proc_st* proc,
-	       int priority, const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64);
+void oclog_hex(const struct worker_st *ws, int priority, const char *prefix,
+	       uint8_t *bin, unsigned int bin_size, unsigned int b64);
 
-void oclog_hex(const struct worker_st* ws, int priority,
-		const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64);
-
-void seclog_hex(const struct sec_mod_st* sec, int priority,
-		const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64);
+void seclog_hex(const struct sec_mod_st *sec, int priority, const char *prefix,
+		uint8_t *bin, unsigned int bin_size, unsigned int b64);
 
 #endif
 
 /* Returns zero when the given priority is not sufficient
  * for logging. Updates the priority with */
-inline static
-unsigned log_check_priority(int oc_priority, int log_prio, int *syslog_prio)
+inline static unsigned int log_check_priority(int oc_priority, int log_prio,
+					      int *syslog_prio)
 {
 	switch (oc_priority) {
 	case LOG_ERR:
@@ -157,7 +163,6 @@ unsigned log_check_priority(int oc_priority, int log_prio, int *syslog_prio)
 		if (log_prio < OCLOG_TRANSFERRED)
 			return 0;
 
-
 		if (syslog_prio)
 			*syslog_prio = LOG_DEBUG;
 		break;
@@ -173,9 +178,9 @@ unsigned log_check_priority(int oc_priority, int log_prio, int *syslog_prio)
 
 		if (syslog_prio)
 			*syslog_prio = LOG_DEBUG;
-        }
+	}
 
-        return 1;
+	return 1;
 }
 
 #endif /* OC_LOG_H */

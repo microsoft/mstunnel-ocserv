@@ -56,10 +56,11 @@
 #include <main-ban.h>
 #include <ccan/list/list.h>
 
-struct proc_st *new_proc(main_server_st * s, pid_t pid, int cmd_fd,
-			struct sockaddr_storage *remote_addr, socklen_t remote_addr_len,
-			struct sockaddr_storage *our_addr, socklen_t our_addr_len,
-			uint8_t *sid, size_t sid_size)
+struct proc_st *new_proc(main_server_st *s, pid_t pid, int cmd_fd,
+			 struct sockaddr_storage *remote_addr,
+			 socklen_t remote_addr_len,
+			 struct sockaddr_storage *our_addr,
+			 socklen_t our_addr_len, uint8_t *sid, size_t sid_size)
 {
 	struct proc_st *ctmp;
 
@@ -70,7 +71,7 @@ struct proc_st *new_proc(main_server_st * s, pid_t pid, int cmd_fd,
 	ctmp->pid = pid;
 	ctmp->tun_lease.fd = -1;
 	ctmp->fd = cmd_fd;
-	set_cloexec_flag (cmd_fd, 1);
+	set_cloexec_flag(cmd_fd, 1);
 	ctmp->conn_time = time(NULL);
 
 	memcpy(&ctmp->remote_addr, remote_addr, remote_addr_len);
@@ -92,7 +93,7 @@ struct proc_st *new_proc(main_server_st * s, pid_t pid, int cmd_fd,
 
 /* k: whether to kill the process
  */
-void remove_proc(main_server_st * s, struct proc_st *proc, unsigned flags)
+void remove_proc(main_server_st *s, struct proc_st *proc, unsigned int flags)
 {
 	pid_t pid;
 
@@ -102,19 +103,25 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned flags)
 	list_del(&proc->list);
 	s->stats.active_clients--;
 
-	if ((flags&RPROC_KILL) && proc->pid != -1 && proc->pid != 0)
+	if ((flags & RPROC_KILL) && proc->pid != -1 && proc->pid != 0)
 		kill(proc->pid, SIGTERM);
 
 	/* close any pending sessions */
 	if (proc->active_sid && !(flags & RPROC_QUIT)) {
-		if (session_close(&(s->sec_mod_instances[proc->sec_mod_instance_index]), proc) < 0) {
-			mslog(s, proc, LOG_ERR, "error closing session (communication with sec-mod issue)");
+		if (session_close(
+			    &(s->sec_mod_instances[proc->sec_mod_instance_index]),
+			    proc) < 0) {
+			mslog(s, proc, LOG_ERR,
+			      "error closing session (communication with sec-mod issue)");
 			exit(EXIT_FAILURE);
 		}
 	}
 
-	mslog(s, proc, discon_reason_to_log_level(proc->discon_reason), "user disconnected (reason: %s, rx: %"PRIu64", tx: %"PRIu64")",
-		discon_reason_to_str(proc->discon_reason), proc->bytes_in, proc->bytes_out);
+	mslog(s, proc, discon_reason_to_log_level(proc->discon_reason),
+	      "user disconnected (reason: %s, rx: %" PRIu64 ", tx: %" PRIu64
+	      ")",
+	      discon_reason_to_str(proc->discon_reason), proc->bytes_in,
+	      proc->bytes_out);
 
 	pid = remove_from_script_list(s, proc);
 	if (proc->status == PS_AUTH_COMPLETED || pid > 0) {
@@ -128,8 +135,8 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned flags)
 					user_disconnected(s, proc);
 			}
 		} else { /* pid > 0 or status == PS_AUTH_COMPLETED are mutually exclusive
-		          * since PS_AUTH_COMPLETED is set only after a successful script run.
-		          */
+			  * since PS_AUTH_COMPLETED is set only after a successful script run.
+			  */
 			user_disconnected(s, proc);
 		}
 	}

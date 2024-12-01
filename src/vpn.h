@@ -36,25 +36,21 @@
 #include <ipc.pb-c.h>
 
 #ifdef __GNUC__
-# define _OCSERV_GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
-# if _OCSERV_GCC_VERSION >= 30000
-#  define _ATTR_PACKED __attribute__ ((__packed__))
-# endif
+#define _OCSERV_GCC_VERSION \
+	(__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#if _OCSERV_GCC_VERSION >= 30000
+#define _ATTR_PACKED __attribute__((__packed__))
+#endif
 #endif /* __GNUC__ */
 
 #ifndef _ATTR_PACKED
-# define _ATTR_PACKED
+#define _ATTR_PACKED
 #endif
 
-#define MAX_MSG_SIZE 16*1024
+#define MAX_MSG_SIZE 16 * 1024
 #define DTLS_PROTO_INDICATOR "PSK-NEGOTIATE"
 
-
-typedef enum {
-	SOCK_TYPE_TCP,
-	SOCK_TYPE_UDP,
-	SOCK_TYPE_UNIX
-} sock_type_t;
+typedef enum { SOCK_TYPE_TCP, SOCK_TYPE_UDP, SOCK_TYPE_UNIX } sock_type_t;
 
 typedef enum {
 	OC_COMP_NULL = 0,
@@ -74,17 +70,10 @@ typedef enum fw_proto_t {
 	PROTO_MAX
 } fw_proto_t;
 
-
 inline static const char *proto_to_str(fw_proto_t proto)
 {
-	const char *proto2str[] = {
-		"udp",
-		"tcp",
-		"sctp",
-		"esp",
-		"icmp",
-		"icmpv6"
-	};
+	const char *proto2str[] = { "udp", "tcp",  "sctp",
+				    "esp", "icmp", "icmpv6" };
 
 	if ((int)proto < 0 || proto >= PROTO_MAX)
 		return "unknown";
@@ -100,7 +89,7 @@ inline static const char *proto_to_str(fw_proto_t proto)
 #define DEFAULT_PASSWORD_POINTS 10
 #define DEFAULT_CONNECT_POINTS 1
 #define DEFAULT_KKDCP_POINTS 1
-#define DEFAULT_MAX_BAN_SCORE (MAX_PASSWORD_TRIES*DEFAULT_PASSWORD_POINTS)
+#define DEFAULT_MAX_BAN_SCORE (MAX_PASSWORD_TRIES * DEFAULT_PASSWORD_POINTS)
 #define DEFAULT_BAN_RESET_TIME 300
 
 #define MIN_NO_COMPRESS_LIMIT 64
@@ -115,13 +104,13 @@ inline static const char *proto_to_str(fw_proto_t proto)
 
 #define DEFAULT_DPD_TIME 600
 
-#define AC_PKT_DATA             0	/* Uncompressed data */
-#define AC_PKT_DPD_OUT          3	/* Dead Peer Detection */
-#define AC_PKT_DPD_RESP         4	/* DPD response */
-#define AC_PKT_DISCONN          5	/* Client disconnection notice */
-#define AC_PKT_KEEPALIVE        7	/* Keepalive */
-#define AC_PKT_COMPRESSED       8	/* Compressed data */
-#define AC_PKT_TERM_SERVER      9	/* Server kick */
+#define AC_PKT_DATA 0 /* Uncompressed data */
+#define AC_PKT_DPD_OUT 3 /* Dead Peer Detection */
+#define AC_PKT_DPD_RESP 4 /* DPD response */
+#define AC_PKT_DISCONN 5 /* Client disconnection notice */
+#define AC_PKT_KEEPALIVE 7 /* Keepalive */
+#define AC_PKT_COMPRESSED 8 /* Compressed data */
+#define AC_PKT_TERM_SERVER 9 /* Server kick */
 
 #define REKEY_METHOD_SSL 1
 #define REKEY_METHOD_NEW_TUNNEL 2
@@ -129,20 +118,23 @@ inline static const char *proto_to_str(fw_proto_t proto)
 extern int syslog_open;
 
 /* the first is generic, for the methods that require a username password */
-#define AUTH_TYPE_USERNAME_PASS (1<<0)
-#define AUTH_TYPE_PAM (1<<1 | AUTH_TYPE_USERNAME_PASS)
-#define AUTH_TYPE_PLAIN (1<<2 | AUTH_TYPE_USERNAME_PASS)
-#define AUTH_TYPE_CERTIFICATE (1<<3)
-#define AUTH_TYPE_RADIUS (1<<5 | AUTH_TYPE_USERNAME_PASS)
-#define AUTH_TYPE_GSSAPI (1<<6)
-#define AUTH_TYPE_OIDC (1<<7)
+#define AUTH_TYPE_USERNAME_PASS (1 << 0)
+#define AUTH_TYPE_PAM (1 << 1 | AUTH_TYPE_USERNAME_PASS)
+#define AUTH_TYPE_PLAIN (1 << 2 | AUTH_TYPE_USERNAME_PASS)
+#define AUTH_TYPE_CERTIFICATE (1 << 3)
+#define AUTH_TYPE_RADIUS (1 << 5 | AUTH_TYPE_USERNAME_PASS)
+#define AUTH_TYPE_GSSAPI (1 << 6)
+#define AUTH_TYPE_OIDC (1 << 7)
 
-#define ALL_AUTH_TYPES ((AUTH_TYPE_PAM|AUTH_TYPE_PLAIN|AUTH_TYPE_CERTIFICATE|AUTH_TYPE_RADIUS|AUTH_TYPE_GSSAPI|AUTH_TYPE_OIDC) & (~AUTH_TYPE_USERNAME_PASS))
+#define ALL_AUTH_TYPES                                              \
+	((AUTH_TYPE_PAM | AUTH_TYPE_PLAIN | AUTH_TYPE_CERTIFICATE | \
+	  AUTH_TYPE_RADIUS | AUTH_TYPE_GSSAPI | AUTH_TYPE_OIDC) &   \
+	 (~AUTH_TYPE_USERNAME_PASS))
 #define VIRTUAL_AUTH_TYPES (AUTH_TYPE_USERNAME_PASS)
 #define CONFIDENTIAL_USER_NAME_AUTH_TYPES (AUTH_TYPE_GSSAPI | AUTH_TYPE_OIDC)
 
-#define ACCT_TYPE_PAM (1<<1)
-#define ACCT_TYPE_RADIUS (1<<2)
+#define ACCT_TYPE_PAM (1 << 1)
+#define ACCT_TYPE_RADIUS (1 << 2)
 
 #include "defs.h"
 
@@ -153,10 +145,8 @@ extern int syslog_open;
  */
 #define AUTH_SLACK_TIME 15
 
-
 #define MAX_CIPHERSUITE_NAME 64
 #define SID_SIZE 32
-
 
 struct vpn_st {
 	char name[IFNAMSIZ];
@@ -165,7 +155,7 @@ struct vpn_st {
 	char *ipv4;
 	char *ipv4_local; /* local IPv4 address */
 	char *ipv6_network;
-	unsigned ipv6_prefix;
+	unsigned int ipv6_prefix;
 
 	char *ipv6;
 	char *ipv6_local; /* local IPv6 address */
@@ -192,7 +182,7 @@ struct vpn_st {
 typedef struct auth_struct_st {
 	char *name;
 	char *additional;
-	unsigned type;
+	unsigned int type;
 	const struct auth_mod_st *amod;
 	void *auth_ctx;
 	void *dl_ctx;
@@ -220,7 +210,7 @@ typedef struct kkdcp_st {
 	char *url;
 	/* the supported realms by this URL */
 	kkdcp_realm_st realms[MAX_KRB_REALMS];
-	unsigned realms_size;
+	unsigned int realms_size;
 } kkdcp_st;
 
 struct cfg_st {
@@ -231,15 +221,15 @@ struct cfg_st {
 	kkdcp_st *kkdcp;
 	unsigned int kkdcp_size;
 
-	char *cert_user_oid;	/* The OID that will be used to extract the username */
-	char *cert_group_oid;	/* The OID that will be used to extract the groupname */
-
+	char *cert_user_oid; /* The OID that will be used to extract the username */
+	char *cert_group_oid; /* The OID that will be used to extract the groupname */
 
 	gnutls_certificate_request_t cert_req;
 	char *priorities;
 #ifdef ENABLE_COMPRESSION
-	unsigned enable_compression;
-	unsigned no_compress_limit;	/* under this size (in bytes) of data there will be no compression */
+	unsigned int enable_compression;
+	unsigned int
+		no_compress_limit; /* under this size (in bytes) of data there will be no compression */
 #endif
 	char *banner;
 	char *pre_login_banner;
@@ -251,77 +241,88 @@ struct cfg_st {
 
 	char **friendly_group_list; /* the same size as group_list_size */
 
-	unsigned select_group_by_url;
-	unsigned auto_select_group;
+	unsigned int select_group_by_url;
+	unsigned int auto_select_group;
 	char *default_select_group;
 
 	char **custom_header;
-	size_t custom_header_size;;
+	size_t custom_header_size;
 
 	char **split_dns;
-	size_t split_dns_size;;
+	size_t split_dns_size;
 
 	/* http headers to include */
 	char **included_http_headers;
 	size_t included_http_headers_size;
 
-	unsigned int append_routes; /* whether to append global routes to per-user config */
-	unsigned restrict_user_to_routes; /* whether the firewall script will be run for the user */
-	unsigned deny_roaming; /* whether a cookie is restricted to a single IP */
-	time_t cookie_timeout;	/* in seconds */
-	time_t session_timeout;	/* in seconds */
-	unsigned persistent_cookies; /* whether cookies stay valid after disconnect */
+	unsigned int
+		append_routes; /* whether to append global routes to per-user config */
+	unsigned int
+		restrict_user_to_routes; /* whether the firewall script will be run for the user */
+	unsigned int
+		deny_roaming; /* whether a cookie is restricted to a single IP */
+	time_t cookie_timeout; /* in seconds */
+	time_t session_timeout; /* in seconds */
+	unsigned int
+		persistent_cookies; /* whether cookies stay valid after disconnect */
 
-	time_t rekey_time;	/* in seconds */
-	unsigned rekey_method; /* REKEY_METHOD_ */
+	time_t rekey_time; /* in seconds */
+	unsigned int rekey_method; /* REKEY_METHOD_ */
 
-	time_t min_reauth_time;	/* after a failed auth, how soon one can reauthenticate -> in seconds */
-	unsigned max_ban_score;	/* the score allowed before a user is banned (see vpn.h) */
+	time_t min_reauth_time; /* after a failed auth, how soon one can reauthenticate -> in seconds */
+	unsigned int
+		max_ban_score; /* the score allowed before a user is banned (see vpn.h) */
 	int ban_reset_time;
 
-	unsigned ban_points_wrong_password;
-	unsigned ban_points_connect;
-	unsigned ban_points_kkdcp;
+	unsigned int ban_points_wrong_password;
+	unsigned int ban_points_connect;
+	unsigned int ban_points_kkdcp;
 
 	/* when using the new PSK DTLS negotiation make sure that
 	 * the negotiated DTLS cipher/mac matches the TLS cipher/mac. */
-	unsigned match_dtls_and_tls;
-	unsigned dtls_psk; /* whether to enable DTLS-PSK */
-	unsigned dtls_legacy; /* whether to enable DTLS-LEGACY */
+	unsigned int match_dtls_and_tls;
+	unsigned int dtls_psk; /* whether to enable DTLS-PSK */
+	unsigned int dtls_legacy; /* whether to enable DTLS-LEGACY */
 
-	unsigned isolate; /* whether seccomp should be enabled or not */
+	unsigned int isolate; /* whether seccomp should be enabled or not */
 
-	unsigned auth_timeout; /* timeout of HTTP auth */
-	unsigned idle_timeout; /* timeout when idle */
-	unsigned mobile_idle_timeout; /* timeout when a mobile is idle */
-	unsigned switch_to_tcp_timeout; /* length of no traffic period to automatically switch to TCP */
-	unsigned keepalive;
-	unsigned dpd;
-	unsigned mobile_dpd;
-	unsigned max_clients;
-	unsigned max_same_clients;
-	unsigned use_utmp;
-	unsigned tunnel_all_dns;
-	unsigned use_occtl; /* whether support for the occtl tool will be enabled */
+	unsigned int auth_timeout; /* timeout of HTTP auth */
+	unsigned int idle_timeout; /* timeout when idle */
+	unsigned int mobile_idle_timeout; /* timeout when a mobile is idle */
+	unsigned int
+		switch_to_tcp_timeout; /* length of no traffic period to automatically switch to TCP */
+	unsigned int keepalive;
+	unsigned int dpd;
+	unsigned int mobile_dpd;
+	unsigned int max_clients;
+	unsigned int max_same_clients;
+	unsigned int use_utmp;
+	unsigned int tunnel_all_dns;
+	unsigned int
+		use_occtl; /* whether support for the occtl tool will be enabled */
 
-	unsigned try_mtu; /* MTU discovery enabled */
-	unsigned cisco_client_compat; /* do not require client certificate,
-	                               * and allow auth to complete in different
-	                               * TCP sessions. */
-	unsigned cisco_svc_client_compat; /* force allowed ciphers and disable dtls-legacy */
-	unsigned rate_limit_ms; /* if non zero force a connection every rate_limit milliseconds if ocserv-sm is heavily loaded */
-	unsigned ping_leases; /* non zero if we need to ping prior to leasing */
-	unsigned server_drain_ms; /* how long to wait after we stop accepting new connections before closing old connections */
+	unsigned int try_mtu; /* MTU discovery enabled */
+	unsigned int cisco_client_compat; /* do not require client certificate,
+				       * and allow auth to complete in different
+				       * TCP sessions. */
+	unsigned int
+		cisco_svc_client_compat; /* force allowed ciphers and disable dtls-legacy */
+	unsigned int
+		rate_limit_ms; /* if non zero force a connection every rate_limit milliseconds if ocserv-sm is heavily loaded */
+	unsigned int
+		ping_leases; /* non zero if we need to ping prior to leasing */
+	unsigned int
+		server_drain_ms; /* how long to wait after we stop accepting new connections before closing old connections */
 
 	size_t rx_per_sec;
 	size_t tx_per_sec;
-	unsigned net_priority;
+	unsigned int net_priority;
 
 	char *crl;
 
-	unsigned output_buffer;
-	unsigned default_mtu;
-	unsigned predictable_ips; /* boolean */
+	unsigned int output_buffer;
+	unsigned int default_mtu;
+	unsigned int predictable_ips; /* boolean */
 
 	char *route_add_cmd;
 	char *route_del_cmd;
@@ -338,7 +339,7 @@ struct cfg_st {
 	char *xml_config_hash;
 #endif
 
-	unsigned client_bypass_protocol;
+	unsigned int client_bypass_protocol;
 
 	/* additional configuration files */
 	char *per_group_dir;
@@ -373,13 +374,13 @@ struct perm_cfg_st {
 
 	/* stuff here don't change on reload */
 	auth_struct_st auth[MAX_AUTH_METHODS];
-	unsigned auth_methods;
+	unsigned int auth_methods;
 	acct_struct_st acct;
 	unsigned int sup_config_type; /* one of SUP_CONFIG_ */
 
-	char *chroot_dir;	/* where the xml files are served from */
-	char* occtl_socket_file;
-	char* socket_file_prefix;
+	char *chroot_dir; /* where the xml files are served from */
+	char *occtl_socket_file;
+	char *socket_file_prefix;
 
 	uid_t uid;
 	gid_t gid;
@@ -397,13 +398,13 @@ struct perm_cfg_st {
 	char *cert_hash;
 #endif
 	unsigned int stats_reset_time;
-	unsigned foreground;
-	unsigned no_chdir;
-	unsigned log_level;
-	unsigned log_stderr;
-	unsigned syslog;
+	unsigned int foreground;
+	unsigned int no_chdir;
+	unsigned int log_level;
+	unsigned int log_stderr;
+	unsigned int syslog;
 
-	unsigned pr_dumpable;
+	unsigned int pr_dumpable;
 
 	char *ca;
 	char *dh_params_file;
@@ -417,7 +418,7 @@ struct perm_cfg_st {
 	unsigned int sec_mod_scale;
 
 	/* for testing ocserv only */
-	unsigned debug_no_secmod_stats;
+	unsigned int debug_no_secmod_stats;
 
 	/* attic, where old config allocated values are stored */
 	struct list_head attic;
@@ -427,7 +428,6 @@ typedef struct attic_entry_st {
 	struct list_node list;
 	int *usage_count;
 } attic_entry_st;
-
 
 /* generic thing to stop complaints */
 struct worker_st;
@@ -443,7 +443,7 @@ struct dtls_st;
 #define TLS_MASTER_SIZE 48
 #define MAX_HOSTNAME_SIZE MAX_USERNAME_SIZE
 #define MAX_GROUPNAME_SIZE MAX_USERNAME_SIZE
-#define MAX_SESSION_DATA_SIZE (4*1024)
+#define MAX_SESSION_DATA_SIZE (4 * 1024)
 
 #if defined(CAPTURE_LATENCY_SUPPORT)
 #define LATENCY_SAMPLE_SIZE 1024
@@ -454,24 +454,30 @@ struct dtls_st;
 
 #include <tun.h>
 
-unsigned extract_prefix(char *network);
+unsigned int extract_prefix(char *network);
 
 /* macros */
-#define TOS_PACK(x) (x<<4)
-#define TOS_UNPACK(x) (x>>4)
-#define IS_TOS(x) ((x&0x0f)==0)
+#define TOS_PACK(x) (x << 4)
+#define TOS_UNPACK(x) (x >> 4)
+#define IS_TOS(x) ((x & 0x0f) == 0)
 
 /* Helper structures */
-enum option_types { OPTION_NUMERIC, OPTION_STRING, OPTION_BOOLEAN, OPTION_MULTI_LINE };
+enum option_types {
+	OPTION_NUMERIC,
+	OPTION_STRING,
+	OPTION_BOOLEAN,
+	OPTION_MULTI_LINE
+};
 
 #include <ip-util.h>
 
-void reload_cfg_file(void *pool, struct list_head *configs, unsigned sec_mod);
+void reload_cfg_file(void *pool, struct list_head *configs,
+		     unsigned int sec_mod);
 void clear_old_configs(struct list_head *configs);
 void write_pid_file(void);
 void remove_pid_file(void);
 
-unsigned switch_comp_priority(void *pool, const char *modstring);
+unsigned int switch_comp_priority(void *pool, const char *modstring);
 
 extern sigset_t sig_default_set;
 

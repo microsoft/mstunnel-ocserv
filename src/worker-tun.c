@@ -37,9 +37,9 @@
 #include <ip-lease.h>
 
 #if defined(HAVE_LINUX_IF_TUN_H)
-# include <linux/if_tun.h>
+#include <linux/if_tun.h>
 #elif defined(HAVE_NET_IF_TUN_H)
-# include <net/if_tun.h>
+#include <net/if_tun.h>
 #endif
 
 #include <netdb.h>
@@ -51,18 +51,18 @@
 #include "log.h"
 
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
-# include <net/if_var.h>
-# include <netinet/in_var.h>
+#include <net/if_var.h>
+#include <netinet/in_var.h>
 #endif
 #if defined(__OpenBSD__)
-# include <netinet6/in6_var.h>
+#include <netinet6/in6_var.h>
 #endif
 #if defined(__DragonFly__)
-# include <net/tun/if_tun.h>
+#include <net/tun/if_tun.h>
 #endif
 
 #if defined(__OpenBSD__) || defined(TUNSIFHEAD)
-# define TUN_AF_PREFIX 1
+#define TUN_AF_PREFIX 1
 #endif
 
 #ifdef TUN_AF_PREFIX
@@ -71,7 +71,7 @@ ssize_t tun_write(int sockfd, const void *buf, size_t len)
 	struct ip *iph = (void *)buf;
 	uint32_t head;
 	const uint8_t *data = buf;
-	static int complained = 0;
+	static int complained;
 	struct iovec iov[2];
 	int ret;
 
@@ -82,7 +82,9 @@ ssize_t tun_write(int sockfd, const void *buf, size_t len)
 	else {
 		if (!complained) {
 			complained = 1;
-			oc_syslog(LOG_ERR, "tun_write: Unknown packet (len %d) received %02x %02x %02x %02x...\n",
+			oc_syslog(
+				LOG_ERR,
+				"tun_write: Unknown packet (len %d) received %02x %02x %02x %02x...\n",
 				(int)len, data[0], data[1], data[2], data[3]);
 		}
 		return -1;
@@ -90,7 +92,7 @@ ssize_t tun_write(int sockfd, const void *buf, size_t len)
 
 	iov[0].iov_base = &head;
 	iov[0].iov_len = sizeof(head);
-	iov[1].iov_base = (void*)buf;
+	iov[1].iov_base = (void *)buf;
 	iov[1].iov_len = len;
 
 	ret = writev(sockfd, iov, 2);
@@ -143,4 +145,4 @@ int tun_claim(int sockfd)
 {
 	return ioctl(sockfd, TUNSIFPID, 0);
 }
-#endif	/* !__FreeBSD__ */
+#endif /* !__FreeBSD__ */

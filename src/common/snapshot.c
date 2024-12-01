@@ -61,7 +61,8 @@ static size_t snapshot_hash_filename(const char *file_name)
 
 static size_t snapshot_rehash(const void *elem, void *priv)
 {
-	snapshot_entry_t *entry = (snapshot_entry_t *) elem;
+	snapshot_entry_t *entry = (snapshot_entry_t *)elem;
+
 	return snapshot_hash_filename(entry->name);
 }
 
@@ -71,6 +72,7 @@ static snapshot_entry_t *snapshot_find(struct snapshot_t *snapshot,
 	struct htable_iter iter;
 	size_t hash = snapshot_hash_filename(filename);
 	snapshot_entry_t *entry = htable_firstval(&snapshot->ht, &iter, hash);
+
 	while (entry != NULL) {
 		if (strcmp(entry->name, filename) == 0) {
 			break;
@@ -84,6 +86,7 @@ static int snapshot_file_name_from_fd(int fd, char *file_name,
 				      size_t file_name_length)
 {
 	int ret = snprintf(file_name, file_name_length, "/proc/self/fd/%d", fd);
+
 	if (ret >= file_name_length) {
 		return -1;
 	} else {
@@ -91,29 +94,28 @@ static int snapshot_file_name_from_fd(int fd, char *file_name,
 	}
 }
 
-static int snapshot_add_entry(snapshot_t * snapshot, const char *filename,
+static int snapshot_add_entry(snapshot_t *snapshot, const char *filename,
 			      int fd)
 {
 	int retval = -1;
 	snapshot_entry_t *entry = NULL;
 	size_t file_name_length = strlen(filename) + 1;
-	entry =
-	    (snapshot_entry_t *) talloc_zero_array(snapshot->pool, char,
-						   sizeof(uint32_t) +
-						   file_name_length);
+
+	entry = (snapshot_entry_t *)talloc_zero_array(
+		snapshot->pool, char, sizeof(uint32_t) + file_name_length);
 	if (entry == NULL)
 		goto cleanup;
 
 	entry->fd = fd;
 	strlcpy((char *)entry->name, filename, file_name_length);
 
-	if (!htable_add
-	    (&snapshot->ht, snapshot_hash_filename(entry->name), entry))
+	if (!htable_add(&snapshot->ht, snapshot_hash_filename(entry->name),
+			entry))
 		goto cleanup;
 
 	entry = NULL;
 	retval = 0;
- cleanup:
+cleanup:
 	if (entry)
 		talloc_free(entry);
 
@@ -138,12 +140,11 @@ int snapshot_init(void *pool, struct snapshot_t **snapshot, const char *prefix)
 	new_snapshot->pool = pool;
 
 	new_snapshot->tmp_filename_template =
-	    talloc_array(pool, char, tmp_filename_template_length);
+		talloc_array(pool, char, tmp_filename_template_length);
 
-	if (snprintf
-	    ((char *)new_snapshot->tmp_filename_template,
-	     tmp_filename_template_length, "%sXXXXXX",
-	     prefix) >= tmp_filename_template_length)
+	if (snprintf((char *)new_snapshot->tmp_filename_template,
+		     tmp_filename_template_length, "%sXXXXXX",
+		     prefix) >= tmp_filename_template_length)
 		goto cleanup;
 
 	htable_init(&new_snapshot->ht, snapshot_rehash, new_snapshot);
@@ -151,11 +152,11 @@ int snapshot_init(void *pool, struct snapshot_t **snapshot, const char *prefix)
 
 	*snapshot = new_snapshot;
 	new_snapshot = NULL;
- cleanup:
+cleanup:
 	if (new_snapshot != NULL) {
 		if (new_snapshot->tmp_filename_template != NULL)
-			talloc_free((char *)new_snapshot->
-				    tmp_filename_template);
+			talloc_free(
+				(char *)new_snapshot->tmp_filename_template);
 		talloc_free(new_snapshot);
 	}
 
@@ -170,6 +171,7 @@ void snapshot_terminate(struct snapshot_t *snapshot)
 {
 	struct htable_iter iter;
 	snapshot_entry_t *entry = htable_first(&snapshot->ht, &iter);
+
 	while (entry != NULL) {
 		htable_delval(&snapshot->ht, &iter);
 		close(entry->fd);
@@ -203,6 +205,7 @@ int snapshot_create(struct snapshot_t *snapshot, const char *filename)
 	fd_out = mkstemp(tmp_file_name);
 	if (fd_out == -1) {
 		int err = errno;
+
 		fprintf(stderr, ERRSTR "cannot create temp file '%s' : %s\n",
 			tmp_file_name, strerror(err));
 		goto cleanup;
@@ -213,10 +216,12 @@ int snapshot_create(struct snapshot_t *snapshot, const char *filename)
 	for (;;) {
 		int byteRead = read(fd_in, buffer, sizeof(buffer));
 		int bytesWritten;
+
 		if (byteRead == 0) {
 			break;
 		} else if (byteRead == -1) {
 			int err = errno;
+
 			fprintf(stderr, ERRSTR " reading %s failed %s\n",
 				filename, strerror(err));
 			goto cleanup;
@@ -224,6 +229,7 @@ int snapshot_create(struct snapshot_t *snapshot, const char *filename)
 			bytesWritten = write(fd_out, buffer, byteRead);
 			if (bytesWritten != byteRead) {
 				int err = errno;
+
 				fprintf(stderr,
 					ERRSTR " writing %s failed %s\n",
 					tmp_file_name, strerror(err));
@@ -250,7 +256,7 @@ int snapshot_create(struct snapshot_t *snapshot, const char *filename)
 	ret = 0;
 	entry = NULL;
 
- cleanup:
+cleanup:
 	if (fd_in != -1)
 		close(fd_in);
 
@@ -264,6 +270,7 @@ int snapshot_first(struct snapshot_t *snapshot, struct htable_iter *iter,
 		   int *fd, const char **file_name)
 {
 	snapshot_entry_t *entry = htable_first(&snapshot->ht, iter);
+
 	if (entry == NULL) {
 		return -1;
 	} else {
@@ -277,6 +284,7 @@ int snapshot_next(struct snapshot_t *snapshot, struct htable_iter *iter,
 		  int *fd, const char **file_name)
 {
 	snapshot_entry_t *entry = htable_next(&snapshot->ht, iter);
+
 	if (entry == NULL) {
 		return -1;
 	} else {
@@ -290,13 +298,14 @@ int snapshot_restore_entry(struct snapshot_t *snapshot, int fd,
 			   const char *file_name)
 {
 	int ret = snapshot_add_entry(snapshot, file_name, fd);
+
 	if (ret < 0)
 		return ret;
 
 	return 0;
 }
 
-size_t snapshot_entry_count(struct snapshot_t * snapshot)
+size_t snapshot_entry_count(struct snapshot_t *snapshot)
 {
 	struct htable_iter iter;
 	size_t count = 0;
@@ -317,6 +326,7 @@ int snapshot_lookup_filename(struct snapshot_t *snapshot, const char *file_name,
 	char fd_path[128];
 	char *new_file_name = NULL;
 	snapshot_entry_t *entry = snapshot_find(snapshot, file_name);
+
 	if (entry == NULL)
 		goto cleanup;
 
@@ -332,7 +342,7 @@ int snapshot_lookup_filename(struct snapshot_t *snapshot, const char *file_name,
 
 	ret = 0;
 
- cleanup:
+cleanup:
 	if (new_file_name != NULL)
 		talloc_free(new_file_name);
 

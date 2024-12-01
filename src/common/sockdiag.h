@@ -24,6 +24,8 @@
 
 #include <config.h>
 
-int sockdiag_query_unix_domain_socket_queue_length(const char * socket_name, int * sock_rqueue, int * sock_wqueue);
+int sockdiag_query_unix_domain_socket_queue_length(const char *socket_name,
+						   int *sock_rqueue,
+						   int *sock_wqueue);
 
 #endif

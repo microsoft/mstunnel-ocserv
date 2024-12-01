@@ -30,15 +30,15 @@
 /* Unit test for _cstp_recv_packet(). I checks whether
  * CSTP packets are received and decoded as expected.
  */
-static unsigned verbose = 0;
+static unsigned int verbose;
 #define UNDER_TEST
 #define force_write write
 
 #include "../src/tlslib.c"
 
-int syslog_open = 0;
+int syslog_open;
 
-int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
+int get_cert_names(worker_st *ws, const gnutls_datum_t *raw)
 {
 	return 0;
 }
@@ -48,13 +48,14 @@ int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
 
 void writer(int fd)
 {
-	unsigned size, i, j;
-	unsigned char buf[MAX_SIZE+8];
+	unsigned int size, i, j;
+	unsigned char buf[MAX_SIZE + 8];
 
 	memset(buf, 0, sizeof(buf));
 
-	for (i=0;i<ITERATIONS;i++) {
-		assert(gnutls_rnd(GNUTLS_RND_NONCE, &size, sizeof(unsigned)) >= 0);
+	for (i = 0; i < ITERATIONS; i++) {
+		assert(gnutls_rnd(GNUTLS_RND_NONCE, &size,
+				  sizeof(unsigned int)) >= 0);
 
 		size %= MAX_SIZE;
 		size++; /* non-zero */
@@ -66,8 +67,8 @@ void writer(int fd)
 
 		if (verbose)
 			fprintf(stderr, "sending %d\n", size);
-		for (j=0;j<size;j++) { /* use multiple writes */
-			assert(write(fd, buf+j, 1) == 1);
+		for (j = 0; j < size; j++) { /* use multiple writes */
+			assert(write(fd, buf + j, 1) == 1);
 		}
 	}
 }
@@ -75,14 +76,14 @@ void writer(int fd)
 void receiver(int fd)
 {
 	worker_st ws;
-	unsigned char buf[MAX_SIZE*3];
+	unsigned char buf[MAX_SIZE * 3];
 	int ret;
-	unsigned i;
+	unsigned int i;
 
 	memset(&ws, 0, sizeof(ws));
 	ws.conn_fd = fd;
 
-	for (i=0;i<ITERATIONS;i++) {
+	for (i = 0; i < ITERATIONS; i++) {
 		ret = _cstp_recv_packet(&ws, buf, sizeof(buf));
 		if (verbose)
 			fprintf(stderr, "received %d\n", ret);
@@ -109,7 +110,8 @@ int main(int argc, char **argv)
 		receiver(sockets[0]);
 		wait(&status);
 		if (WEXITSTATUS(status) != 0) {
-			fprintf(stderr, "child failed %d!\n", (int)WEXITSTATUS(status));
+			fprintf(stderr, "child failed %d!\n",
+				(int)WEXITSTATUS(status));
 			exit(1);
 		}
 	} else {

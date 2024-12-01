@@ -44,12 +44,13 @@
 #include <tlslib.h>
 
 #ifdef HAVE_SIGALTSTACK
-# include <signal.h>
-# include <sys/mman.h>
+#include <signal.h>
+#include <sys/mman.h>
 #endif
 
 /* recv from the new file descriptor and make sure we have a valid packet */
-static unsigned recv_from_new_fd(struct worker_st * ws, struct dtls_st *dtls, int fd, UdpFdMsg **tmsg)
+static unsigned int recv_from_new_fd(struct worker_st *ws, struct dtls_st *dtls,
+				     int fd, UdpFdMsg **tmsg)
 {
 	int saved_fd, ret;
 	UdpFdMsg *saved_tmsg;
@@ -64,7 +65,8 @@ static unsigned recv_from_new_fd(struct worker_st * ws, struct dtls_st *dtls, in
 	dtls->dtls_tptr.msg = *tmsg;
 	dtls->dtls_tptr.fd = fd;
 
-	ret = gnutls_record_recv(dtls->dtls_session, ws->buffer, ws->buffer_size);
+	ret = gnutls_record_recv(dtls->dtls_session, ws->buffer,
+				 ws->buffer_size);
 	/* we receive GNUTLS_E_AGAIN in case the packet was discarded */
 	if (ret > 0) {
 		ret = 1;
@@ -72,7 +74,7 @@ static unsigned recv_from_new_fd(struct worker_st * ws, struct dtls_st *dtls, in
 	}
 
 	ret = 0;
- revert:
+revert:
 	*tmsg = dtls->dtls_tptr.msg;
 	dtls->dtls_tptr.fd = saved_fd;
 	dtls->dtls_tptr.msg = saved_tmsg;
@@ -86,12 +88,13 @@ int handle_commands_from_main(struct worker_st *ws)
 	UdpFdMsg *tmsg = NULL;
 	int ret;
 	int fd = -1;
-	struct dtls_st * dtls = NULL;
+	struct dtls_st *dtls = NULL;
 	/*int cmd_data_len;*/
 
 	memset(&ws->buffer, 0, sizeof(ws->buffer));
 
-	ret = recv_msg_data(ws->cmd_fd, &cmd, ws->buffer, sizeof(ws->buffer), &fd);
+	ret = recv_msg_data(ws->cmd_fd, &cmd, ws->buffer, sizeof(ws->buffer),
+			    &fd);
 	if (ret < 0) {
 		oclog(ws, LOG_DEBUG, "cannot obtain data from command socket");
 		exit_worker_reason(ws, REASON_SERVER_DISCONNECT);
@@ -104,7 +107,8 @@ int handle_commands_from_main(struct worker_st *ws)
 
 	length = ret;
 
-	oclog(ws, LOG_DEBUG, "worker received message %s of %u bytes\n", cmd_request_to_str(cmd), (unsigned)length);
+	oclog(ws, LOG_DEBUG, "worker received message %s of %u bytes\n",
+	      cmd_request_to_str(cmd), (unsigned int)length);
 
 	/*cmd_data_len = ret - 1;*/
 
@@ -112,7 +116,7 @@ int handle_commands_from_main(struct worker_st *ws)
 	case CMD_TERMINATE:
 		exit_worker_reason(ws, REASON_SERVER_DISCONNECT);
 	case CMD_UDP_FD: {
-		unsigned has_hello = 1;
+		unsigned int has_hello = 1;
 
 		if (DTLS_ACTIVE(ws)->udp_state != UP_WAIT_FD) {
 			oclog(ws, LOG_DEBUG, "received another a UDP fd!");
@@ -124,7 +128,8 @@ int handle_commands_from_main(struct worker_st *ws)
 		}
 
 		if (fd == -1) {
-			oclog(ws, LOG_ERR, "received UDP fd message of wrong type");
+			oclog(ws, LOG_ERR,
+			      "received UDP fd message of wrong type");
 
 			if (tmsg)
 				udp_fd_msg__free_unpacked(tmsg, NULL);
@@ -139,7 +144,8 @@ int handle_commands_from_main(struct worker_st *ws)
 			/* check if the first packet received is a valid one -
 			 * if not discard the new fd */
 			if (!recv_from_new_fd(ws, DTLS_ACTIVE(ws), fd, &tmsg)) {
-				oclog(ws, LOG_INFO, "received UDP fd message but its session has invalid data!");
+				oclog(ws, LOG_INFO,
+				      "received UDP fd message but its session has invalid data!");
 				if (tmsg)
 					udp_fd_msg__free_unpacked(tmsg, NULL);
 				close(fd);
@@ -149,7 +155,8 @@ int handle_commands_from_main(struct worker_st *ws)
 		} else { /* received client hello */
 			dtls = DTLS_INACTIVE(ws);
 			dtls->udp_state = UP_SETUP;
-			oclog(ws, LOG_DEBUG, "Starting DTLS session %d", ws->dtls_active_session ^ 1);
+			oclog(ws, LOG_DEBUG, "Starting DTLS session %d",
+			      ws->dtls_active_session ^ 1);
 		}
 
 		if (dtls->dtls_tptr.fd != -1)
@@ -163,27 +170,26 @@ int handle_commands_from_main(struct worker_st *ws)
 		if (WSCONFIG(ws)->try_mtu == 0)
 			set_mtu_disc(fd, ws->proto, 0);
 
-		oclog(ws, LOG_DEBUG, "received new UDP fd and connected to peer");
+		oclog(ws, LOG_DEBUG,
+		      "received new UDP fd and connected to peer");
 		ws->udp_recv_time = time(NULL);
 
 		return 0;
 
-		}
-		break;
+	} break;
 	default:
-		oclog(ws, LOG_ERR, "unknown CMD 0x%x", (unsigned)cmd);
+		oclog(ws, LOG_ERR, "unknown CMD 0x%x", (unsigned int)cmd);
 		exit_worker_reason(ws, REASON_ERROR);
 	}
 
 	return 0;
-
 }
 
 /* Completes the VPN device information.
  *
  * Returns 0 on success.
  */
-int complete_vpn_info(worker_st * ws, struct vpn_st *vinfo)
+int complete_vpn_info(worker_st *ws, struct vpn_st *vinfo)
 {
 	int ret, fd;
 	struct ifreq ifr;
@@ -202,7 +208,7 @@ int complete_vpn_info(worker_st * ws, struct vpn_st *vinfo)
 		memset(&ifr, 0, sizeof(ifr));
 		ifr.ifr_addr.sa_family = AF_INET;
 		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
-		ret = ioctl(fd, SIOCGIFMTU, (caddr_t) & ifr);
+		ret = ioctl(fd, SIOCGIFMTU, (caddr_t)&ifr);
 		if (ret < 0) {
 			oclog(ws, LOG_INFO,
 			      "cannot obtain MTU for %s. Assuming 1500",
@@ -224,12 +230,12 @@ void ocsigaltstack(struct worker_st *ws)
 	int e;
 
 	/* setup the stack for signal handlers */
-	if (posix_memalign((void**)&ss.ss_sp, getpagesize(), SIGSTKSZ) != 0) {
+	if (posix_memalign((void **)&ss.ss_sp, getpagesize(), SIGSTKSZ) != 0) {
 		oclog(ws, LOG_ERR,
 		      "could not allocate memory for signal stack");
 		exit(EXIT_FAILURE);
 	}
-	if (mprotect(ss.ss_sp, SIGSTKSZ, PROT_READ|PROT_WRITE) == -1) {
+	if (mprotect(ss.ss_sp, SIGSTKSZ, PROT_READ | PROT_WRITE) == -1) {
 		e = errno;
 		oclog(ws, LOG_ERR, "mprotect: %s\n", strerror(e));
 		exit(EXIT_FAILURE);

@@ -32,17 +32,18 @@
 #include "log.h"
 
 /* proc is optional */
-void __attribute__ ((format(printf, 4, 5)))
-_mslog(const main_server_st * s, const struct proc_st* proc,
-       int priority, const char *fmt, ...)
+void __attribute__((format(printf, 4, 5))) _mslog(const main_server_st *s,
+						  const struct proc_st *proc,
+						  int priority, const char *fmt,
+						  ...)
 {
 	char buf[512];
 	char ipbuf[128];
-	char name[MAX_USERNAME_SIZE+MAX_HOSTNAME_SIZE+3];
-	const char* ip = NULL;
+	char name[MAX_USERNAME_SIZE + MAX_HOSTNAME_SIZE + 3];
+	const char *ip = NULL;
 	va_list args;
 	int log_prio = DEFAULT_LOG_LEVEL;
-	unsigned have_vhosts;
+	unsigned int have_vhosts;
 	int syslog_prio;
 
 	if (s)
@@ -52,8 +53,8 @@ _mslog(const main_server_st * s, const struct proc_st* proc,
 		return;
 
 	if (proc) {
-		ip = human_addr((void*)&proc->remote_addr, proc->remote_addr_len,
-			    ipbuf, sizeof(ipbuf));
+		ip = human_addr((void *)&proc->remote_addr,
+				proc->remote_addr_len, ipbuf, sizeof(ipbuf));
 	} else {
 		ip = "";
 	}
@@ -62,27 +63,32 @@ _mslog(const main_server_st * s, const struct proc_st* proc,
 	vsnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
 
-	have_vhosts = s?HAVE_VHOSTS(s):0;
+	have_vhosts = s ? HAVE_VHOSTS(s) : 0;
 
 	if (have_vhosts && proc && proc->username[0] != 0) {
-		snprintf(name, sizeof(name), "[%s%s]", PREFIX_VHOST(proc->vhost), proc->username);
-	} else if (have_vhosts && proc && proc->username[0] == 0 && proc->vhost && proc->vhost->name) {
-		snprintf(name, sizeof(name), "[vhost:%s]", VHOSTNAME(proc->vhost));
+		snprintf(name, sizeof(name), "[%s%s]",
+			 PREFIX_VHOST(proc->vhost), proc->username);
+	} else if (have_vhosts && proc && proc->username[0] == 0 &&
+		   proc->vhost && proc->vhost->name) {
+		snprintf(name, sizeof(name), "[vhost:%s]",
+			 VHOSTNAME(proc->vhost));
 	} else if (proc && proc->username[0] != 0) {
 		snprintf(name, sizeof(name), "[%s]", proc->username);
 	} else
 		name[0] = 0;
 
-	_oc_syslog(syslog_prio, "main%s:%s %s", name, ip?ip:"[unknown]", buf);
+	_oc_syslog(syslog_prio, "main%s:%s %s", name, ip ? ip : "[unknown]",
+		   buf);
 }
 
-void mslog_hex(const main_server_st * s, const struct proc_st* proc,
-	       int priority, const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64)
+void mslog_hex(const main_server_st *s, const struct proc_st *proc,
+	       int priority, const char *prefix, uint8_t *bin,
+	       unsigned int bin_size, unsigned int b64)
 {
 	char buf[512];
 	int ret;
 	size_t buf_size;
-	gnutls_datum_t data = {bin, bin_size};
+	gnutls_datum_t data = { bin, bin_size };
 	int log_prio = DEFAULT_LOG_LEVEL;
 
 	if (s)
@@ -92,7 +98,8 @@ void mslog_hex(const main_server_st * s, const struct proc_st* proc,
 		return;
 
 	if (b64) {
-		oc_base64_encode((char*)bin, bin_size, (char*)buf, sizeof(buf));
+		oc_base64_encode((char *)bin, bin_size, (char *)buf,
+				 sizeof(buf));
 	} else {
 		buf_size = sizeof(buf);
 		ret = gnutls_hex_encode(&data, buf, &buf_size);
@@ -103,13 +110,13 @@ void mslog_hex(const main_server_st * s, const struct proc_st* proc,
 	_mslog(s, proc, priority, "%s %s", prefix, buf);
 }
 
-void seclog_hex(const struct sec_mod_st* sec, int priority,
-		const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64)
+void seclog_hex(const struct sec_mod_st *sec, int priority, const char *prefix,
+		uint8_t *bin, unsigned int bin_size, unsigned int b64)
 {
 	char buf[512];
 	int ret;
 	size_t buf_size;
-	gnutls_datum_t data = {bin, bin_size};
+	gnutls_datum_t data = { bin, bin_size };
 	int log_prio;
 
 	log_prio = GETPCONFIG(sec)->log_level;
@@ -118,7 +125,8 @@ void seclog_hex(const struct sec_mod_st* sec, int priority,
 		return;
 
 	if (b64) {
-		oc_base64_encode((char*)bin, bin_size, (char*)buf, sizeof(buf));
+		oc_base64_encode((char *)bin, bin_size, (char *)buf,
+				 sizeof(buf));
 	} else {
 		buf_size = sizeof(buf);
 		ret = gnutls_hex_encode(&data, buf, &buf_size);
@@ -129,8 +137,8 @@ void seclog_hex(const struct sec_mod_st* sec, int priority,
 	seclog(sec, priority, "%s %s", prefix, buf);
 }
 
-void __attribute__ ((format(printf, 3, 4)))
-    _seclog(const sec_mod_st* sec, int priority, const char *fmt, ...)
+void __attribute__((format(printf, 3, 4)))
+_seclog(const sec_mod_st *sec, int priority, const char *fmt, ...)
 {
 	char buf[512];
 	va_list args;

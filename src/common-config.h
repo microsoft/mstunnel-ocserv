@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #ifndef OC_COMMON_CONFIG_H
-# define OC_COMMON_CONFIG_H
+#define OC_COMMON_CONFIG_H
 
 #include <config.h>
 #include <vpn.h>
@@ -27,8 +27,9 @@
 
 char *sanitize_config_value(void *pool, const char *value);
 int _add_multi_line_val(void *pool, char ***varname, size_t *num,
-		        const char *val);
-int cfg_parse_ports(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, const char *str);
+			const char *val);
+int cfg_parse_ports(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports,
+		    const char *str);
 
 #define MAX_SUBOPTIONS 5
 
@@ -39,7 +40,7 @@ typedef struct subcfg_val_st {
 
 typedef struct gssapi_cfg_st {
 	char *keytab;
-	unsigned no_local_map;
+	unsigned int no_local_map;
 	time_t ticket_freshness_secs;
 	int gid_min;
 } gssapi_cfg_st;
@@ -58,17 +59,27 @@ typedef struct pam_cfg_st {
 	int gid_min;
 } pam_cfg_st;
 
-#define CHECK_TRUE(str) ((str != NULL && (strcasecmp(str, "true") == 0 || strcasecmp(str, "yes") == 0))?1:0)
+#define CHECK_TRUE(str)                                                    \
+	((str != NULL &&                                                   \
+	  (strcasecmp(str, "true") == 0 || strcasecmp(str, "yes") == 0)) ? \
+		 1 :                                                       \
+		 0)
 
 struct perm_cfg_st;
 
 void *get_brackets_string1(void *pool, const char *str);
-void *gssapi_get_brackets_string(void *pool, struct perm_cfg_st *config, const char *str);
-void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config, const char *str);
-void *pam_get_brackets_string(void *pool, struct perm_cfg_st *config, const char *str);
-void *plain_get_brackets_string(void *pool, struct perm_cfg_st *config, const char *str);
-void *oidc_get_brackets_string(void * pool, struct perm_cfg_st *config, const char *str);
+void *gssapi_get_brackets_string(void *pool, struct perm_cfg_st *config,
+				 const char *str);
+void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config,
+				 const char *str);
+void *pam_get_brackets_string(void *pool, struct perm_cfg_st *config,
+			      const char *str);
+void *plain_get_brackets_string(void *pool, struct perm_cfg_st *config,
+				const char *str);
+void *oidc_get_brackets_string(void *pool, struct perm_cfg_st *config,
+			       const char *str);
 
-void parse_kkdcp_string(char *str, int *socktype, char **_port, char **_server, char **_path, char **_realm);
+void parse_kkdcp_string(char *str, int *socktype, char **_port, char **_server,
+			char **_path, char **_realm);
 
 #endif

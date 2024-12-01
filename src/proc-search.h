@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #ifndef OC_PROC_SEARCH_H
-# define OC_PROC_SEARCH_H
+#define OC_PROC_SEARCH_H
 
 #include <vpn.h>
 #include <string.h>
@@ -28,17 +28,21 @@
 #include <main.h>
 
 struct proc_st *proc_search_single_ip(struct main_server_st *s,
-			       struct sockaddr_storage *sockaddr,
-			       unsigned sockaddr_size);
-struct proc_st *proc_search_dtls_id(struct main_server_st *s, const uint8_t *id, unsigned id_size);
+				      struct sockaddr_storage *sockaddr,
+				      unsigned int sockaddr_size);
+struct proc_st *proc_search_dtls_id(struct main_server_st *s, const uint8_t *id,
+				    unsigned int id_size);
 struct proc_st *proc_search_sid(struct main_server_st *s,
-			        const uint8_t id[SID_SIZE]);
+				const uint8_t id[SID_SIZE]);
 
 void proc_table_init(main_server_st *s);
 void proc_table_deinit(main_server_st *s);
 int proc_table_add(main_server_st *s, struct proc_st *proc);
 void proc_table_del(main_server_st *s, struct proc_st *proc);
-int proc_table_update_ip(main_server_st *s, struct proc_st *proc, struct sockaddr_storage *addr, unsigned addr_size);
-int proc_table_update_dtls_ip(main_server_st *s, struct proc_st *proc, struct sockaddr_storage *addr, unsigned addr_size);
+int proc_table_update_ip(main_server_st *s, struct proc_st *proc,
+			 struct sockaddr_storage *addr, unsigned int addr_size);
+int proc_table_update_dtls_ip(main_server_st *s, struct proc_st *proc,
+			      struct sockaddr_storage *addr,
+			      unsigned int addr_size);
 
 #endif

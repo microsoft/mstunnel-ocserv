@@ -45,46 +45,44 @@ typedef struct method_ctx {
 	void *pool;
 } method_ctx;
 
-static void method_top(method_ctx *ctx, int cfd, uint8_t * msg,
-			      unsigned msg_size);
-static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
-			  unsigned msg_size);
-static void method_list_users(method_ctx *ctx, int cfd, uint8_t * msg,
-			      unsigned msg_size);
-static void method_disconnect_user_name(method_ctx *ctx, int cfd,
-					uint8_t * msg, unsigned msg_size);
-static void method_disconnect_user_id(method_ctx *ctx, int cfd,
-				      uint8_t * msg, unsigned msg_size);
-static void method_unban_ip(method_ctx *ctx, int cfd,
-				      uint8_t * msg, unsigned msg_size);
-static void method_stop(method_ctx *ctx, int cfd, uint8_t * msg,
-			unsigned msg_size);
-static void method_reload(method_ctx *ctx, int cfd, uint8_t * msg,
-			  unsigned msg_size);
-static void method_user_info(method_ctx *ctx, int cfd, uint8_t * msg,
-			     unsigned msg_size);
-static void method_id_info(method_ctx *ctx, int cfd, uint8_t * msg,
-			   unsigned msg_size);
-static void method_list_banned(method_ctx *ctx, int cfd, uint8_t * msg,
-			   unsigned msg_size);
-static void method_list_cookies(method_ctx *ctx, int cfd, uint8_t * msg,
-			   unsigned msg_size);
+static void method_top(method_ctx *ctx, int cfd, uint8_t *msg,
+		       unsigned int msg_size);
+static void method_status(method_ctx *ctx, int cfd, uint8_t *msg,
+			  unsigned int msg_size);
+static void method_list_users(method_ctx *ctx, int cfd, uint8_t *msg,
+			      unsigned int msg_size);
+static void method_disconnect_user_name(method_ctx *ctx, int cfd, uint8_t *msg,
+					unsigned int msg_size);
+static void method_disconnect_user_id(method_ctx *ctx, int cfd, uint8_t *msg,
+				      unsigned int msg_size);
+static void method_unban_ip(method_ctx *ctx, int cfd, uint8_t *msg,
+			    unsigned int msg_size);
+static void method_stop(method_ctx *ctx, int cfd, uint8_t *msg,
+			unsigned int msg_size);
+static void method_reload(method_ctx *ctx, int cfd, uint8_t *msg,
+			  unsigned int msg_size);
+static void method_user_info(method_ctx *ctx, int cfd, uint8_t *msg,
+			     unsigned int msg_size);
+static void method_id_info(method_ctx *ctx, int cfd, uint8_t *msg,
+			   unsigned int msg_size);
+static void method_list_banned(method_ctx *ctx, int cfd, uint8_t *msg,
+			       unsigned int msg_size);
+static void method_list_cookies(method_ctx *ctx, int cfd, uint8_t *msg,
+				unsigned int msg_size);
 
-typedef void (*method_func) (method_ctx *ctx, int cfd, uint8_t * msg,
-			     unsigned msg_size);
+typedef void (*method_func)(method_ctx *ctx, int cfd, uint8_t *msg,
+			    unsigned int msg_size);
 
 typedef struct {
 	char *name;
-	unsigned cmd;
+	unsigned int cmd;
 	method_func func;
-	unsigned indefinite; /* session remains open */
+	unsigned int indefinite; /* session remains open */
 } ctl_method_st;
 
-#define ENTRY(cmd, func) \
-	{#cmd, cmd, func, 0}
+#define ENTRY(cmd, func) { #cmd, cmd, func, 0 }
 
-#define ENTRY_INDEF(cmd, func) \
-	{#cmd, cmd, func, 1}
+#define ENTRY_INDEF(cmd, func) { #cmd, cmd, func, 1 }
 
 static const ctl_method_st methods[] = {
 	ENTRY_INDEF(CTL_CMD_TOP, method_top),
@@ -99,10 +97,10 @@ static const ctl_method_st methods[] = {
 	ENTRY(CTL_CMD_UNBAN_IP, method_unban_ip),
 	ENTRY(CTL_CMD_DISCONNECT_NAME, method_disconnect_user_name),
 	ENTRY(CTL_CMD_DISCONNECT_ID, method_disconnect_user_id),
-	{NULL, 0, NULL}
+	{ NULL, 0, NULL }
 };
 
-void ctl_handler_deinit(main_server_st * s)
+void ctl_handler_deinit(main_server_st *s)
 {
 	if (GETCONFIG(s)->use_occtl == 0)
 		return;
@@ -116,21 +114,24 @@ void ctl_handler_deinit(main_server_st * s)
 
 /* Initializes unix socket and stores the fd.
  */
-int ctl_handler_init(main_server_st * s)
+int ctl_handler_init(main_server_st *s)
 {
 	int ret;
 	struct sockaddr_un sa;
 	int sd, e;
 
-	if (GETCONFIG(s)->use_occtl == 0 || GETPCONFIG(s)->occtl_socket_file == NULL) {
+	if (GETCONFIG(s)->use_occtl == 0 ||
+	    GETPCONFIG(s)->occtl_socket_file == NULL) {
 		mslog(s, NULL, LOG_INFO, "not using control unix socket");
 		return 0;
 	}
 
-	mslog(s, NULL, LOG_DEBUG, "initializing control unix socket: %s", GETPCONFIG(s)->occtl_socket_file);
+	mslog(s, NULL, LOG_DEBUG, "initializing control unix socket: %s",
+	      GETPCONFIG(s)->occtl_socket_file);
 	memset(&sa, 0, sizeof(sa));
 	sa.sun_family = AF_UNIX;
-	strlcpy(sa.sun_path, GETPCONFIG(s)->occtl_socket_file, sizeof(sa.sun_path));
+	strlcpy(sa.sun_path, GETPCONFIG(s)->occtl_socket_file,
+		sizeof(sa.sun_path));
 	ret = remove(GETPCONFIG(s)->occtl_socket_file);
 	if (ret != 0) {
 		e = errno;
@@ -156,7 +157,8 @@ int ctl_handler_init(main_server_st * s)
 		return -1;
 	}
 
-	ret = chown(GETPCONFIG(s)->occtl_socket_file, GETPCONFIG(s)->uid, GETPCONFIG(s)->gid);
+	ret = chown(GETPCONFIG(s)->occtl_socket_file, GETPCONFIG(s)->uid,
+		    GETPCONFIG(s)->gid);
 	if (ret == -1) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "could not chown socket '%s': %s",
@@ -176,18 +178,20 @@ int ctl_handler_init(main_server_st * s)
 	return sd;
 }
 
-static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
-			  unsigned msg_size)
+static void method_status(method_ctx *ctx, int cfd, uint8_t *msg,
+			  unsigned int msg_size)
 {
 	StatusRep rep = STATUS_REP__INIT;
 	int ret;
 	unsigned int i;
-	uint32_t * sec_mod_pids;
+	uint32_t *sec_mod_pids;
 
-	sec_mod_pids = talloc_array(ctx->pool, uint32_t, ctx->s->sec_mod_instance_count);
+	sec_mod_pids = talloc_array(ctx->pool, uint32_t,
+				    ctx->s->sec_mod_instance_count);
 	if (sec_mod_pids) {
-		for (i = 0; i < ctx->s->sec_mod_instance_count; i ++) {
-			sec_mod_pids[i] = ctx->s->sec_mod_instances[i].sec_mod_pid;
+		for (i = 0; i < ctx->s->sec_mod_instance_count; i++) {
+			sec_mod_pids[i] =
+				ctx->s->sec_mod_instances[i].sec_mod_pid;
 		}
 	}
 
@@ -205,10 +209,14 @@ static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
 	rep.stored_tls_sessions = 0;
 	rep.max_auth_time = 0;
 	rep.avg_auth_time = 0;
-	for (i = 0; i < ctx->s->sec_mod_instance_count; i ++) {
-		rep.secmod_client_entries += ctx->s->sec_mod_instances[i].secmod_client_entries;
-		rep.stored_tls_sessions += ctx->s->sec_mod_instances[i].tlsdb_entries;
-		rep.max_auth_time = MAX(rep.max_auth_time, ctx->s->sec_mod_instances[i].max_auth_time);
+	for (i = 0; i < ctx->s->sec_mod_instance_count; i++) {
+		rep.secmod_client_entries +=
+			ctx->s->sec_mod_instances[i].secmod_client_entries;
+		rep.stored_tls_sessions +=
+			ctx->s->sec_mod_instances[i].tlsdb_entries;
+		rep.max_auth_time =
+			MAX(rep.max_auth_time,
+			    ctx->s->sec_mod_instances[i].max_auth_time);
 		rep.avg_auth_time = ctx->s->sec_mod_instances[i].avg_auth_time;
 	}
 	if (ctx->s->sec_mod_instance_count != 0) {
@@ -232,65 +240,66 @@ static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
 	rep.total_auth_failures = ctx->s->stats.total_auth_failures;
 	rep.total_sessions_closed = ctx->s->stats.total_sessions_closed;
 #if defined(CAPTURE_LATENCY_SUPPORT)
-	rep.latency_median_total = ctx->s->stats.current_latency_stats.median_total;
+	rep.latency_median_total =
+		ctx->s->stats.current_latency_stats.median_total;
 	rep.has_latency_median_total = true;
 	rep.latency_rms_total = ctx->s->stats.current_latency_stats.rms_total;
 	rep.has_latency_rms_total = true;
-	rep.latency_sample_count = ctx->s->stats.current_latency_stats.sample_count;
+	rep.latency_sample_count =
+		ctx->s->stats.current_latency_stats.sample_count;
 	rep.has_latency_sample_count = true;
 #endif
 
 	ret = send_msg(ctx->pool, cfd, CTL_CMD_STATUS_REP, &rep,
-		       (pack_size_func) status_rep__get_packed_size,
-		       (pack_func) status_rep__pack);
+		       (pack_size_func)status_rep__get_packed_size,
+		       (pack_func)status_rep__pack);
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
 }
 
-static void method_reload(method_ctx *ctx, int cfd, uint8_t * msg,
-			  unsigned msg_size)
+static void method_reload(method_ctx *ctx, int cfd, uint8_t *msg,
+			  unsigned int msg_size)
 {
 	BoolMsg rep = BOOL_MSG__INIT;
 	int ret;
 
 	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: reload");
 
-	ev_feed_signal_event (main_loop, SIGHUP);
+	ev_feed_signal_event(main_loop, SIGHUP);
 
 	rep.status = 1;
 
 	ret = send_msg(ctx->pool, cfd, CTL_CMD_RELOAD_REP, &rep,
-		       (pack_size_func) bool_msg__get_packed_size,
-		       (pack_func) bool_msg__pack);
+		       (pack_size_func)bool_msg__get_packed_size,
+		       (pack_func)bool_msg__pack);
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
 }
 
-static void method_stop(method_ctx *ctx, int cfd, uint8_t * msg,
-			unsigned msg_size)
+static void method_stop(method_ctx *ctx, int cfd, uint8_t *msg,
+			unsigned int msg_size)
 {
 	BoolMsg rep = BOOL_MSG__INIT;
 	int ret;
 
 	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: stop");
 
-	ev_feed_signal_event (main_loop, SIGTERM);
+	ev_feed_signal_event(main_loop, SIGTERM);
 
 	rep.status = 1;
 
 	ret = send_msg(ctx->pool, cfd, CTL_CMD_STOP_REP, &rep,
-		       (pack_size_func) bool_msg__get_packed_size,
-		       (pack_func) bool_msg__pack);
+		       (pack_size_func)bool_msg__get_packed_size,
+		       (pack_func)bool_msg__pack);
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
 }
 
 #define IPBUF_SIZE 64
-static int append_user_info(method_ctx *ctx,
-			    UserListRep * list,
+static int append_user_info(method_ctx *ctx, UserListRep *list,
 			    struct proc_st *ctmp)
 {
 	uint32_t tmp;
@@ -299,8 +308,8 @@ static int append_user_info(method_ctx *ctx,
 	UserInfoRep *rep;
 	char *safe_id;
 
-	list->user =
-	    talloc_realloc(ctx->pool, list->user, UserInfoRep *, (1 + list->n_user));
+	list->user = talloc_realloc(ctx->pool, list->user, UserInfoRep *,
+				    (1 + list->n_user));
 	if (list->user == NULL)
 		return -1;
 
@@ -327,9 +336,8 @@ static int append_user_info(method_ctx *ctx,
 	if (ipbuf == NULL)
 		return -1;
 
-	strtmp =
-	    human_addr2((struct sockaddr *)&ctmp->remote_addr,
-			ctmp->remote_addr_len, ipbuf, IPBUF_SIZE, 0);
+	strtmp = human_addr2((struct sockaddr *)&ctmp->remote_addr,
+			     ctmp->remote_addr_len, ipbuf, IPBUF_SIZE, 0);
 	if (strtmp == NULL)
 		strtmp = "";
 	rep->ip = strtmp;
@@ -338,9 +346,8 @@ static int append_user_info(method_ctx *ctx,
 	if (ipbuf == NULL)
 		return -1;
 
-	strtmp =
-	    human_addr2((struct sockaddr *)&ctmp->our_addr,
-			ctmp->our_addr_len, ipbuf, IPBUF_SIZE, 0);
+	strtmp = human_addr2((struct sockaddr *)&ctmp->our_addr,
+			     ctmp->our_addr_len, ipbuf, IPBUF_SIZE, 0);
 	if (strtmp == NULL)
 		strtmp = "";
 	rep->local_dev_ip = strtmp;
@@ -353,9 +360,8 @@ static int append_user_info(method_ctx *ctx,
 
 	strtmp = NULL;
 	if (ctmp->ipv4 != NULL)
-		strtmp =
-		    human_addr2((struct sockaddr *)&ctmp->ipv4->rip,
-				ctmp->ipv4->rip_len, ipbuf, IPBUF_SIZE, 0);
+		strtmp = human_addr2((struct sockaddr *)&ctmp->ipv4->rip,
+				     ctmp->ipv4->rip_len, ipbuf, IPBUF_SIZE, 0);
 	if (strtmp == NULL)
 		strtmp = "";
 	rep->local_ip = strtmp;
@@ -366,9 +372,8 @@ static int append_user_info(method_ctx *ctx,
 
 	strtmp = NULL;
 	if (ctmp->ipv4 != NULL)
-		strtmp =
-		    human_addr2((struct sockaddr *)&ctmp->ipv4->lip,
-				ctmp->ipv4->lip_len, ipbuf, IPBUF_SIZE, 0);
+		strtmp = human_addr2((struct sockaddr *)&ctmp->ipv4->lip,
+				     ctmp->ipv4->lip_len, ipbuf, IPBUF_SIZE, 0);
 	if (strtmp == NULL)
 		strtmp = "";
 	rep->remote_ip = strtmp;
@@ -381,9 +386,8 @@ static int append_user_info(method_ctx *ctx,
 
 	strtmp = NULL;
 	if (ctmp->ipv6 != NULL)
-		strtmp =
-		    human_addr2((struct sockaddr *)&ctmp->ipv6->rip,
-				ctmp->ipv6->rip_len, ipbuf, IPBUF_SIZE, 0);
+		strtmp = human_addr2((struct sockaddr *)&ctmp->ipv6->rip,
+				     ctmp->ipv6->rip_len, ipbuf, IPBUF_SIZE, 0);
 	if (strtmp == NULL)
 		strtmp = "";
 	rep->local_ip6 = strtmp;
@@ -394,9 +398,8 @@ static int append_user_info(method_ctx *ctx,
 
 	strtmp = NULL;
 	if (ctmp->ipv6 != NULL)
-		strtmp =
-		    human_addr2((struct sockaddr *)&ctmp->ipv6->lip,
-				ctmp->ipv6->lip_len, ipbuf, IPBUF_SIZE, 0);
+		strtmp = human_addr2((struct sockaddr *)&ctmp->ipv6->lip,
+				     ctmp->ipv6->lip_len, ipbuf, IPBUF_SIZE, 0);
 	if (strtmp == NULL)
 		strtmp = "";
 	rep->remote_ip6 = strtmp;
@@ -411,7 +414,7 @@ static int append_user_info(method_ctx *ctx,
 	rep->dtls_ciphersuite = ctmp->dtls_ciphersuite;
 
 	calc_safe_id(ctmp->sid, sizeof(ctmp->sid), safe_id, SAFE_ID_SIZE);
-	rep->safe_id.data = (unsigned char*)safe_id;
+	rep->safe_id.data = (unsigned char *)safe_id;
 	rep->safe_id.len = SAFE_ID_SIZE;
 
 	rep->cstp_compr = ctmp->cstp_compr;
@@ -438,8 +441,10 @@ static int append_user_info(method_ctx *ctx,
 
 		rep->keepalive = ctmp->config->keepalive;
 		if (ctmp->vhost) {
-			rep->domains = ctmp->vhost->perm_config.config->split_dns;
-			rep->n_domains = ctmp->vhost->perm_config.config->split_dns_size;
+			rep->domains =
+				ctmp->vhost->perm_config.config->split_dns;
+			rep->n_domains =
+				ctmp->vhost->perm_config.config->split_dns_size;
 		}
 
 		rep->dns = ctmp->config->dns;
@@ -464,8 +469,8 @@ static int append_user_info(method_ctx *ctx,
 	return 0;
 }
 
-static void method_list_users(method_ctx *ctx, int cfd, uint8_t * msg,
-			      unsigned msg_size)
+static void method_list_users(method_ctx *ctx, int cfd, uint8_t *msg,
+			      unsigned int msg_size)
 {
 	UserListRep rep = USER_LIST_REP__INIT;
 	struct proc_st *ctmp = NULL;
@@ -473,7 +478,8 @@ static void method_list_users(method_ctx *ctx, int cfd, uint8_t * msg,
 
 	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: list-users");
 
-	list_for_each(&ctx->s->proc_list.head, ctmp, list) {
+	list_for_each(&ctx->s->proc_list.head, ctmp, list)
+	{
 		ret = append_user_info(ctx, &rep, ctmp);
 		if (ret < 0) {
 			mslog(ctx->s, NULL, LOG_ERR,
@@ -483,15 +489,15 @@ static void method_list_users(method_ctx *ctx, int cfd, uint8_t * msg,
 	}
 
 	ret = send_msg(ctx->pool, cfd, CTL_CMD_LIST_REP, &rep,
-		       (pack_size_func) user_list_rep__get_packed_size,
-		       (pack_func) user_list_rep__pack);
+		       (pack_size_func)user_list_rep__get_packed_size,
+		       (pack_func)user_list_rep__pack);
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
 }
 
-static void method_top(method_ctx *ctx, int cfd, uint8_t * msg,
-			      unsigned msg_size)
+static void method_top(method_ctx *ctx, int cfd, uint8_t *msg,
+		       unsigned int msg_size)
 {
 	/* we send the initial user list, and the we send a TOP reply message
 	 * once a user connects/disconnects. */
@@ -505,15 +511,14 @@ static void method_top(method_ctx *ctx, int cfd, uint8_t * msg,
 	method_list_users(ctx, cfd, msg, msg_size);
 }
 
-static int append_ban_info(method_ctx *ctx,
-			   BanListRep *list,
+static int append_ban_info(method_ctx *ctx, BanListRep *list,
 			   struct ban_entry_st *e)
 {
 	BanInfoRep *rep;
 	main_server_st *s = ctx->s;
 
-	list->info =
-	    talloc_realloc(ctx->pool, list->info, BanInfoRep *, (1 + list->n_info));
+	list->info = talloc_realloc(ctx->pool, list->info, BanInfoRep *,
+				    (1 + list->n_info));
 	if (list->info == NULL)
 		return -1;
 
@@ -528,7 +533,8 @@ static int append_ban_info(method_ctx *ctx,
 	rep->ip.len = e->ip.size;
 	rep->score = e->score;
 
-	if (GETCONFIG(s)->max_ban_score > 0 && e->score >= GETCONFIG(s)->max_ban_score) {
+	if (GETCONFIG(s)->max_ban_score > 0 &&
+	    e->score >= GETCONFIG(s)->max_ban_score) {
 		rep->expires = e->expires;
 		rep->has_expires = 1;
 	}
@@ -536,8 +542,8 @@ static int append_ban_info(method_ctx *ctx,
 	return 0;
 }
 
-static void method_list_banned(method_ctx *ctx, int cfd, uint8_t * msg,
-			      unsigned msg_size)
+static void method_list_banned(method_ctx *ctx, int cfd, uint8_t *msg,
+			       unsigned int msg_size)
 {
 	BanListRep rep = BAN_LIST_REP__INIT;
 	struct ban_entry_st *e = NULL;
@@ -559,19 +565,21 @@ static void method_list_banned(method_ctx *ctx, int cfd, uint8_t * msg,
 	}
 
 	ret = send_msg(ctx->pool, cfd, CTL_CMD_LIST_BANNED_REP, &rep,
-		       (pack_size_func) ban_list_rep__get_packed_size,
-		       (pack_func) ban_list_rep__pack);
+		       (pack_size_func)ban_list_rep__get_packed_size,
+		       (pack_func)ban_list_rep__pack);
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending ban list reply");
 	}
 }
 
-static void method_list_cookies(method_ctx *ctx, int cfd, uint8_t * msg,
-			      unsigned msg_size)
+static void method_list_cookies(method_ctx *ctx, int cfd, uint8_t *msg,
+				unsigned int msg_size)
 {
 	SecmListCookiesReplyMsg reply = SECM_LIST_COOKIES_REPLY_MSG__INIT;
-	SecmListCookiesReplyMsg ** sub_replies = NULL;
-	CookieIntMsg ** cookies = NULL;
+	SecmListCookiesReplyMsg **sub_replies = NULL;
+
+	CookieIntMsg **cookies = NULL;
+
 	PROTOBUF_ALLOCATOR(pa, ctx->pool);
 
 	size_t total_cookies = 0;
@@ -582,23 +590,31 @@ static void method_list_cookies(method_ctx *ctx, int cfd, uint8_t * msg,
 
 	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: list-cookies");
 
-	sub_replies = talloc_zero_array(ctx->pool, SecmListCookiesReplyMsg*, ctx->s->sec_mod_instance_count);
+	sub_replies = talloc_zero_array(ctx->pool, SecmListCookiesReplyMsg *,
+					ctx->s->sec_mod_instance_count);
 	if (!sub_replies) {
 		goto reply_and_exit;
 	}
 
 	for (i = 0; i < ctx->s->sec_mod_instance_count; i++) {
-		SecmListCookiesReplyMsg * sub_reply = NULL;
-		ret = send_msg(ctx->pool, ctx->s->sec_mod_instances[i].sec_mod_fd_sync, CMD_SECM_LIST_COOKIES,
-				NULL, NULL, NULL);
+		SecmListCookiesReplyMsg *sub_reply = NULL;
+
+		ret = send_msg(ctx->pool,
+			       ctx->s->sec_mod_instances[i].sec_mod_fd_sync,
+			       CMD_SECM_LIST_COOKIES, NULL, NULL, NULL);
 		if (ret < 0) {
-			mslog(ctx->s, NULL, LOG_ERR, "error sending list cookies to sec-mod!");
+			mslog(ctx->s, NULL, LOG_ERR,
+			      "error sending list cookies to sec-mod!");
 			continue;
 		}
-		ret = recv_msg(ctx->pool, ctx->s->sec_mod_instances[i].sec_mod_fd_sync, CMD_SECM_LIST_COOKIES_REPLY,
-				(void*)&sub_reply, (unpack_func)secm_list_cookies_reply_msg__unpack, MAIN_SEC_MOD_TIMEOUT);
+		ret = recv_msg(ctx->pool,
+			       ctx->s->sec_mod_instances[i].sec_mod_fd_sync,
+			       CMD_SECM_LIST_COOKIES_REPLY, (void *)&sub_reply,
+			       (unpack_func)secm_list_cookies_reply_msg__unpack,
+			       MAIN_SEC_MOD_TIMEOUT);
 		if (ret < 0) {
-			mslog(ctx->s, NULL, LOG_ERR, "error receiving list cookies reply");
+			mslog(ctx->s, NULL, LOG_ERR,
+			      "error receiving list cookies reply");
 			continue;
 		}
 
@@ -608,7 +624,7 @@ static void method_list_cookies(method_ctx *ctx, int cfd, uint8_t * msg,
 		}
 	}
 
-	cookies = talloc_zero_array(ctx->pool, CookieIntMsg*, total_cookies);
+	cookies = talloc_zero_array(ctx->pool, CookieIntMsg *, total_cookies);
 	if (!cookies) {
 		goto reply_and_exit;
 	}
@@ -628,11 +644,13 @@ reply_and_exit:
 	reply.cookies = cookies;
 	reply.n_cookies = total_cookies;
 
-	ret = send_msg(ctx->pool, cfd, CTL_CMD_LIST_COOKIES_REP, &reply,
-		       (pack_size_func) secm_list_cookies_reply_msg__get_packed_size,
-		       (pack_func) secm_list_cookies_reply_msg__pack);
+	ret = send_msg(
+		ctx->pool, cfd, CTL_CMD_LIST_COOKIES_REP, &reply,
+		(pack_size_func)secm_list_cookies_reply_msg__get_packed_size,
+		(pack_func)secm_list_cookies_reply_msg__pack);
 	if (ret < 0) {
-		mslog(ctx->s, NULL, LOG_ERR, "error sending list cookies reply");
+		mslog(ctx->s, NULL, LOG_ERR,
+		      "error sending list cookies reply");
 	}
 
 	if (sub_replies) {
@@ -640,7 +658,8 @@ reply_and_exit:
 			if (sub_replies[i] == NULL) {
 				continue;
 			}
-			secm_list_cookies_reply_msg__free_unpacked(sub_replies[i], &pa);
+			secm_list_cookies_reply_msg__free_unpacked(
+				sub_replies[i], &pa);
 		}
 		talloc_free(sub_replies);
 	}
@@ -650,25 +669,28 @@ reply_and_exit:
 	}
 }
 
-static void single_info_common(method_ctx *ctx, int cfd, uint8_t * msg,
-			       unsigned msg_size, const char *user, unsigned id)
+static void single_info_common(method_ctx *ctx, int cfd, uint8_t *msg,
+			       unsigned int msg_size, const char *user,
+			       unsigned int id)
 {
 	UserListRep rep = USER_LIST_REP__INIT;
 	int ret;
-	unsigned found_user = 0;
+	unsigned int found_user = 0;
 	struct proc_st *ctmp = NULL;
 
 	if (user != NULL)
-		mslog(ctx->s, NULL, LOG_INFO, "providing info for user '%s'", user);
+		mslog(ctx->s, NULL, LOG_INFO, "providing info for user '%s'",
+		      user);
 	else
 		mslog(ctx->s, NULL, LOG_INFO, "providing info for ID '%u'", id);
 
-	list_for_each(&ctx->s->proc_list.head, ctmp, list) {
-		if (user == NULL) {	/* id */
+	list_for_each(&ctx->s->proc_list.head, ctmp, list)
+	{
+		if (user == NULL) { /* id */
 			if (id == 0 || id == -1 || id != ctmp->pid) {
 				continue;
 			}
-		} else {	/* username */
+		} else { /* username */
 			if (strcmp(ctmp->username, user) != 0) {
 				continue;
 			}
@@ -683,28 +705,29 @@ static void single_info_common(method_ctx *ctx, int cfd, uint8_t * msg,
 
 		found_user = 1;
 
-		if (id != 0)	/* id -> one a single element */
+		if (id != 0) /* id -> one a single element */
 			break;
 	}
 
 	if (found_user == 0) {
 		if (user != NULL)
-			mslog(ctx->s, NULL, LOG_INFO, "could not find user '%s'",
-			      user);
+			mslog(ctx->s, NULL, LOG_INFO,
+			      "could not find user '%s'", user);
 		else
-			mslog(ctx->s, NULL, LOG_INFO, "could not find ID '%u'", id);
+			mslog(ctx->s, NULL, LOG_INFO, "could not find ID '%u'",
+			      id);
 	}
 
 	ret = send_msg(ctx->pool, cfd, CTL_CMD_LIST_REP, &rep,
-		       (pack_size_func) user_list_rep__get_packed_size,
-		       (pack_func) user_list_rep__pack);
+		       (pack_size_func)user_list_rep__get_packed_size,
+		       (pack_func)user_list_rep__pack);
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
 }
 
-static void method_user_info(method_ctx *ctx, int cfd, uint8_t * msg,
-			     unsigned msg_size)
+static void method_user_info(method_ctx *ctx, int cfd, uint8_t *msg,
+			     unsigned int msg_size)
 {
 	UsernameReq *req;
 
@@ -720,8 +743,8 @@ static void method_user_info(method_ctx *ctx, int cfd, uint8_t * msg,
 	username_req__free_unpacked(req, NULL);
 }
 
-static void method_id_info(method_ctx *ctx, int cfd, uint8_t * msg,
-			   unsigned msg_size)
+static void method_id_info(method_ctx *ctx, int cfd, uint8_t *msg,
+			   unsigned int msg_size)
 {
 	IdReq *req;
 
@@ -737,9 +760,8 @@ static void method_id_info(method_ctx *ctx, int cfd, uint8_t * msg,
 	id_req__free_unpacked(req, NULL);
 }
 
-static void method_unban_ip(method_ctx *ctx,
-			    int cfd, uint8_t * msg,
-			    unsigned msg_size)
+static void method_unban_ip(method_ctx *ctx, int cfd, uint8_t *msg,
+			    unsigned int msg_size)
 {
 	UnbanReq *req;
 	BoolMsg rep = BOOL_MSG__INIT;
@@ -749,8 +771,7 @@ static void method_unban_ip(method_ctx *ctx,
 
 	req = unban_req__unpack(NULL, msg_size, msg);
 	if (req == NULL) {
-		mslog(ctx->s, NULL, LOG_ERR,
-		      "error parsing unban IP request");
+		mslog(ctx->s, NULL, LOG_ERR, "error parsing unban IP request");
 		return;
 	}
 
@@ -761,16 +782,16 @@ static void method_unban_ip(method_ctx *ctx,
 	unban_req__free_unpacked(req, NULL);
 
 	ret = send_msg(ctx->pool, cfd, CTL_CMD_UNBAN_IP_REP, &rep,
-		       (pack_size_func) bool_msg__get_packed_size,
-		       (pack_func) bool_msg__pack);
+		       (pack_size_func)bool_msg__get_packed_size,
+		       (pack_func)bool_msg__pack);
 	if (ret < 0) {
-		mslog(ctx->s, NULL, LOG_ERR, "error sending unban IP ctl reply");
+		mslog(ctx->s, NULL, LOG_ERR,
+		      "error sending unban IP ctl reply");
 	}
 }
 
-static void method_disconnect_user_name(method_ctx *ctx,
-					int cfd, uint8_t * msg,
-					unsigned msg_size)
+static void method_disconnect_user_name(method_ctx *ctx, int cfd, uint8_t *msg,
+					unsigned int msg_size)
 {
 	UsernameReq *req;
 	BoolMsg rep = BOOL_MSG__INIT;
@@ -788,7 +809,8 @@ static void method_disconnect_user_name(method_ctx *ctx,
 	}
 
 	/* got the name. Try to disconnect */
-	list_for_each_safe(&ctx->s->proc_list.head, ctmp, cpos, list) {
+	list_for_each_safe(&ctx->s->proc_list.head, ctmp, cpos, list)
+	{
 		if (strcmp(ctmp->username, req->username) == 0) {
 			disconnect_proc(ctx->s, ctmp);
 			rep.status = 1;
@@ -798,15 +820,15 @@ static void method_disconnect_user_name(method_ctx *ctx,
 	username_req__free_unpacked(req, NULL);
 
 	ret = send_msg(ctx->pool, cfd, CTL_CMD_DISCONNECT_NAME_REP, &rep,
-		       (pack_size_func) bool_msg__get_packed_size,
-		       (pack_func) bool_msg__pack);
+		       (pack_size_func)bool_msg__get_packed_size,
+		       (pack_func)bool_msg__pack);
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
 }
 
-static void method_disconnect_user_id(method_ctx *ctx, int cfd,
-				      uint8_t * msg, unsigned msg_size)
+static void method_disconnect_user_id(method_ctx *ctx, int cfd, uint8_t *msg,
+				      unsigned int msg_size)
 {
 	IdReq *req;
 	BoolMsg rep = BOOL_MSG__INIT;
@@ -818,12 +840,14 @@ static void method_disconnect_user_id(method_ctx *ctx, int cfd,
 
 	req = id_req__unpack(NULL, msg_size, msg);
 	if (req == NULL) {
-		mslog(ctx->s, NULL, LOG_ERR, "error parsing disconnect_id request");
+		mslog(ctx->s, NULL, LOG_ERR,
+		      "error parsing disconnect_id request");
 		return;
 	}
 
 	/* got the ID. Try to disconnect */
-	list_for_each_safe(&ctx->s->proc_list.head, ctmp, cpos, list) {
+	list_for_each_safe(&ctx->s->proc_list.head, ctmp, cpos, list)
+	{
 		if (ctmp->pid == req->id) {
 			disconnect_proc(ctx->s, ctmp);
 			rep.status = 1;
@@ -837,8 +861,8 @@ static void method_disconnect_user_id(method_ctx *ctx, int cfd,
 	id_req__free_unpacked(req, NULL);
 
 	ret = send_msg(ctx->pool, cfd, CTL_CMD_DISCONNECT_ID_REP, &rep,
-		       (pack_size_func) bool_msg__get_packed_size,
-		       (pack_func) bool_msg__pack);
+		       (pack_size_func)bool_msg__get_packed_size,
+		       (pack_func)bool_msg__pack);
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
@@ -857,8 +881,9 @@ static void ctl_cmd_wacher_cb(EV_P_ ev_io *w, int revents)
 	uint8_t cmd;
 	uint8_t buffer[256];
 	method_ctx ctx;
-	struct ctl_watcher_st *wst = container_of(w, struct ctl_watcher_st, ctl_cmd_io);
-	unsigned i, indef = 0;
+	struct ctl_watcher_st *wst =
+		container_of(w, struct ctl_watcher_st, ctl_cmd_io);
+	unsigned int i, indef = 0;
 
 	ctx.s = s;
 	ctx.pool = talloc_new(wst);
@@ -879,7 +904,7 @@ static void ctl_cmd_wacher_cb(EV_P_ ev_io *w, int revents)
 		if (methods[i].cmd == 0) {
 			mslog(s, NULL, LOG_INFO,
 			      "unknown unix ctl message: 0x%.1x",
-			      (unsigned)cmd);
+			      (unsigned int)cmd);
 			break;
 		} else if (methods[i].cmd == cmd) {
 			indef = methods[i].indefinite;
@@ -892,7 +917,7 @@ static void ctl_cmd_wacher_cb(EV_P_ ev_io *w, int revents)
 		talloc_free(ctx.pool);
 		return;
 	}
- fail:
+fail:
 	if (s->top_fd == wst->fd)
 		s->top_fd = -1;
 	close(wst->fd);
@@ -900,7 +925,7 @@ static void ctl_cmd_wacher_cb(EV_P_ ev_io *w, int revents)
 	talloc_free(wst);
 }
 
-static void ctl_handle_commands(main_server_st * s)
+static void ctl_handle_commands(main_server_st *s)
 {
 	int cfd = -1, e, ret;
 	struct sockaddr_un sa;
@@ -916,7 +941,8 @@ static void ctl_handle_commands(main_server_st * s)
 		goto fail;
 	}
 
-	ret = check_upeer_id("ctl", GETPCONFIG(s)->log_level, cfd, 0, 0, NULL, NULL);
+	ret = check_upeer_id("ctl", GETPCONFIG(s)->log_level, cfd, 0, 0, NULL,
+			     NULL);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_ERR, "ctl: unauthorized connection");
 		goto fail;
@@ -934,12 +960,12 @@ static void ctl_handle_commands(main_server_st * s)
 	ev_io_start(main_loop, &wst->ctl_cmd_io);
 
 	return;
- fail:
+fail:
 	if (cfd != -1)
 		close(cfd);
 }
 
-void ctl_handler_set_fds(main_server_st * s, ev_io *watcher)
+void ctl_handler_set_fds(main_server_st *s, ev_io *watcher)
 {
 	if (GETCONFIG(s)->use_occtl == 0)
 		return;
@@ -947,7 +973,7 @@ void ctl_handler_set_fds(main_server_st * s, ev_io *watcher)
 	ev_io_set(watcher, s->ctl_fd, EV_READ);
 }
 
-void ctl_handler_run_pending(main_server_st* s, ev_io *watcher)
+void ctl_handler_run_pending(main_server_st *s, ev_io *watcher)
 {
 	if (GETCONFIG(s)->use_occtl == 0)
 		return;
@@ -955,7 +981,8 @@ void ctl_handler_run_pending(main_server_st* s, ev_io *watcher)
 	ctl_handle_commands(s);
 }
 
-void ctl_handler_notify (main_server_st* s, struct proc_st *proc, unsigned connect)
+void ctl_handler_notify(main_server_st *s, struct proc_st *proc,
+			unsigned int connect)
 {
 	TopUpdateRep rep = TOP_UPDATE_REP__INIT;
 	UserListRep list = USER_LIST_REP__INIT;
@@ -979,20 +1006,20 @@ void ctl_handler_notify (main_server_st* s, struct proc_st *proc, unsigned conne
 	if (connect == 0 && proc->discon_reason) {
 		rep.has_discon_reason = 1;
 		rep.discon_reason = proc->discon_reason;
-		rep.discon_reason_txt = (char*)discon_reason_to_str(proc->discon_reason);
+		rep.discon_reason_txt =
+			(char *)discon_reason_to_str(proc->discon_reason);
 	}
 
 	ret = append_user_info(&ctx, &list, proc);
 	if (ret < 0) {
-		mslog(s, NULL, LOG_ERR,
-		      "error appending user info to reply");
+		mslog(s, NULL, LOG_ERR, "error appending user info to reply");
 		goto fail;
 	}
 	rep.user = &list;
 
 	ret = send_msg(pool, s->top_fd, CTL_CMD_TOP_UPDATE_REP, &rep,
-		       (pack_size_func) top_update_rep__get_packed_size,
-		       (pack_func) top_update_rep__pack);
+		       (pack_size_func)top_update_rep__get_packed_size,
+		       (pack_func)top_update_rep__pack);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_ERR, "error sending ctl reply");
 		goto fail;
@@ -1000,7 +1027,7 @@ void ctl_handler_notify (main_server_st* s, struct proc_st *proc, unsigned conne
 
 	talloc_free(pool);
 	return;
- fail:
+fail:
 	talloc_free(pool);
 	s->top_fd = -1;
 }

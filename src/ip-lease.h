@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #ifndef OC_IP_LEASE_H
-# define OC_IP_LEASE_H
+#define OC_IP_LEASE_H
 
 #include <vpn.h>
 #include <string.h>
@@ -28,28 +28,28 @@
 #include <main.h>
 
 struct ip_lease_st {
-        /* In IPv4 this is the same as rip, in IPv6
-         * that's the network address */
-        struct sockaddr_storage sig;
+	/* In IPv4 this is the same as rip, in IPv6
+	 * that's the network address */
+	struct sockaddr_storage sig;
 #define sig_len rip_len
 
-        struct sockaddr_storage rip;
-        socklen_t rip_len;
+	struct sockaddr_storage rip;
+	socklen_t rip_len;
 
-        struct sockaddr_storage lip;
-        socklen_t lip_len;
-        unsigned prefix; /* in ipv6 */
+	struct sockaddr_storage lip;
+	socklen_t lip_len;
+	unsigned int prefix; /* in ipv6 */
 
-        struct ip_lease_db_st* db;
+	struct ip_lease_db_st *db;
 };
 
-void ip_lease_deinit(struct ip_lease_db_st* db);
-void ip_lease_init(struct ip_lease_db_st* db);
+void ip_lease_deinit(struct ip_lease_db_st *db);
+void ip_lease_init(struct ip_lease_db_st *db);
 
-void steal_ip_leases(struct proc_st* proc, struct proc_st *thief);
+void steal_ip_leases(struct proc_st *proc, struct proc_st *thief);
 
-int get_ip_leases(struct main_server_st* s, struct proc_st* proc);
-void remove_ip_leases(struct main_server_st* s, struct proc_st* proc);
-void remove_ip_lease(main_server_st* s, struct ip_lease_st * lease);
+int get_ip_leases(struct main_server_st *s, struct proc_st *proc);
+void remove_ip_leases(struct main_server_st *s, struct proc_st *proc);
+void remove_ip_lease(main_server_st *s, struct ip_lease_st *lease);
 
 #endif
