@@ -71,7 +71,7 @@ char *geo_lookup(const char *ip, char *buf, unsigned int buf_size)
 	MMDB_s mmdb;
 	MMDB_entry_data_s entry_data;
 	int gai_error, mmdb_error, status, coordinates = 0;
-	double latitude, longitude;
+	double latitude = 0, longitude = 0;
 	char *country = NULL, *ccode = NULL;
 	char *coord = NULL;
 	unsigned int found = 0;
