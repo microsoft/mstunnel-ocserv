@@ -535,10 +535,11 @@ ciphersuite_finish:
 
 		break;
 	case HEADER_DTLS12_CIPHERSUITE:
-		if (req->use_psk || !WSCONFIG(ws)->dtls_legacy)
+		if (req->use_psk || !WSCONFIG(ws)->dtls_legacy) {
 			break;
+		}
 
-			/* in gnutls 3.6.0+ there is a regression which makes
+		/* in gnutls 3.6.0+ there is a regression which makes
 		 * anyconnect's openssl fail: https://gitlab.com/gnutls/gnutls/merge_requests/868
 		 */
 #ifdef gnutls_check_version_numeric

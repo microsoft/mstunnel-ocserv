@@ -31,10 +31,11 @@ int _ocserv_vasprintf(char **strp, const char *fmt, va_list ap)
 	int errno_save = -ENOMEM;
 
 	res = malloc(160);
-	if (!res)
+	if (!res) {
 		goto err;
+	}
 
-		/* Use a copy of 'ap', preserving it in case we need to retry into
+	/* Use a copy of 'ap', preserving it in case we need to retry into
 	   a larger buffer. 160 characters should be sufficient for most
 	   strings in openconnect. */
 #ifdef HAVE_VA_COPY
