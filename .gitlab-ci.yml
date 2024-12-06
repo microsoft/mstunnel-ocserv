@@ -427,7 +427,7 @@ codingstyle/Fedora:
   stage: preliminaries
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:
-  - find src/ tests/ -name '*.[ch]'| grep -Ev '^(src/http-heads.h|src/pcl|src/protobuf|src/ccan|src/inih|src/llhttp)'| xargs -I{} clang-format -style=file --dry-run {} -Werror
+  - find src/ tests/ -name '*.[ch]'| grep -Ev '^(src/http-heads.h|src/pcl|src/protobuf|src/ccan|src/gnulib|src/inih|src/llhttp)'| xargs -I{} clang-format -style=file --dry-run {} -Werror
   tags:
   - saas-linux-small-amd64
   except:
