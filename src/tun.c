@@ -33,7 +33,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <cloexec.h>
+#include "gnulib/cloexec.h"
 #include <ip-lease.h>
 
 #if defined(HAVE_LINUX_IF_TUN_H)

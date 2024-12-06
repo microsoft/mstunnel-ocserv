@@ -44,7 +44,7 @@
 #include <route-add.h>
 #include <ipc.pb-c.h>
 #include <script-list.h>
-#include <cloexec.h>
+#include "gnulib/cloexec.h"
 
 #include <vpn.h>
 #include <main.h>

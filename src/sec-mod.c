@@ -41,7 +41,7 @@
 #include <ipc.pb-c.h>
 #include <sec-mod-sup-config.h>
 #include <sec-mod-resume.h>
-#include <cloexec.h>
+#include "gnulib/cloexec.h"
 #include <assert.h>
 
 #include <gnutls/gnutls.h>

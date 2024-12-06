@@ -28,7 +28,7 @@
 #include <sys/un.h>
 #include <main.h>
 #include <vpn.h>
-#include <cloexec.h>
+#include "gnulib/cloexec.h"
 #include <ip-lease.h>
 
 #include <errno.h>

@@ -35,7 +35,7 @@ endif
 CORE_SOURCES = $(LLHTTP_SOURCES) \
 	common/hmac.c common/hmac.h common/snapshot.c common/snapshot.h \
 	common-config.h config.c config-kkdcp.c config-ports.c defs.h gettime.h \
-	inih/ini.c inih/ini.h \
+	gnulib/cloexec.c gnulib/cloexec.h inih/ini.c inih/ini.h \
 	ip-util.c ip-util.h main.h main-ctl.h \
 	script-list.h setproctitle.c setproctitle.h str.c str.h subconfig.c \
 	sup-config/file.c sup-config/file.h sup-config/radius.c \
@@ -157,7 +157,7 @@ ocpasswd_ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT) $(CODE_COVERAGE_LDFLAGS
 # Files common to ocserv and occtl.
 libcommon_a_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/common
 libcommon_a_SOURCES=common/common.c common/common.h common/system.c common/system.h \
-	common/cloexec.c common/cloexec.h common/base64-helper.c common/base64-helper.h \
+	common/base64-helper.c common/base64-helper.h \
 	log.c log.h
 libcommon_a_LIBS = $(NEEDED_LIBPROTOBUF_LIBS)
 noinst_LIBRARIES += libcommon.a

@@ -34,7 +34,7 @@
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <cloexec.h>
+#include "gnulib/cloexec.h"
 #include <script-list.h>
 
 #include <gnutls/x509.h>

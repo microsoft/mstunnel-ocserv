@@ -37,7 +37,7 @@
 #include <gnutls/crypto.h>
 #include <tlslib.h>
 #include <sys/un.h>
-#include <cloexec.h>
+#include "gnulib/cloexec.h"
 #include "common.h"
 #include "str.h"
 #include "setproctitle.h"
