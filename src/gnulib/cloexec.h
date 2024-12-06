@@ -20,6 +20,8 @@ extern "C" {
 #endif
 
 
+#include <stdbool.h>
+
 /* Set the 'FD_CLOEXEC' flag of DESC if VALUE is true,
    or clear the flag if VALUE is false.
    Return 0 on success, or -1 on error with 'errno' set.
