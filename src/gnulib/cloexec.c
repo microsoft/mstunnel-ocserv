@@ -1,21 +1,21 @@
-/* closexec.c - set or clear the close-on-exec descriptor flag
+/* cloexec.c - set or clear the close-on-exec descriptor flag
 
-   Copyright (C) 1991, 2004-2006, 2009-2014 Free Software Foundation, Inc.
+   Copyright (C) 1991, 2004-2006, 2009-2025 Free Software Foundation, Inc.
 
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU Lesser General Public License as published by
-   the Free Software Foundation; either version 2.1 of the License, or
-   (at your option) any later version.
+   This file is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License as
+   published by the Free Software Foundation; either version 2.1 of the
+   License, or (at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
+   This file is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU Lesser General Public License for more details.
 
    You should have received a copy of the GNU Lesser General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
-   The code is taken from glibc/manual/llio.texi  */
+/* The code is taken from glibc/manual/llio.texi  */
 
 #include <config.h>
 
@@ -35,44 +35,49 @@
    open or pipe2 that accept flags like O_CLOEXEC to create DESC
    non-inheritable in the first place.  */
 
-int set_cloexec_flag(int desc, bool value)
+int
+set_cloexec_flag (int desc, bool value)
 {
 #ifdef F_SETFD
 
-	int flags = fcntl(desc, F_GETFD, 0);
+  int flags = fcntl (desc, F_GETFD, 0);
 
-	if (flags >= 0) {
-		int newflags =
-			(value ? flags | FD_CLOEXEC : flags & ~FD_CLOEXEC);
+  if (0 <= flags)
+    {
+      int newflags = (value ? flags | FD_CLOEXEC : flags & ~FD_CLOEXEC);
 
-		if (flags == newflags || fcntl(desc, F_SETFD, newflags) != -1)
-			return 0;
-	}
+      if (flags == newflags
+          || fcntl (desc, F_SETFD, newflags) != -1)
+        return 0;
+    }
 
-	return -1;
+  return -1;
 
 #else /* !F_SETFD */
 
-	/* Use dup2 to reject invalid file descriptors; the cloexec flag
+  /* Use dup2 to reject invalid file descriptors; the cloexec flag
      will be unaffected.  */
-	if (desc < 0) {
-		errno = EBADF;
-		return -1;
-	}
-	if (dup2(desc, desc) < 0)
-		/* errno is EBADF here.  */
-		return -1;
+  if (desc < 0)
+    {
+      errno = EBADF;
+      return -1;
+    }
+  if (dup2 (desc, desc) < 0)
+    /* errno is EBADF here.  */
+    return -1;
 
-	/* There is nothing we can do on this kind of platform.  Punt.  */
-	return 0;
+  /* There is nothing we can do on this kind of platform.  Punt.  */
+  return 0;
 #endif /* !F_SETFD */
 }
+
 
 /* Duplicates a file handle FD, while marking the copy to be closed
    prior to exec or spawn.  Returns -1 and sets errno if FD could not
    be duplicated.  */
 
-int dup_cloexec(int fd)
+int
+dup_cloexec (int fd)
 {
-	return fcntl(fd, F_DUPFD_CLOEXEC, 0);
+  return fcntl (fd, F_DUPFD_CLOEXEC, 0);
 }
