@@ -229,7 +229,7 @@ int handle_auth_cookie_req(sec_mod_instance_st *sec_mod_instance,
 		if (old_proc->pid > 0) {
 			kill_proc(old_proc);
 		}
-		mslog(s, proc, LOG_DEBUG, "re-using session");
+		mslog(s, proc, LOG_DEBUG, "reusing session");
 	} else {
 		mslog(s, proc, LOG_INFO, "new user session");
 	}

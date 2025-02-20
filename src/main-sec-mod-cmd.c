@@ -618,7 +618,7 @@ int session_open(sec_mod_instance_st *sec_mod_instance, struct proc_st *proc,
 
 			if (strcmp(str_ip, msg->ip) != 0) {
 				mslog(s, proc, LOG_INFO,
-				      "user '%s' is re-using cookie from different IP (prev: %s, current: %s); rejecting",
+				      "user '%s' is reusing cookie from different IP (prev: %s, current: %s); rejecting",
 				      proc->username, msg->ip, str_ip);
 				return -1;
 			}
