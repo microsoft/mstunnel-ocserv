@@ -33,10 +33,10 @@ configuration while ocserv-main will use the previous configuration.
 # Basic build tools
 apt-get install -y build-essential pkg-config
 # Required
-apt-get install -y libgnutls28-dev libev-dev
+apt-get install -y libgnutls28-dev libev-dev libreadline-dev
 # Optional functionality and testing
 apt-get install -y libpam0g-dev liblz4-dev libseccomp-dev \
-	libreadline-dev libnl-route-3-dev libkrb5-dev libradcli-dev \
+	libnl-route-3-dev libkrb5-dev libradcli-dev \
 	libcurl4-gnutls-dev libcjose-dev libjansson-dev liboath-dev \
 	libprotobuf-c-dev libtalloc-dev libllhttp-dev protobuf-c-compiler \
 	gperf iperf3 lcov libuid-wrapper libpam-wrapper libnss-wrapper \
@@ -51,9 +51,9 @@ apt-get install -y ronn
 # Basic build tools
 yum install -y install make automake gcc pkgconf-pkg-config
 # Required
-yum install -y gnutls-devel libev-devel
+yum install -y gnutls-devel libev-devel readline-devel
 # Optional functionality and testing
-yum install -y pam-devel lz4-devel libseccomp-devel readline-devel \
+yum install -y pam-devel lz4-devel libseccomp-devel \
 	libnl3-devel krb5-devel radcli-devel libcurl-devel cjose-devel \
 	jansson-devel liboath-devel protobuf-c-devel libtalloc-devel \
 	llhttp-devel protobuf-c gperf iperf3 lcov uid_wrapper \
