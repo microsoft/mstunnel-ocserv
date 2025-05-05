@@ -355,6 +355,13 @@ int get_auth_handler2(worker_st *ws, unsigned int http_ver, const char *pmsg,
 				ret = -1;
 				goto cleanup;
 			}
+
+			ret = str_append_str(&str,
+					     OC_LOGIN_FORM_INPUT_PASSWORD);
+			if (ret < 0) {
+				ret = -1;
+				goto cleanup;
+			}
 		}
 
 		if ((ws->selected_auth->type & AUTH_TYPE_CERTIFICATE) &&
@@ -1844,7 +1851,14 @@ int post_auth_handler(worker_st *ws, unsigned int http_ver)
 		if (ws->selected_auth->type & AUTH_TYPE_GSSAPI) {
 			ret = basic_auth_handler(ws, http_ver, msg);
 		} else {
-			ret = get_auth_handler2(ws, http_ver, msg, pcounter);
+			if (username != NULL) {
+				/* Process the same request a second time to get the password
+				   and do the necessary secmod requests */
+				ret = post_auth_handler(ws, http_ver);
+			} else {
+				ret = get_auth_handler2(ws, http_ver, msg,
+							pcounter);
+			}
 		}
 		goto cleanup;
 	} else if (ret < 0) {
