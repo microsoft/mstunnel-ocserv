@@ -560,8 +560,16 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned int pass_len)
 				oc_syslog(
 					LOG_DEBUG,
 					"radius-auth: ignoring server's attribute (%u,%u) of type %u",
+#ifndef ATTRID /* FreeRADIUS client >= 1.1.8 */
+					(unsigned int)vp->attribute,
+#else
 					(unsigned int)ATTRID(vp->attribute),
+#endif
+#ifndef VENDOR /* FreeRADIUS client >= 1.1.8 */
+					(unsigned int)vp->vendor,
+#else
 					(unsigned int)VENDOR(vp->attribute),
+#endif
 					(unsigned int)vp->type);
 			}
 			vp = vp->next;
