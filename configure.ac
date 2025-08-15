@@ -27,7 +27,7 @@ AC_CHECK_PROGS([IPCALC], [ipcalc ipcalc-ng], [:])
 if test x"$IPCALC" = "x:"; then
 	AC_MSG_ERROR([[
 ***
-*** ipcalc (ipcalc-ng in debian) was not found. It is needed for the test suite
+*** ipcalc (or ipcalc-ng) was not found. It is needed for the test suite
 *** ]])
 fi
 

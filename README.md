@@ -41,7 +41,7 @@ apt-get install -y libpam0g-dev liblz4-dev libseccomp-dev \
 	libprotobuf-c-dev libtalloc-dev libllhttp-dev protobuf-c-compiler \
 	gperf iperf3 lcov libuid-wrapper libpam-wrapper libnss-wrapper \
 	libsocket-wrapper gss-ntlmssp haproxy iputils-ping freeradius \
-	gawk gnutls-bin iproute2 yajl-tools tcpdump
+	gawk gnutls-bin iproute2 yajl-tools tcpdump ipcalc
 # For manpages
 apt-get install -y ronn
 ```
