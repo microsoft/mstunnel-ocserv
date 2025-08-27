@@ -614,9 +614,8 @@ static void load_iroutes(struct cfg_st *config)
 
 	dir = opendir(config->per_user_dir);
 	if (dir != NULL) {
-		do {
-			r = readdir(dir);
-			if (r != NULL && r->d_type == DT_REG) {
+		for (r = readdir(dir); r != NULL; r = readdir(dir)) {
+			if (r->d_type == DT_REG) {
 				ret = snprintf(path, sizeof(path), "%s/%s",
 					       config->per_user_dir, r->d_name);
 				if (ret != (int)strlen(path)) {
@@ -627,7 +626,7 @@ static void load_iroutes(struct cfg_st *config)
 				}
 				append_iroutes_from_file(config, path);
 			}
-		} while (r != NULL);
+		}
 		closedir(dir);
 	}
 }

@@ -743,19 +743,14 @@ url_handler_fn http_get_url_handler(const char *url)
 	const struct known_urls_st *p;
 	unsigned int len = strlen(url);
 
-	p = known_urls;
-	do {
-		if (p->url != NULL) {
-			if ((len == p->url_size && strcmp(p->url, url) == 0) ||
-			    (len >= p->url_size &&
-			     strncmp(p->url, url, p->url_size) == 0 &&
-			     (p->partial_match != 0 ||
-			      url[p->url_size] == '/' ||
-			      url[p->url_size] == '?')))
-				return p->get_handler;
-		}
-		p++;
-	} while (p->url != NULL);
+	for (p = known_urls; p->url != NULL; p++) {
+		if ((len == p->url_size && strcmp(p->url, url) == 0) ||
+		    (len >= p->url_size &&
+		     strncmp(p->url, url, p->url_size) == 0 &&
+		     (p->partial_match != 0 || url[p->url_size] == '/' ||
+		      url[p->url_size] == '?')))
+			return p->get_handler;
+	}
 
 	return NULL;
 }
@@ -767,17 +762,13 @@ url_handler_fn http_post_known_service_check(struct worker_st *ws,
 	unsigned int len = strlen(url);
 	unsigned int i;
 
-	p = known_urls;
-	do {
-		if (p->url != NULL) {
-			if ((len == p->url_size && strcmp(p->url, url) == 0) ||
-			    (len > p->url_size &&
-			     strncmp(p->url, url, p->url_size) == 0 &&
-			     p->partial_match == 0 && url[p->url_size] == '?'))
-				return p->post_handler;
-		}
-		p++;
-	} while (p->url != NULL);
+	for (p = known_urls; p->url != NULL; p++) {
+		if ((len == p->url_size && strcmp(p->url, url) == 0) ||
+		    (len > p->url_size &&
+		     strncmp(p->url, url, p->url_size) == 0 &&
+		     p->partial_match == 0 && url[p->url_size] == '?'))
+			return p->post_handler;
+	}
 
 	for (i = 0; i < WSCONFIG(ws)->kkdcp_size; i++) {
 		if (WSCONFIG(ws)->kkdcp[i].url &&
