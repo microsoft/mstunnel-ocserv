@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <vpn.h>
 #include <ctype.h>
@@ -93,7 +94,7 @@ static void append_stats(rc_handle *rh, VALUE_PAIR **send, stats_st *stats)
 	uint32_t uin, uout;
 
 	if (stats->uptime) {
-		uin = stats->uptime;
+		uin = (uint32_t)MIN(stats->uptime, UINT32_MAX);
 		rc_avpair_add(rh, send, PW_ACCT_SESSION_TIME, &uin, -1, 0);
 	}
 
