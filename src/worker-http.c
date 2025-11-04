@@ -72,7 +72,8 @@ static const struct known_urls_st known_urls[] = {
 	LL("/1/VPNManifest.xml", get_string_handler, NULL),
 	LL("/1/binaries/update.txt", get_string_handler, NULL),
 
-	LL("/+CSCOT+/", get_string_handler, NULL),
+	LL("/+CSCOT+/translation-table", get_string_handler, NULL),
+	LL("/+CSCOT+/oem-customization", get_string_handler, NULL),
 	LL("/logout", get_empty_handler, NULL),
 #endif
 	LL("/svc", get_svc_handler, post_svc_handler),
