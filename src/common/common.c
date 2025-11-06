@@ -430,7 +430,7 @@ int forward_msg(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd,
 
 	if (rcmd != icmd) {
 		oc_syslog(LOG_ERR, "%s:%u: expected %d, received %d", __FILE__,
-			  __LINE__, (int)rcmd, (int)icmd);
+			  __LINE__, (int)icmd, (int)rcmd);
 		return ERR_BAD_COMMAND;
 	}
 
@@ -726,7 +726,7 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd, int *socketfd, void **msg,
 
 	if (rcmd != cmd) {
 		oc_syslog(LOG_ERR, "%s:%u: expected %d, received %d", __FILE__,
-			  __LINE__, (int)rcmd, (int)cmd);
+			  __LINE__, (int)cmd, (int)rcmd);
 		return ERR_BAD_COMMAND;
 	}
 
