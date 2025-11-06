@@ -22,6 +22,18 @@ if test "$GCC" = "yes" && ! expr "$CC" : clang >/dev/null 2>&1;then
 	CFLAGS="$CFLAGS -Wall -Wno-strict-aliasing -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-missing-field-initializers -Wno-implicit-fallthrough -Wno-stringop-truncation"
 fi
 
+AC_PATH_PROG([GPERF], [gperf])
+
+if test -z "$GPERF"; then
+	GPERF_FILE="src/http-heads.h"
+	if test ! -f "$GPERF_FILE"; then
+		AC_MSG_ERROR([[
+***
+*** GNU gperf was not found. It is required to generate $GPERF_FILE
+*** ]])
+	fi
+fi
+
 AC_CHECK_PROGS([IPCALC], [ipcalc ipcalc-ng], [:])
 
 if test x"$IPCALC" = "x:"; then

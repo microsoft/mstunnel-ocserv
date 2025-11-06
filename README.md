@@ -49,7 +49,7 @@ apt-get install -y ronn
 ## Fedora/RHEL:
 ```
 # Basic build tools
-yum install -y install make automake gcc pkgconf-pkg-config
+yum install -y make automake gcc pkgconf-pkg-config
 # Required
 yum install -y gnutls-devel libev-devel readline-devel
 # Optional functionality and testing
@@ -84,7 +84,7 @@ Note that the code coverage reported does not currently include tests which
 are run within docker.
 
 In addition to the prerequisites listed above, building from git requires
-the following packages: autoconf, automake, and xz.
+the following packages: autoconf, automake, gperf, and xz.
 
 To build from the git repository use:
 ```
