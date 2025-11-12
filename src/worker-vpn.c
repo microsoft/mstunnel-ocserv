@@ -1930,7 +1930,7 @@ static void set_socket_timeout(worker_st *ws, int fd)
 		int e = errno;
 
 		oclog(ws, LOG_DEBUG, "setsockopt(%s, SO_RCVTIMEO) failed: %s",
-		      (fd == ws->conn_fd) ? "ΤCP" : "UDP", strerror(e));
+		      (fd == ws->conn_fd) ? "TCP" : "UDP", strerror(e));
 	}
 }
 
