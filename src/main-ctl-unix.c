@@ -133,9 +133,9 @@ int ctl_handler_init(main_server_st *s)
 	strlcpy(sa.sun_path, GETPCONFIG(s)->occtl_socket_file,
 		sizeof(sa.sun_path));
 	ret = remove(GETPCONFIG(s)->occtl_socket_file);
-	if (ret != 0) {
+	if (ret != 0 && errno != ENOENT) {
 		e = errno;
-		mslog(s, NULL, LOG_DEBUG, "could not delete socket: '%s': %s",
+		mslog(s, NULL, LOG_ERR, "could not delete socket: '%s': %s",
 		      GETPCONFIG(s)->occtl_socket_file, strerror(e));
 	}
 
