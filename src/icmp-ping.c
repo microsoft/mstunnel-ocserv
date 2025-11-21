@@ -202,7 +202,7 @@ int icmp_ping4(main_server_st *s, struct sockaddr_in *addr1)
 	pkt->icmp_cksum = in_cksum((unsigned short *)pkt, sizeof(packet1));
 
 	while (sendto(pingsock, packet1, DEFDATALEN + ICMP_MINLEN, 0,
-		      (struct sockaddr *)addr1, sizeof(*addr1) == -1) &&
+		      (struct sockaddr *)addr1, sizeof(*addr1)) == -1 &&
 	       retry(errno))
 		;
 	/* listen for replies */
@@ -300,7 +300,7 @@ int icmp_ping6(main_server_st *s, struct sockaddr_in6 *addr1)
 	setsockopt(pingsock, SOL_RAW, IPV6_CHECKSUM, &sockopt, sizeof(sockopt));
 #endif
 	while (sendto(pingsock, packet1, DEFDATALEN + sizeof(struct icmp6_hdr),
-		      0, (struct sockaddr *)addr1, sizeof(*addr1) == -1) &&
+		      0, (struct sockaddr *)addr1, sizeof(*addr1)) == -1 &&
 	       retry(errno))
 		;
 
