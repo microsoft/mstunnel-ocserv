@@ -561,15 +561,15 @@ static int iroutes_handler(void *_ctx, const char *section, const char *name,
 	if (section != NULL && section[0] != 0) {
 		fprintf(stderr, WARNSTR "skipping unknown section '%s'\n",
 			section);
-		return 0;
+		return 1;
 	}
 
 	if (strcmp(name, "iroute") != 0)
-		return 0;
+		return 1;
 
 	value = sanitize_config_value(ctx->config, _value);
 	if (value == NULL)
-		return 0;
+		return 1;
 
 	ret = _add_multi_line_val(ctx->config, &ctx->config->known_iroutes,
 				  &ctx->config->known_iroutes_size, value);
@@ -579,7 +579,7 @@ static int iroutes_handler(void *_ctx, const char *section, const char *name,
 	}
 
 	talloc_free(value);
-	return 0;
+	return 1;
 }
 
 static void append_iroutes_from_file(struct cfg_st *config, const char *file)
