@@ -423,21 +423,8 @@ static int listen_ports(void *pool, struct perm_cfg_st *config,
  * worker */
 static void set_worker_udp_opts(main_server_st *s, int fd, int family)
 {
-	int y;
+	int y = 1;
 
-#ifdef IPV6_V6ONLY
-	if (family == AF_INET6) {
-		y = 1;
-		/* avoid listen on ipv6 addresses failing
-		 * because already listening on ipv4 addresses: */
-		if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, (const void *)&y,
-			       sizeof(y)) < 0) {
-			perror("setsockopt(IPV6_V6ONLY) failed");
-		}
-	}
-#endif
-
-	y = 1;
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const void *)&y,
 		       sizeof(y)) < 0) {
 		perror("setsockopt(SO_REUSEADDR) failed");
@@ -810,10 +797,9 @@ static int forward_udp_to_owner(main_server_st *s, struct listener_st *listener)
 				e = errno;
 				mslog(s, proc_to_send, LOG_INFO,
 				      "bind UDP to %s: %s",
-				      human_addr(
-					      (struct sockaddr *)&listener->addr,
-					      listener->addr_len, tbuf,
-					      sizeof(tbuf)),
+				      human_addr((struct sockaddr *)&our_addr,
+						 our_addr_size, tbuf,
+						 sizeof(tbuf)),
 				      strerror(e));
 			}
 		}
