@@ -1016,7 +1016,7 @@ int handle_list_iroutes_cmd(struct unix_ctx *ctx, const char *arg,
 					vpn_ip, rep->user[i]->iroutes[j]);
 		}
 	} else {
-		print_start_block(out, params);
+		print_array_block(out, params);
 		for (i = 0; i < rep->n_user; i++) {
 			const char *username, *vpn_ip;
 
@@ -1027,6 +1027,7 @@ int handle_list_iroutes_cmd(struct unix_ctx *ctx, const char *arg,
 			vpn_ip = get_ip(rep->user[i]->local_ip,
 					rep->user[i]->local_ip6);
 
+			print_start_block(out, params);
 			print_single_value_int(out, params, "ID",
 					       rep->user[i]->id, 1);
 			print_single_value(out, params, "Username", username,
@@ -1038,10 +1039,11 @@ int handle_list_iroutes_cmd(struct unix_ctx *ctx, const char *arg,
 			print_single_value(out, params, "IP", vpn_ip, 1);
 			print_list_entries(out, params, "iRoutes",
 					   rep->user[i]->iroutes,
-					   rep->user[i]->n_iroutes, 1);
-			print_single_value(out, params, "IP", vpn_ip, 0);
+					   rep->user[i]->n_iroutes, 0);
+			print_end_block(out, params,
+					i < (rep->n_user - 1) ? 1 : 0);
 		}
-		print_end_block(out, params, 0);
+		print_end_array_block(out, params);
 	}
 
 	ret = 0;
@@ -1546,7 +1548,7 @@ static int session_info_cmd(void *ctx, SecmListCookiesReplyMsg *args, FILE *out,
 					       args->cookies[i]->tls_auth_ok,
 					       1);
 			print_single_value_int(out, params, "in_use",
-					       args->cookies[i]->in_use, 1);
+					       args->cookies[i]->in_use, 0);
 		} else {
 			/* old names for compatibility */
 			print_pair_value(
