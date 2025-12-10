@@ -716,6 +716,17 @@ static int recv_cookie_auth_reply(worker_st *ws)
 			memcpy(ws->sid, msg->sid.data, sizeof(ws->sid));
 			ws->sid_set = 1;
 
+			if (msg->secmod_addr.len > sizeof(ws->secmod_addr)) {
+				oclog(ws, LOG_ERR,
+				      "msg->secmod_addr.len too large");
+				ret = ERR_AUTH_FAIL;
+				goto cleanup;
+			}
+
+			ws->secmod_addr_len = msg->secmod_addr.len;
+			memcpy(&ws->secmod_addr, msg->secmod_addr.data,
+			       msg->secmod_addr.len);
+
 			strlcpy(ws->vinfo.name, msg->vname,
 				sizeof(ws->vinfo.name));
 			strlcpy(ws->username, msg->user_name,

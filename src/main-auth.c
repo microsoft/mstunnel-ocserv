@@ -145,6 +145,13 @@ int send_cookie_auth_reply(main_server_st *s, struct proc_st *proc, AUTHREP r)
 		}
 
 		msg.config = proc->config;
+		msg.secmod_addr.data =
+			(uint8_t *)&s
+				->sec_mod_instances[proc->sec_mod_instance_index]
+				.secmod_addr;
+		msg.secmod_addr.len =
+			s->sec_mod_instances[proc->sec_mod_instance_index]
+				.secmod_addr_len;
 
 		ret = send_socket_msg_to_worker(
 			s, proc, AUTH_COOKIE_REP, proc->tun_lease.fd, &msg,

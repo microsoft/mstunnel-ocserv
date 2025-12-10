@@ -83,6 +83,7 @@ message auth_cookie_reply_msg
 	optional string ipv6_local = 10;
 
 	required bytes sid = 11;
+	required bytes secmod_addr = 13;
 
 	/* additional config */
 	optional group_cfg_st config = 20;
