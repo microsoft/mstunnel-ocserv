@@ -36,6 +36,8 @@ typedef struct ban_entry_st {
 	time_t expires; /* the time after the client is allowed to login */
 } ban_entry_st;
 
+#define IS_BANNED(main, entry) (entry->score >= GETCONFIG(main)->max_ban_score)
+
 void cleanup_banned_entries(main_server_st *s);
 unsigned int check_if_banned(main_server_st *s, struct sockaddr_storage *addr,
 			     socklen_t addr_size);

@@ -512,7 +512,7 @@ static void method_top(method_ctx *ctx, int cfd, uint8_t *msg,
 }
 
 static int append_ban_info(method_ctx *ctx, BanListRep *list,
-			   struct ban_entry_st *e)
+			   struct ban_entry_st *e, time_t now)
 {
 	BanInfoRep *rep;
 	main_server_st *s = ctx->s;
@@ -533,8 +533,8 @@ static int append_ban_info(method_ctx *ctx, BanListRep *list,
 	rep->ip.len = e->ip.size;
 	rep->score = e->score;
 
-	if (GETCONFIG(s)->max_ban_score > 0 &&
-	    e->score >= GETCONFIG(s)->max_ban_score) {
+	if (GETCONFIG(s)->max_ban_score > 0 && IS_BANNED(s, e) &&
+	    e->expires > now) {
 		rep->expires = e->expires;
 		rep->has_expires = 1;
 	}
@@ -550,12 +550,13 @@ static void method_list_banned(method_ctx *ctx, int cfd, uint8_t *msg,
 	struct htable *db = ctx->s->ban_db;
 	int ret;
 	struct htable_iter iter;
+	time_t now = time(NULL);
 
 	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: list-banned-ips");
 
 	e = htable_first(db, &iter);
 	while (e != NULL) {
-		ret = append_ban_info(ctx, &rep, e);
+		ret = append_ban_info(ctx, &rep, e, now);
 		if (ret < 0) {
 			mslog(ctx->s, NULL, LOG_ERR,
 			      "error appending ban info to reply");

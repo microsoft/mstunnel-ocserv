@@ -94,8 +94,6 @@ void main_ban_db_deinit(main_server_st *s)
 	}
 }
 
-#define IS_BANNED(main, entry) (entry->score >= GETCONFIG(main)->max_ban_score)
-
 unsigned int main_ban_db_elems(main_server_st *s)
 {
 	struct htable *db = s->ban_db;
