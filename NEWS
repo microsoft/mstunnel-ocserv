@@ -8,6 +8,7 @@
 - Fixed 'iroute' option processing to handle multiple routes (#625)
 - occtl: fix invalid JSON output in `occtl -j show iroutes` (#661)
 - occtl: fix regression with trailing commas in `occtl -j show sessions` (#669)
+- occtl: fix missing column headers in 'show ip bans' output (#677)
 - Fixed DTLS not working with systemd socket activation (#647)
 
 * Version 1.3.0 (released 2024-05-05)

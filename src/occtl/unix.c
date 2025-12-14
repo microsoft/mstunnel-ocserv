@@ -21,6 +21,7 @@
  */
 
 #include <config.h>
+#include <stdbool.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1077,6 +1078,7 @@ static int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg,
 	FILE *out;
 	struct tm *tm, _tm;
 	time_t t;
+	bool header_printed = false;
 
 	PROTOBUF_ALLOCATOR(pa, ctx);
 	char txt_ip[MAX_IP_STR];
@@ -1123,9 +1125,10 @@ static int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg,
 				continue;
 			}
 
-			if (i == 0 && NO_JSON(params)) {
+			if (!header_printed && NO_JSON(params)) {
 				fprintf(out, "%14s %14s %30s\n", "IP", "score",
 					"expires");
+				header_printed = true;
 			}
 			print_start_block(out, params);
 
@@ -1144,8 +1147,9 @@ static int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg,
 					str_since, tmpbuf);
 			}
 		} else {
-			if (i == 0 && NO_JSON(params)) {
+			if (!header_printed && NO_JSON(params)) {
 				fprintf(out, "%14s %14s\n", "IP", "score");
+				header_printed = true;
 			}
 			print_start_block(out, params);
 
