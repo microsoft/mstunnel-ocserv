@@ -25,7 +25,7 @@ Signoff:
   # Quoted to work around https://gitlab.com/gitlab-org/gitlab-foss/-/issues/20177
   - 'echo "Checking for new commits without Signed-off-by: tags as described in https://gitlab.com/openconnect/ocserv/-/blob/master/CONTRIBUTING.md"'
   # Last bad commit
-  - 'git log 7c8abd2e2ca6ec0dffb8c7768c3839e057f21ee7.. --grep "(^Signed-off-by)|(^Merge branch)|(^This reverts commit)" --extended-regexp --invert-grep --exit-code'
+  - 'git log 6a65e3acdd3251fe20815cc2984a2781d9717173.. --grep "(^Signed-off-by)|(^Merge branch)|(^This reverts commit)" --extended-regexp --invert-grep --exit-code'
   - echo "None (good)"
 
 Debian:
