@@ -163,11 +163,11 @@ static int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip,
 		}
 	} else {
 		/* Reset the score if:
-		 *   - ban period ended (now > e->expires)
+		 *   - ban period ended (now > e->expires && IS_BANNED)
 		 *   - reset interval elapsed AND user not currently banned
 		 *     (to avoid prematurely lifting an active ban)
 		 */
-		if (now > e->expires ||
+		if ((now > e->expires && IS_BANNED(s, e)) ||
 		    (now > e->last_reset + GETCONFIG(s)->ban_reset_time &&
 		     !IS_BANNED(s, e))) {
 			e->score = 0;
