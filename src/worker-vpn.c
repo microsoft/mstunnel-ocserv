@@ -1332,14 +1332,8 @@ static int periodic_check(worker_st *ws, struct timespec *tnow,
 {
 	int max, ret;
 	time_t now = tnow->tv_sec;
-	time_t periodic_check_time = PERIODIC_CHECK_TIME;
 
-	/* modify timers with a fuzzying factor, to prevent all worker processes
-	 * to act at exactly the same time (e.g., after a server restart on which
-	 * all clients reconnect at the same time). */
-	FUZZ(periodic_check_time, 5, tnow->tv_nsec);
-
-	if (now - ws->last_periodic_check < periodic_check_time)
+	if (now - ws->last_periodic_check < PERIODIC_CHECK_TIME)
 		return 0;
 
 	/* we set an alarm at each periodic check to prevent any
@@ -2077,7 +2071,6 @@ static int connect_handler(worker_st *ws)
 			sizeof(ws->req.hostname));
 	}
 
-	FUZZ(ws->user_config->interim_update_secs, 5, rnd);
 	FUZZ(WSCONFIG(ws)->rekey_time, 30, rnd);
 
 	/* Connected. Turn of the alarm */
@@ -2963,6 +2956,8 @@ static void periodic_check_watcher_cb(EV_P_ ev_timer *w, int revents)
 static int worker_event_loop(struct worker_st *ws)
 {
 	struct timespec tnow;
+	unsigned int rnd;
+	int ret;
 
 #if defined(__linux__) && defined(HAVE_LIBSECCOMP)
 	worker_loop = ev_default_loop(EVFLAG_NOENV | EVBACKEND_EPOLL);
@@ -3006,7 +3001,17 @@ static int worker_event_loop(struct worker_st *ws)
 	ev_io_start(worker_loop, &tun_watcher);
 
 	ev_init(&period_check_watcher, periodic_check_watcher_cb);
-	ev_timer_set(&period_check_watcher, WORKER_MAINTENANCE_TIME,
+	/* generate a random offset to prevent all worker processes from
+	 * acting at exactly the same time (e.g., after a server restart
+	 * on which all clients reconnect at the same time). */
+	ret = gnutls_rnd(GNUTLS_RND_NONCE, &rnd, sizeof(rnd));
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "error in the random generator: %s",
+		      gnutls_strerror(ret));
+		goto exit;
+	}
+	ev_timer_set(&period_check_watcher,
+		     rnd % (unsigned int)WORKER_MAINTENANCE_TIME,
 		     WORKER_MAINTENANCE_TIME);
 	ev_timer_start(worker_loop, &period_check_watcher);
 
