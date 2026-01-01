@@ -16,6 +16,8 @@
   from being banned or cause premature unbans (#678)
 - Session statistics are now reported at consistent intervals
   for RADIUS compatibility (#630)
+- Single form to enter username and password (#551)
+
 
 * Version 1.3.0 (released 2024-05-05)
 - Switch to https://github.com/nodejs/llhttp from http-parser.
