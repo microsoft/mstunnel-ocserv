@@ -8,7 +8,7 @@ variables:
   ALPINE_BUILD: buildenv-alpine
   DEBIAN_BUILD: buildenv-debian
   DEBIAN_X86_CROSS_BUILD: buildenv-debian-x86
-  FEDORA_BUILD: buildenv-fedora41
+  FEDORA_BUILD: buildenv-fedora42
   UBUNTU20_BUILD: buildenv-ubuntu20
   UBUNTU22_BUILD: buildenv-ubuntu22
   CENTOS8_BUILD: buildenv-centos8
