@@ -69,6 +69,14 @@ void drop_privileges(struct worker_st *ws, main_server_st *s)
 			      GETPCONFIG(s)->chroot_dir, strerror(e));
 			exit(EXIT_FAILURE);
 		}
+
+		ret = chdir("/");
+		if (ret != 0) {
+			e = errno;
+			oclog(ws, LOG_ERR, "cannot chdir to '/': %s",
+			      strerror(e));
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	if (GETPCONFIG(s)->gid != -1 && (getgid() == 0 || getegid() == 0)) {
