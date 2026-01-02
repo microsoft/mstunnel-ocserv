@@ -5,6 +5,7 @@
 - Enhanced the seccomp filters to address issue in testing (#627)
 - Fixed "unexpected URL" errors for Cisco AnyConnect clients
 - Fixed the 'ping-leases' option, which was broken since version 1.1.1
+- Fixed maximum MTU tracking in server statistics
 - Fixed 'iroute' option processing to handle multiple routes (#625)
 - Fixed session accounting for roaming users (#674)
 - occtl: fix invalid JSON output in `occtl -j show iroutes` (#661)

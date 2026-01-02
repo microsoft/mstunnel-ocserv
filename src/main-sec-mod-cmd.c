@@ -723,7 +723,7 @@ static void update_main_stats(main_server_st *s, struct proc_st *proc)
 
 	if (s->stats.min_mtu == 0 || proc->mtu < s->stats.min_mtu)
 		s->stats.min_mtu = proc->mtu;
-	if (s->stats.max_mtu == 0 || proc->mtu > s->stats.min_mtu)
+	if (s->stats.max_mtu == 0 || proc->mtu > s->stats.max_mtu)
 		s->stats.max_mtu = proc->mtu;
 
 	/* connection time in minutes */
