@@ -41,7 +41,7 @@ apt-get install -y libpam0g-dev liblz4-dev libseccomp-dev \
 	libprotobuf-c-dev libtalloc-dev libllhttp-dev protobuf-c-compiler \
 	gperf iperf3 lcov libuid-wrapper libpam-wrapper libnss-wrapper \
 	libsocket-wrapper gss-ntlmssp haproxy iputils-ping freeradius \
-	gawk gnutls-bin iproute2 yajl-tools tcpdump ipcalc
+	gawk gnutls-bin iproute2 jq tcpdump ipcalc
 # For manpages
 apt-get install -y ronn
 ```
@@ -58,7 +58,7 @@ yum install -y pam-devel lz4-devel libseccomp-devel \
 	jansson-devel liboath-devel protobuf-c-devel libtalloc-devel \
 	llhttp-devel protobuf-c gperf iperf3 lcov uid_wrapper \
 	pam_wrapper nss_wrapper socket_wrapper gssntlmssp haproxy iputils \
-	freeradius gawk gnutls-utils iproute yajl tcpdump
+	freeradius gawk gnutls-utils iproute jq tcpdump
 # For manpages
 yum install -y rubygem-ronn-ng
 ```

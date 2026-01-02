@@ -92,7 +92,7 @@ if test $? != 0;then
 	exit 1
 fi
 
-json_verify <${OUTFILE}
+jq . ${OUTFILE}
 if test $? != 0;then
 	echo "occtl show users json invalid"
 	exit 1
@@ -104,7 +104,7 @@ if test $? != 0;then
 	exit 1
 fi
 
-json_verify <${OUTFILE}
+jq . ${OUTFILE}
 if test $? != 0;then
 	echo "occtl show users --debug json invalid"
 	exit 1
@@ -116,7 +116,7 @@ if test $? != 0;then
 	exit 1
 fi
 
-json_verify <${OUTFILE}
+jq . ${OUTFILE}
 if test $? != 0;then
 	echo "occtl show user json invalid"
 	exit 1
@@ -128,7 +128,7 @@ if test $? != 0;then
 	exit 1
 fi
 
-json_verify <${OUTFILE}
+jq . ${OUTFILE}
 if test $? != 0;then
 	echo "occtl show user --debug json invalid"
 	exit 1
@@ -140,7 +140,7 @@ if test $? != 0;then
 	exit 1
 fi
 
-json_verify <${OUTFILE}
+jq . ${OUTFILE}
 if test $? != 0;then
 	echo "occtl show status json invalid"
 	exit 1
@@ -152,7 +152,7 @@ if test $? != 0;then
 	exit 1
 fi
 
-json_verify <${OUTFILE}
+jq . ${OUTFILE}
 if test $? != 0;then
 	echo "occtl show status --debug json invalid"
 	exit 1
@@ -164,7 +164,7 @@ if test $? != 0;then
 	exit 1
 fi
 
-json_verify <${OUTFILE}
+jq . ${OUTFILE}
 if test $? != 0;then
 	echo "occtl show session all json invalid"
 	exit 1
@@ -176,7 +176,7 @@ if test $? != 0;then
 	exit 1
 fi
 
-json_verify <${OUTFILE}
+jq . ${OUTFILE}
 if test $? != 0;then
 	echo "occtl show session all --debug json invalid"
 	exit 1
