@@ -2733,6 +2733,12 @@ static int parse_data(struct worker_st *ws, uint8_t *buf, size_t buf_size,
 	return 0;
 }
 
+// Wrapper of parse_data so it can be called by tests.
+int parse_data_caller(struct worker_st *ws, uint8_t *buf, size_t buf_siz, time_t now, unsigned is_dtls)
+{
+	return parse_data(ws, buf, buf_siz, now, is_dtls);
+}
+
 static int parse_cstp_data(struct worker_st *ws, uint8_t *buf, size_t buf_size,
 			   time_t now)
 {
