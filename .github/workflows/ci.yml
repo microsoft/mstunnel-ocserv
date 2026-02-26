@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: ["develop", "main", "master"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ipcalc openconnect \
+            autoconf automake libtool pkg-config make gcc g++ \
+            libgnutls28-dev libev-dev \
+            libpam0g-dev liblz4-dev libseccomp-dev \
+            libreadline-dev libnl-route-3-dev libkrb5-dev libradcli-dev \
+            libcurl4-gnutls-dev libcjose-dev libjansson-dev liboath-dev \
+            libprotobuf-c-dev libtalloc-dev libhttp-parser-dev protobuf-c-compiler \
+            gperf iperf3 lcov libuid-wrapper libpam-wrapper libnss-wrapper \
+            libsocket-wrapper gss-ntlmssp haproxy iputils-ping freeradius \
+            gawk gnutls-bin iproute2 yajl-tools tcpdump
+      
+      - name: Bootstrap
+        run: ./autogen.sh
+
+      - name: Configure
+        run: ./configure
+
+      - name: Build
+        run: make -j$(nproc)
+
+      - name: Test
+        run: make check VERBOSE=1
