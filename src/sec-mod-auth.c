@@ -956,8 +956,21 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req,
 		strlcpy(e->acct_info.user_agent, req->user_agent,
 			sizeof(e->acct_info.user_agent));
 
+	bool username_confidential = req->auth_type &
+				     CONFIDENTIAL_USER_NAME_AUTH_TYPES;
+
+#ifdef HAVE_PAM
+	if ((req->auth_type & AUTH_TYPE_PAM) == AUTH_TYPE_PAM) {
+		struct pam_vhost_ctx *vctx = e->vhost_auth_ctx;
+
+		if (vctx != NULL && vctx->use_token) {
+			username_confidential = true;
+		}
+	}
+#endif
+
 	// Real user name is retrieved after auth.
-	if (!(req->auth_type & CONFIDENTIAL_USER_NAME_AUTH_TYPES)) {
+	if (!username_confidential) {
 		if (req->user_name != NULL) {
 			strlcpy(e->acct_info.username, req->user_name,
 				sizeof(e->acct_info.username));

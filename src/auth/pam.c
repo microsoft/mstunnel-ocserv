@@ -188,11 +188,30 @@ wait:
 	}
 }
 
+static void pam_vhost_init(void **_vctx, void *pool, void *additional)
+{
+	pam_cfg_st *config = additional;
+	struct pam_vhost_ctx *vctx = talloc_zero(pool, struct pam_vhost_ctx);
+
+	if (vctx == NULL) {
+		fprintf(stderr, "PAM-auth: memory error\n");
+		exit(EXIT_FAILURE);
+	}
+
+	*_vctx = vctx;
+
+	if (config == NULL)
+		return;
+
+	vctx->use_token = config->use_token;
+}
+
 static int pam_auth_init(void **ctx, void *pool, void *vctx,
 			 const common_auth_init_st *info)
 {
 	int pret;
 	struct pam_ctx_st *pctx;
+	struct pam_vhost_ctx *pvctx = vctx;
 
 	if (info->username == NULL || info->username[0] == 0) {
 		oc_syslog(LOG_NOTICE, "pam-auth: no username present");
@@ -218,12 +237,26 @@ static int pam_auth_init(void **ctx, void *pool, void *vctx,
 	if (pctx->cr == NULL)
 		goto fail2;
 
-	strlcpy(pctx->username, info->username, sizeof(pctx->username));
+	if (!pvctx->use_token) {
+		strlcpy(pctx->username, info->username, sizeof(pctx->username));
+	}
 
 	if (info->ip != NULL)
 		pam_set_item(pctx->ph, PAM_RHOST, info->ip);
 
 	*ctx = pctx;
+
+	if (pvctx->use_token) {
+		co_call(pctx->cr);
+
+		if (pctx->cr_ret != PAM_SUCCESS) {
+			oc_syslog(LOG_NOTICE, "PAM-auth pam_auth_msg: %s",
+				  pam_strerror(pctx->ph, pctx->cr_ret));
+			return ERR_AUTH_FAIL;
+		}
+
+		return 0;
+	}
 
 	return ERR_AUTH_CONTINUE;
 
@@ -376,6 +409,7 @@ static void pam_group_list(void *pool, void *_additional, char ***groupname,
 
 const struct auth_mod_st pam_auth_funcs = { .type = AUTH_TYPE_PAM |
 						    AUTH_TYPE_USERNAME_PASS,
+						.vhost_init = pam_vhost_init,
 					    .auth_init = pam_auth_init,
 					    .auth_deinit = pam_auth_deinit,
 					    .auth_msg = pam_auth_msg,

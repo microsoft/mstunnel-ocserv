@@ -32,6 +32,11 @@
 
 extern const struct auth_mod_st pam_auth_funcs;
 
+
+struct pam_vhost_ctx {
+	bool use_token;
+};
+
 struct pam_ctx_st {
 	char password[MAX_PASSWORD_SIZE];
 	char username[MAX_USERNAME_SIZE];

@@ -19,6 +19,7 @@
  */
 
 #include <config.h>
+#include <common-config.h>
 
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>
@@ -1671,7 +1672,30 @@ int post_auth_handler(worker_st *ws, unsigned int http_ver)
 			}
 		}
 
-		if (ws->selected_auth->type & AUTH_TYPE_USERNAME_PASS) {
+		bool use_username_pass = ws->selected_auth->type &
+					 AUTH_TYPE_USERNAME_PASS;
+
+#ifdef HAVE_PAM
+		if ((ws->selected_auth->type & AUTH_TYPE_PAM) ==
+		    AUTH_TYPE_PAM) {
+			pam_cfg_st *pam_cfg =
+				(pam_cfg_st *)ws->selected_auth->additional;
+
+			if (pam_cfg != NULL && pam_cfg->use_token) {
+				use_username_pass = false;
+
+				if (req->authorization == NULL ||
+				    req->authorization_size == 0)
+					return basic_auth_handler(ws, http_ver,
+								  NULL);
+
+				ireq.auth_type |= AUTH_TYPE_PAM;
+				ireq.user_name = req->authorization;
+			}
+		}
+#endif
+
+		if (use_username_pass) {
 			ret = parse_reply(ws, req->body, req->body_length,
 					  USERNAME_FIELD,
 					  sizeof(USERNAME_FIELD) - 1, NULL, 0,
