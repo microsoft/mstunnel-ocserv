@@ -715,6 +715,10 @@ ciphersuite12_finish:
 				}
 
 				nlen = BASE64_DECODE_LENGTH(tmplen);
+				if (nlen < sizeof(ws->sid) ||
+				    nlen > sizeof(ws->sid) + 8)
+					return;
+
 				ret = oc_base64_decode((uint8_t *)p, tmplen,
 						       ws->sid, &nlen);
 				if (ret == 0 || nlen != sizeof(ws->sid)) {
