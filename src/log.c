@@ -34,8 +34,8 @@
 /* This global variable is used by oc_syslog() */
 int global_log_prio = DEFAULT_LOG_LEVEL;
 
-void __attribute__ ((format(printf, 2, 3)))
-    oc_syslog(int priority, const char *fmt, ...)
+void __attribute__((format(printf, 2, 3))) oc_syslog(int priority,
+						     const char *fmt, ...)
 {
 	char buf[512];
 	va_list args;

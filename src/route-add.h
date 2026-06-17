@@ -19,12 +19,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #ifndef OC_ROUTE_ADD_H
-# define OC_ROUTE_ADD_H
+#define OC_ROUTE_ADD_H
 
 #include <vpn.h>
 #include <main.h>
 
-int apply_iroutes(struct main_server_st* s, struct proc_st *proc);
-void remove_iroutes(struct main_server_st* s, struct proc_st *proc);
+int apply_iroutes(struct main_server_st *s, struct proc_st *proc);
+void remove_iroutes(struct main_server_st *s, struct proc_st *proc);
 
 #endif

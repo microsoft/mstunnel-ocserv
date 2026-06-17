@@ -23,9 +23,9 @@
 #include "../src/ip-util.h"
 #include "../src/ip-util.c"
 
-int syslog_open = 0;
+int syslog_open;
 
-static char* my_ipv6_prefix_to_mask(char str[MAX_IP_STR], unsigned prefix)
+static char *my_ipv6_prefix_to_mask(char str[MAX_IP_STR], unsigned int prefix)
 {
 	struct in6_addr in;
 
@@ -44,19 +44,22 @@ int main(void)
 	char str[MAX_IP_STR];
 
 	p = my_ipv6_prefix_to_mask(str, 128);
-	if (p == NULL || strcmp(p, "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff") != 0) {
+	if (p == NULL ||
+	    strcmp(p, "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff") != 0) {
 		fprintf(stderr, "error in %d: %s\n", __LINE__, p);
 		exit(1);
 	}
 
 	p = my_ipv6_prefix_to_mask(str, 127);
-	if (p == NULL || strcmp(p, "ffff:ffff:ffff:ffff:ffff:ffff:ffff:fffe") != 0) {
+	if (p == NULL ||
+	    strcmp(p, "ffff:ffff:ffff:ffff:ffff:ffff:ffff:fffe") != 0) {
 		fprintf(stderr, "error in %d: %s\n", __LINE__, p);
 		exit(1);
 	}
 
 	p = my_ipv6_prefix_to_mask(str, 97);
-	if (p == NULL || strcmp(p, "ffff:ffff:ffff:ffff:ffff:ffff:8000:0") != 0) {
+	if (p == NULL ||
+	    strcmp(p, "ffff:ffff:ffff:ffff:ffff:ffff:8000:0") != 0) {
 		fprintf(stderr, "error in %d: %s\n", __LINE__, p);
 		exit(1);
 	}

@@ -141,4 +141,21 @@ ATTRIBUTE	DNS-Server-IPv6-Address	169	ipv6addr
 # Sets IPv6 routes
 ATTRIBUTE	Framed-IPv6-Prefix	97	ipv6prefix
 ATTRIBUTE	Route-IPv6-Information	170	ipv6prefix
+
+
+############################
+#	Traffic shaping    #
+############################
+
+VENDOR Roaring-Penguin 10055
+
+BEGIN-VENDOR Roaring-Penguin
+
+# tx speed limit in kb/s
+ATTRIBUTE	RP-Upstream-Speed-Limit		1	integer
+# rx speed limit in kb/s
+ATTRIBUTE	RP-Downstream-Speed-Limit	2	integer
+
+END-VENDOR Roaring-Penguin
+
 ```

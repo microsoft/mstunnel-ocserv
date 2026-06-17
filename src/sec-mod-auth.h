@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #ifndef OC_SEC_MOD_AUTH_H
-# define OC_SEC_MOD_AUTH_H
+#define OC_SEC_MOD_AUTH_H
 
 #include <main.h>
 #include <sec-mod.h>
@@ -28,26 +28,30 @@
 
 typedef struct passwd_msg_st {
 	char *msg_str;
-	unsigned counter;
+	unsigned int counter;
 } passwd_msg_st;
 
 typedef struct auth_mod_st {
 	unsigned int type;
-	unsigned int allows_retries; /* whether the module allows retries of the same password */
-	void (*vhost_init)(void **vctx, void *pool, void* additional);
+	unsigned int
+		allows_retries; /* whether the module allows retries of the same password */
+	void (*vhost_init)(void **vctx, void *pool, void *additional);
 	void (*vhost_deinit)(void *vctx);
-	int (*auth_init)(void **ctx, void *pool, void *vctx, const common_auth_init_st *);
-	int (*auth_msg)(void* ctx, void *pool, passwd_msg_st *);
-	int (*auth_pass)(void* ctx, const char* pass, unsigned pass_len);
-	int (*auth_group)(void* ctx, const char *suggested, char *groupname, int groupname_size);
-	int (*auth_user)(void* ctx, char *groupname, int groupname_size);
+	int (*auth_init)(void **ctx, void *pool, void *vctx,
+			 const common_auth_init_st *);
+	int (*auth_msg)(void *ctx, void *pool, passwd_msg_st *);
+	int (*auth_pass)(void *ctx, const char *pass, unsigned int pass_len);
+	int (*auth_group)(void *ctx, const char *suggested, char *groupname,
+			  int groupname_size);
+	int (*auth_user)(void *ctx, char *groupname, int groupname_size);
 
-	void (*auth_deinit)(void* ctx);
-	void (*group_list)(void *pool, void *additional, char ***groupname, unsigned *groupname_size);
+	void (*auth_deinit)(void *ctx);
+	void (*group_list)(void *pool, void *additional, char ***groupname,
+			   unsigned int *groupname_size);
 } auth_mod_st;
 
 void main_auth_init(main_server_st *s);
-void proc_auth_deinit(main_server_st* s, struct proc_st* proc);
+void proc_auth_deinit(main_server_st *s, struct proc_st *proc);
 
 /* The authentication with the worker thread is shown in ipc.proto.
  */

@@ -30,13 +30,14 @@
 #include <hmac.h>
 #include <stdbool.h>
 
-bool hmac_init_key(size_t key_length, uint8_t * key)
+bool hmac_init_key(size_t key_length, uint8_t *key)
 {
 	return gnutls_rnd(GNUTLS_RND_RANDOM, key, key_length) == 0;
 }
 
-void generate_hmac(size_t key_length, const uint8_t * key, size_t component_count,
-		  const hmac_component_st * components, uint8_t digest[HMAC_DIGEST_SIZE])
+void generate_hmac(size_t key_length, const uint8_t *key,
+		   size_t component_count, const hmac_component_st *components,
+		   uint8_t digest[HMAC_DIGEST_SIZE])
 {
 	struct hmac_sha256_ctx ctx;
 	size_t i;
@@ -44,10 +45,8 @@ void generate_hmac(size_t key_length, const uint8_t * key, size_t component_coun
 	hmac_sha256_set_key(&ctx, key_length, key);
 
 	for (i = 0; i < component_count; i++) {
-
 		if (components[i].data) {
-			hmac_sha256_update(&ctx,
-					   components[i].length,
+			hmac_sha256_update(&ctx, components[i].length,
 					   (const uint8_t *)components[i].data);
 		}
 	}

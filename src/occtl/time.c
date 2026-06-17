@@ -44,17 +44,19 @@ void print_time_ival7(char output[MAX_TMPSTR_SIZE], time_t t1, time_t t2)
 
 	if (t >= 48 * 60 * 60)
 		/* 2 days or more */
-		snprintf(output, MAX_TMPSTR_SIZE, _("%2ludays"), (long)t / (24 * 60 * 60));
+		snprintf(output, MAX_TMPSTR_SIZE, _("%2ludays"),
+			 (long)t / (24 * 60 * 60));
 	else if (t >= 60 * 60)
 		/* 1 hour or more */
-	        /* Translation Hint: Hours:Minutes */
-		snprintf(output, MAX_TMPSTR_SIZE, _("%2luh:%02um"), (long)t / (60 * 60),
-			(unsigned)((t / 60) % 60));
+		/* Translation Hint: Hours:Minutes */
+		snprintf(output, MAX_TMPSTR_SIZE, _("%2luh:%02um"),
+			 (long)t / (60 * 60), (unsigned int)((t / 60) % 60));
 	else if (t > 60)
 		/* 1 minute or more */
-	        /* Translation Hint: Minutes:Seconds */
-		snprintf(output, MAX_TMPSTR_SIZE, "%2lum:%02us", (long)t / 60, (unsigned)t % 60);
+		/* Translation Hint: Minutes:Seconds */
+		snprintf(output, MAX_TMPSTR_SIZE, "%2lum:%02us", (long)t / 60,
+			 (unsigned int)t % 60);
 	else
-	        /* Translation Hint: Seconds:Centiseconds */
+		/* Translation Hint: Seconds:Centiseconds */
 		snprintf(output, MAX_TMPSTR_SIZE, _("%5lus"), (long)t);
 }

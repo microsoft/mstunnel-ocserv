@@ -27,17 +27,19 @@
 #include <stdint.h>
 
 #define STR_TAB_INIT(t, s_t) memset(t, 0, s_t)
-#define STR_TAB_SET(i,pat,val) { \
-	tab[i].pattern = pat; \
-	tab[i].pattern_length = sizeof(pat)-1; \
-	tab[i].rep_val = val; \
+#define STR_TAB_SET(i, pat, val)                         \
+	{                                                \
+		tab[i].pattern = pat;                    \
+		tab[i].pattern_length = sizeof(pat) - 1; \
+		tab[i].rep_val = val;                    \
 	}
-#define STR_TAB_SET_FUNC(i,pat,func,funcinput) { \
-	tab[i].pattern = pat; \
-	tab[i].pattern_length = sizeof(pat)-1; \
-	tab[i].rep_val = NULL; \
-	tab[i].rep_func = func; \
-	tab[i].rep_func_input = funcinput; \
+#define STR_TAB_SET_FUNC(i, pat, func, funcinput)        \
+	{                                                \
+		tab[i].pattern = pat;                    \
+		tab[i].pattern_length = sizeof(pat) - 1; \
+		tab[i].rep_val = NULL;                   \
+		tab[i].rep_func = func;                  \
+		tab[i].rep_func_input = funcinput;       \
 	}
 #define STR_TAB_TERM(i) tab[i].pattern = NULL
 
@@ -45,22 +47,22 @@ typedef char *(*str_get_func)(void *pool, const char *input);
 
 typedef struct {
 	const char *pattern;
-	unsigned pattern_length;
+	unsigned int pattern_length;
 	const char *rep_val;
 	str_get_func rep_func;
 	const void *rep_func_input;
 } str_rep_tab;
 
 typedef struct {
-	uint8_t *allocd;	/* pointer to allocated data */
-	uint8_t *data;		/* API: pointer to data to copy from */
+	uint8_t *allocd; /* pointer to allocated data */
+	uint8_t *data; /* API: pointer to data to copy from */
 	size_t max_length;
-	size_t length;		/* API: current length */
+	size_t length; /* API: current length */
 	void *pool;
 } str_st;
 
 /* Initialize a buffer */
-inline static void str_init(str_st * str, void *pool)
+inline static void str_init(str_st *str, void *pool)
 {
 	str->data = str->allocd = NULL;
 	str->max_length = 0;
@@ -72,7 +74,7 @@ inline static void str_init(str_st * str, void *pool)
 void str_clear(str_st *);
 
 /* Set the buffer data to be of zero length */
-inline static void str_reset(str_st * buf)
+inline static void str_reset(str_st *buf)
 {
 	buf->data = buf->allocd;
 	buf->length = 0;
@@ -87,6 +89,8 @@ int str_append_data(str_st *, const void *data, size_t data_size);
 int str_append_size(str_st *, size_t data_size);
 int str_append_data_prefix1(str_st *, const void *data, size_t data_size);
 
-#define str_append_str_prefix1(s, str) (((str)==NULL)?str_append_data_prefix1(s, NULL, 0):str_append_data_prefix1(s, str, strlen(str)))
+#define str_append_str_prefix1(s, str)                           \
+	(((str) == NULL) ? str_append_data_prefix1(s, NULL, 0) : \
+			   str_append_data_prefix1(s, str, strlen(str)))
 
 #endif

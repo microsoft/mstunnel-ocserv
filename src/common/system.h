@@ -19,30 +19,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #ifndef DIE_H
-# define DIE_H
+#define DIE_H
 
-# include <config.h>
-# include <signal.h>
-# include <unistd.h>
+#include <config.h>
+#include <signal.h>
+#include <unistd.h>
 
 #ifdef HAVE_SIGHANDLER_T
-# define SIGHANDLER_T sighandler_t
+#define SIGHANDLER_T sighandler_t
 #elif HAVE_SIG_T
-# define SIGHANDLER_T sig_t
+#define SIGHANDLER_T sig_t
 #elif HAVE___SIGHANDLER_T
-# define SIGHANDLER_T __sighandler_t
+#define SIGHANDLER_T __sighandler_t
 #else
 typedef void (*sighandler_t)(int);
-# define SIGHANDLER_T sighandler_t
+#define SIGHANDLER_T sighandler_t
 #endif
 
-void pr_set_undumpable(const char* mod);
+void pr_set_undumpable(const char *mod);
 void kill_on_parent_kill(int sig);
 
 SIGHANDLER_T ocsignal(int signum, SIGHANDLER_T handler);
 
-int check_upeer_id(const char *mod, int debug, int cfg, uid_t uid, uid_t gid, uid_t *ruid, pid_t *pid);
-
-
+int check_upeer_id(const char *mod, int debug, int cfg, uid_t uid, uid_t gid,
+		   uid_t *ruid, pid_t *pid);
 
 #endif

@@ -16,7 +16,7 @@
  */
 
 #ifndef OC_NAMESPACE_H
-# define OC_NAMESPACE_H
+#define OC_NAMESPACE_H
 
 #include <config.h>
 
@@ -27,7 +27,7 @@ struct netns_fds {
 
 #if defined(LINUX_NAMESPACES)
 
-int socket_netns(const struct netns_fds*, int domain, int type, int protocol);
+int socket_netns(const struct netns_fds *, int domain, int type, int protocol);
 int open_namespaces(struct netns_fds *netns, struct perm_cfg_st *config);
 int close_namespaces(struct netns_fds *netns);
 
@@ -36,10 +36,11 @@ int close_namespaces(struct netns_fds *netns);
 #define open_namespaces(netns, config) (-1)
 #define close_namespaces(netns) (-1)
 
-static inline int socket_netns(__attribute__((unused)) const struct netns_fds* fds,
+static inline int socket_netns(__attribute__((unused))
+			       const struct netns_fds *fds,
 			       int domain, int type, int protocol)
 {
-        return socket(domain, type, protocol);
+	return socket(domain, type, protocol);
 }
 
 #endif /* __linux__ */

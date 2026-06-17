@@ -19,21 +19,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-
 #ifndef HMAC_H
 #define HMAC_H
 #include <stdbool.h>
 
 #define HMAC_DIGEST_SIZE 32
 
-bool hmac_init_key(size_t key_length, uint8_t * key);
+bool hmac_init_key(size_t key_length, uint8_t *key);
 
-typedef struct hmac_component_st  {
+typedef struct hmac_component_st {
 	size_t length;
-	void * data;
+	void *data;
 } hmac_component_st;
 
-void generate_hmac(size_t key_length, const uint8_t * key, size_t component_count,
-		  const hmac_component_st * components, uint8_t digest[HMAC_DIGEST_SIZE]);
+void generate_hmac(size_t key_length, const uint8_t *key,
+		   size_t component_count, const hmac_component_st *components,
+		   uint8_t digest[HMAC_DIGEST_SIZE]);
 
 #endif

@@ -85,13 +85,10 @@ function wait_file {
 }
 
 # server address
-ADDRESS=10.201.2.1
-CLI_ADDRESS=10.201.1.1
-VPNNET=192.168.1.0/24
-VPNADDR=192.168.1.1
 OCCTL_SOCKET=./occtl-udp-listen-host-$$.socket
 USERNAME=test
 
+. "$(dirname "$0")/random-net.sh"
 . "$(dirname "$0")/ns.sh"
 
 # Run servers

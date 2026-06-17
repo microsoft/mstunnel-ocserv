@@ -19,20 +19,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #ifndef OC_SETPROCTITLE_H
-# define OC_SETPROCTITLE_H
+#define OC_SETPROCTITLE_H
 
-# include <config.h>
+#include <config.h>
 
-# ifndef HAVE_SETPROCTILE
+#ifndef HAVE_SETPROCTILE
 
-void __attribute__ ((format(printf, 1, 2)))
-setproctitle(const char *fmt, ...);
+void __attribute__((format(printf, 1, 2))) setproctitle(const char *fmt, ...);
 
-# else
+#else
 
-#  include <sys/types.h>
-#  include <unistd.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-# endif
+#endif
 
 #endif

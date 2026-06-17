@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #ifndef OC_SCRIPT_LIST_H
-# define OC_SCRIPT_LIST_H
+#define OC_SCRIPT_LIST_H
 
 #include <main.h>
 #include <sys/types.h>
@@ -28,10 +28,10 @@
 
 void script_child_watcher_cb(struct ev_loop *loop, ev_child *w, int revents);
 
-inline static
-void add_to_script_list(main_server_st* s, pid_t pid, struct proc_st* proc)
+inline static void add_to_script_list(main_server_st *s, pid_t pid,
+				      struct proc_st *proc)
 {
-struct script_wait_st *stmp;
+	struct script_wait_st *stmp;
 
 	stmp = talloc(s, struct script_wait_st);
 	if (stmp == NULL)
@@ -49,12 +49,14 @@ struct script_wait_st *stmp;
 /* Removes the tracked connect script, and kills it. It returns the pid
  * of the removed script or -1.
  */
-inline static pid_t remove_from_script_list(main_server_st* s, struct proc_st* proc)
+inline static pid_t remove_from_script_list(main_server_st *s,
+					    struct proc_st *proc)
 {
 	struct script_wait_st *stmp = NULL, *spos;
 	pid_t ret = -1;
 
-	list_for_each_safe(&s->script_list.head, stmp, spos, list) {
+	list_for_each_safe(&s->script_list.head, stmp, spos, list)
+	{
 		if (stmp->proc == proc) {
 			list_del(&stmp->list);
 			ev_child_stop(main_loop, &stmp->ev_child);

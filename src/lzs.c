@@ -23,9 +23,9 @@
 
 #include "lzs.h"
 
-#define GET_BITS(bits)							\
-do {									\
-	/* Strictly speaking, this check ought to be on			\
+#define GET_BITS(bits)                                                             \
+	do {                                                                       \
+		/* Strictly speaking, this check ought to be on			\
 	 * (srclen < 1 + (bits_left < bits)). However, when bits == 9	\
 	 * the (bits_left < bits) comparison is always true so it	\
 	 * always comes out as (srclen < 2).				\
@@ -33,40 +33,43 @@ do {									\
 	 * reading part of a match encoding. And in that case, there	\
 	 * damn well ought to be an end marker (7 more bits) after	\
 	 * what we're reading now, so it's perfectly OK to use		\
-	 * (srclen < 2) in that case too. And a *lot* cheaper. */	\
-	if (srclen < 2)							\
-		return -EINVAL;						\
-	/* Explicit comparison with 8 to optimise it into a tautology	\
+	 * (srclen < 2) in that case too. And a *lot* cheaper. */                \
+		if (srclen < 2)                                                    \
+			return -EINVAL;                                            \
+		/* Explicit comparison with 8 to optimise it into a tautology	\
 	 * in the bits == 9 case, because the compiler doesn't
-	 * know that bits_left can never be larger than 8. */		\
-	if (bits >= 8 || bits >= bits_left) {				\
-		/* We need *all* the bits that are left in the current	\
-		 * byte. Take them and bump the input pointer. */	\
-		data = (src[0] << (bits - bits_left)) & ((1 << bits) - 1); \
-		src++;							\
-		srclen--;						\
-		bits_left += 8 - bits;					\
-		if (bits > 8 || bits_left < 8) {			\
-			/* We need bits from the next byte too... */	\
-			data |= src[0] >> bits_left;			\
-			/* ...if we used *all* of them then (which can	\
+	 * know that bits_left can never be larger than 8. */    \
+		if (bits >= 8 || bits >= bits_left) {                              \
+			/* We need *all* the bits that are left in the current	\
+		 * byte. Take them and bump the input pointer. */   \
+			data = (src[0] << (bits - bits_left)) &                    \
+			       ((1 << bits) - 1);                                  \
+			src++;                                                     \
+			srclen--;                                                  \
+			bits_left += 8 - bits;                                     \
+			if (bits > 8 || bits_left < 8) {                           \
+				/* We need bits from the next byte too... */       \
+				data |= src[0] >> bits_left;                       \
+				/* ...if we used *all* of them then (which can	\
 			 * only happen if bits > 8), then bump the	\
 			 * input pointer again so we never leave	\
-			 * bits_left == 0. */				\
-			if (bits > 8 && !bits_left) {			\
-				bits_left = 8;				\
-				src++;					\
-				srclen--;				\
-			}						\
-		}							\
-	} else {							\
-		/* We need fewer bits than are left in the current byte */ \
-		data = (src[0] >> (bits_left - bits)) & ((1ULL << bits) - 1); \
-		bits_left -= bits;					\
-	}								\
-} while (0)
+			 * bits_left == 0. */   \
+				if (bits > 8 && !bits_left) {                      \
+					bits_left = 8;                             \
+					src++;                                     \
+					srclen--;                                  \
+				}                                                  \
+			}                                                          \
+		} else {                                                           \
+			/* We need fewer bits than are left in the current byte */ \
+			data = (src[0] >> (bits_left - bits)) &                    \
+			       ((1ULL << bits) - 1);                               \
+			bits_left -= bits;                                         \
+		}                                                                  \
+	} while (0)
 
-int lzs_decompress(unsigned char *dst, int dstlen, const unsigned char *src, int srclen)
+int lzs_decompress(unsigned char *dst, int dstlen, const unsigned char *src,
+		   int srclen)
 {
 	int outlen = 0;
 	int bits_left = 8; /* Bits left in the current byte at *src */
@@ -140,24 +143,24 @@ int lzs_decompress(unsigned char *dst, int dstlen, const unsigned char *src, int
 	return -EINVAL;
 }
 
-#define PUT_BITS(nr, bits)					\
-do {								\
-	outbits <<= (nr);					\
-	outbits |= (bits);					\
-	nr_outbits += (nr);					\
-	if ((nr) > 8) {						\
-		nr_outbits -= 8;				\
-		if (outpos == dstlen)				\
-			return -EFBIG;				\
-		dst[outpos++] = outbits >> nr_outbits;		\
-	}							\
-	if (nr_outbits >= 8) {					\
-		nr_outbits -= 8;				\
-		if (outpos == dstlen)				\
-			return -EFBIG;				\
-		dst[outpos++] = outbits >> nr_outbits;		\
-	}							\
-} while (0)
+#define PUT_BITS(nr, bits)                                     \
+	do {                                                   \
+		outbits <<= (nr);                              \
+		outbits |= (bits);                             \
+		nr_outbits += (nr);                            \
+		if ((nr) > 8) {                                \
+			nr_outbits -= 8;                       \
+			if (outpos == dstlen)                  \
+				return -EFBIG;                 \
+			dst[outpos++] = outbits >> nr_outbits; \
+		}                                              \
+		if (nr_outbits >= 8) {                         \
+			nr_outbits -= 8;                       \
+			if (outpos == dstlen)                  \
+				return -EFBIG;                 \
+			dst[outpos++] = outbits >> nr_outbits; \
+		}                                              \
+	} while (0)
 
 struct oc_packed_uint16_t {
 	uint16_t d;
@@ -167,7 +170,8 @@ struct oc_packed_uint16_t {
  * Much of the compression algorithm used here is based very loosely on ideas
  * from isdn_lzscomp.c by Andre Beck: http://micky.ibh.de/~beck/stuff/lzs4i4l/
  */
-int lzs_compress(unsigned char *dst, int dstlen, const unsigned char *src, int srclen)
+int lzs_compress(unsigned char *dst, int dstlen, const unsigned char *src,
+		 int srclen)
 {
 	int length, offset;
 	int inpos = 0, outpos = 0;
@@ -203,7 +207,7 @@ int lzs_compress(unsigned char *dst, int dstlen, const unsigned char *src, int s
 	 * offset will yield the previous offset at which the same data hash
 	 * value was found.
 	 */
-#define MAX_HISTORY (1<<11) /* Highest offset LZS can represent is 11 bits */
+#define MAX_HISTORY (1 << 11) /* Highest offset LZS can represent is 11 bits */
 	uint16_t hash_chain[MAX_HISTORY];
 
 	/* Just in case anyone tries to use this in a more general-purpose
@@ -234,10 +238,10 @@ int lzs_compress(unsigned char *dst, int dstlen, const unsigned char *src, int s
 
 		for (; hofs != INVALID_OFS && hofs + MAX_HISTORY > inpos;
 		     hofs = hash_chain[hofs & (MAX_HISTORY - 1)]) {
-
 			/* We only get here if longest_match_len is >= 2. We need to find
 			   a match of longest_match_len + 1 for it to be interesting. */
-			if (!memcmp(src + hofs + 2, src + inpos + 2, longest_match_len - 1)) {
+			if (!memcmp(src + hofs + 2, src + inpos + 2,
+				    longest_match_len - 1)) {
 				longest_match_ofs = hofs;
 
 				do {
@@ -248,7 +252,8 @@ int lzs_compress(unsigned char *dst, int dstlen, const unsigned char *src, int s
 					if (longest_match_len + inpos == srclen)
 						goto got_match;
 
-				} while (src[longest_match_len + inpos] == src[longest_match_len + hofs]);
+				} while (src[longest_match_len + inpos] ==
+					 src[longest_match_len + hofs]);
 			}
 
 			/* Typical compressor tuning would have a break out of the loop
@@ -261,7 +266,7 @@ int lzs_compress(unsigned char *dst, int dstlen, const unsigned char *src, int s
 			   something. Anyway, we currently don't give up until we run out
 			   of reachable history — maximal compression. */
 		}
-	got_match:
+got_match:
 		/* Output offset, as 7-bit or 11-bit as appropriate */
 		offset = inpos - longest_match_ofs;
 		length = longest_match_len;
@@ -298,7 +303,8 @@ int lzs_compress(unsigned char *dst, int dstlen, const unsigned char *src, int s
 		inpos++;
 		while (--longest_match_len) {
 			hash = HASH(src + inpos);
-			hash_chain[inpos & (MAX_HISTORY - 1)] = hash_table[hash];
+			hash_chain[inpos & (MAX_HISTORY - 1)] =
+				hash_table[hash];
 			hash_table[hash] = inpos++;
 		}
 	}

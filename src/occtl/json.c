@@ -26,21 +26,22 @@
 /* Escapes @val and stores it in tmp. A fixed string is returned
  * in case tmp is too small.
  */
-char *json_escape_val(char *tmp, unsigned tmp_size, const char *val)
+char *json_escape_val(char *tmp, unsigned int tmp_size, const char *val)
 {
-	unsigned val_len = strlen(val);
-	unsigned i, j;
+	unsigned int val_len = strlen(val);
+	unsigned int i, j;
 
-	for (i=j=0;i<val_len;i++) {
+	for (i = j = 0; i < val_len; i++) {
 		if (j + 7 >= tmp_size)
 			return "(invalid)";
 		if (val[i] == '"' || val[i] == '\\') {
-		    snprintf(&tmp[j], 3, "\\%c", val[i]);
-		    j+=2;
+			snprintf(&tmp[j], 3, "\\%c", val[i]);
+			j += 2;
 		} else if (val[i] <= 0x1F) {
-		    snprintf(&tmp[j], 7, "\\u00%02x", (unsigned)val[i]);
-		    j+=6;
-		} else tmp[j++] = val[i];
+			snprintf(&tmp[j], 7, "\\u00%02x", (unsigned int)val[i]);
+			j += 6;
+		} else
+			tmp[j++] = val[i];
 	}
 	tmp[j] = 0;
 

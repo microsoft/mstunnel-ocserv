@@ -75,13 +75,13 @@ trap nsfinish EXIT
 
 echo " * Setting up namespaces..."
 set -e
-NSNAME1="ocserv-c-tmp-$$"
-NSNAME3="ocserv-c-2-tmp-$$"
-NSNAME2="ocserv-s-tmp-$$"
-ETHNAME1="oceth-c$$"
-ETHNAME2="oceth-s$$"
-ETHNAME3="oceth-c-2$$"
-ETHNAME4="oceth-s-2$$"
+NSNAME1="ocserv-c-tmp-${$:0:4}"
+NSNAME3="ocserv-c-2-tmp-${$:0:4}"
+NSNAME2="ocserv-s-tmp-${$:0:4}"
+ETHNAME1="oceth-c${$:0:4}"
+ETHNAME2="oceth-s${$:0:4}"
+ETHNAME3="oceth-c-2${$:0:4}"
+ETHNAME4="oceth-s-2${$:0:4}"
 
 ${IP} netns add ${NSNAME1}
 ${IP} netns add ${NSNAME2}

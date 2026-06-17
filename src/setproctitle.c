@@ -24,25 +24,25 @@
 
 #if !defined(HAVE_SETPROCTITLE)
 
-# if defined(__linux__)
-#  include <sys/prctl.h>
+#if defined(__linux__)
+#include <sys/prctl.h>
 
 /* This sets the process title as shown in top, but not in ps (*@#%@).
  * To change the ps name in Linux, one needs to do master black magic
  * trickery (see util-linux setproctitle).
  */
-void setproctitle (const char *fmt, ...)
+void setproctitle(const char *fmt, ...)
 {
 	char name[16];
 	va_list args;
 
 	va_start(args, fmt);
-	vsnprintf(name, sizeof(name)-1, fmt, args);
+	vsnprintf(name, sizeof(name) - 1, fmt, args);
 	va_end(args);
 
-#  ifdef PR_SET_NAME
-	prctl (PR_SET_NAME, name);
-#  endif
+#ifdef PR_SET_NAME
+	prctl(PR_SET_NAME, name);
+#endif
 	/* Copied systemd's implementation under LGPL by Lennart Poettering */
 	if (saved_argc > 0) {
 		int i;
@@ -56,12 +56,12 @@ void setproctitle (const char *fmt, ...)
 		}
 	}
 }
-# else /* not linux */
+#else /* not linux */
 
-void setproctitle (const char *fmt, ...)
+void setproctitle(const char *fmt, ...)
 {
 }
 
-# endif /* __linux__ */
+#endif /* __linux__ */
 
 #endif /* HAVE_SETPROCTITLE */

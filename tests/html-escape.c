@@ -27,10 +27,10 @@
 #include "../src/html.c"
 #include "../src/common/common.h"
 
-int syslog_open = 0;
+int syslog_open;
 
-static char *strings[] =
-{
+static char *strings[] = {
+
 	"hello there",
 	"hi bro\n",
 	"small ascii\x10\x01\x03\x04\x18\x20\x21\x1f end",
@@ -43,8 +43,8 @@ static char *strings[] =
 	"Ahoy matey&#33"
 };
 
-static char *encoded_strings[] =
-{
+static char *encoded_strings[] = {
+
 	"hello there",
 	"hi bro&#x000a;",
 	"small ascii&#x0010;&#x0001;&#x0003;&#x0004;&#x0018; !&#x001f; end",
@@ -60,17 +60,21 @@ static char *encoded_strings[] =
 int main(void)
 {
 	char *dec;
-	unsigned i;
-	unsigned len;
+	unsigned int i;
+	unsigned int len;
 
-	for (i=0;i<ARRAY_SIZE(encoded_strings);i++) {
-		dec = unescape_html(NULL, encoded_strings[i], strlen(encoded_strings[i]), &len);
+	for (i = 0; i < ARRAY_SIZE(encoded_strings); i++) {
+		dec = unescape_html(NULL, encoded_strings[i],
+				    strlen(encoded_strings[i]), &len);
 		if (dec == NULL) {
-			fprintf(stderr, "failed to unescape %s\n", encoded_strings[i]);
+			fprintf(stderr, "failed to unescape %s\n",
+				encoded_strings[i]);
 			exit(1);
 		}
 		if (strcmp(dec, strings[i]) != 0) {
-			fprintf(stderr, "string %d, fails decoding:\n\tinput: '%s'\n\toutput: '%s'\n", i, strings[i], dec);
+			fprintf(stderr,
+				"string %d, fails decoding:\n\tinput: '%s'\n\toutput: '%s'\n",
+				i, strings[i], dec);
 			exit(1);
 		}
 		talloc_free(dec);

@@ -30,29 +30,37 @@ configuration while ocserv-main will use the previous configuration.
 
 ## Debian/Ubuntu:
 ```
+# Basic build tools
+apt-get install -y build-essential pkg-config
 # Required
-apt-get install -y libgnutls28-dev libev-dev
+apt-get install -y libgnutls28-dev libev-dev libreadline-dev
 # Optional functionality and testing
 apt-get install -y libpam0g-dev liblz4-dev libseccomp-dev \
-	libreadline-dev libnl-route-3-dev libkrb5-dev libradcli-dev \
+	libnl-route-3-dev libkrb5-dev libradcli-dev \
 	libcurl4-gnutls-dev libcjose-dev libjansson-dev liboath-dev \
-	libprotobuf-c-dev libtalloc-dev libhttp-parser-dev protobuf-c-compiler \
+	libprotobuf-c-dev libtalloc-dev libllhttp-dev protobuf-c-compiler \
 	gperf iperf3 lcov libuid-wrapper libpam-wrapper libnss-wrapper \
 	libsocket-wrapper gss-ntlmssp haproxy iputils-ping freeradius \
-	gawk gnutls-bin iproute2 yajl-tools tcpdump
+	gawk gnutls-bin iproute2 jq tcpdump ipcalc
+# For manpages
+apt-get install -y ronn
 ```
 
 ## Fedora/RHEL:
 ```
+# Basic build tools
+yum install -y make automake gcc pkgconf-pkg-config
 # Required
-yum install -y gnutls-devel libev-devel
+yum install -y gnutls-devel libev-devel readline-devel
 # Optional functionality and testing
-yum install -y pam-devel lz4-devel libseccomp-devel readline-devel \
+yum install -y pam-devel lz4-devel libseccomp-devel \
 	libnl3-devel krb5-devel radcli-devel libcurl-devel cjose-devel \
 	jansson-devel liboath-devel protobuf-c-devel libtalloc-devel \
-	http-parser-devel protobuf-c gperf iperf3 lcov uid_wrapper \
+	llhttp-devel protobuf-c gperf iperf3 lcov uid_wrapper \
 	pam_wrapper nss_wrapper socket_wrapper gssntlmssp haproxy iputils \
-	freeradius gawk gnutls-utils iproute yajl tcpdump
+	freeradius gawk gnutls-utils iproute jq tcpdump
+# For manpages
+yum install -y rubygem-ronn-ng
 ```
 
 See [README-radius](doc/README-radius.md) for more information on Radius
@@ -76,7 +84,7 @@ Note that the code coverage reported does not currently include tests which
 are run within docker.
 
 In addition to the prerequisites listed above, building from git requires
-the following packages: autoconf, automake, and xz.
+the following packages: autoconf, automake, gperf, and xz.
 
 To build from the git repository use:
 ```
@@ -133,7 +141,7 @@ container registry. The compilation/test phase is on every commit to project.
 
 # How the VPN works
 
-Please see the [technical description page](http://ocserv.gitlab.io/www/technical.html).
+Please see the [technical description page](http://ocserv.openconnect-vpn.net/technical.html).
 
 # License
 

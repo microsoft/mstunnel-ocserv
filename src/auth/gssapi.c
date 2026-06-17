@@ -17,7 +17,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include <config.h>
 
 #ifdef HAVE_GSSAPI
@@ -42,7 +41,7 @@
 struct gssapi_vhost_ctx_st {
 	gss_cred_id_t creds;
 	gss_OID_set oids;
-	unsigned no_local_map;
+	unsigned int no_local_map;
 	time_t ticket_freshness_secs;
 };
 
@@ -57,8 +56,7 @@ struct gssapi_ctx_st {
 };
 
 /* Taken from openconnect's gssapi */
-static void print_gss_err(const char *where,
-			  gss_OID mech, OM_uint32 err_maj,
+static void print_gss_err(const char *where, gss_OID mech, OM_uint32 err_maj,
 			  OM_uint32 err_min)
 {
 	OM_uint32 major, minor, msg_ctx = 0;
@@ -69,7 +67,8 @@ static void print_gss_err(const char *where,
 					   mech, &msg_ctx, &status);
 		if (GSS_ERROR(major))
 			break;
-		oc_syslog(LOG_ERR, "gssapi: %s[maj]: %s\n", where, (char *)status.value);
+		oc_syslog(LOG_ERR, "gssapi: %s[maj]: %s\n", where,
+			  (char *)status.value);
 		gss_release_buffer(&minor, &status);
 	} while (msg_ctx);
 
@@ -79,16 +78,15 @@ static void print_gss_err(const char *where,
 					   mech, &msg_ctx, &status);
 		if (GSS_ERROR(major))
 			break;
-		oc_syslog(LOG_ERR, "gssapi: %s[min]: %s\n", where, (char *)status.value);
+		oc_syslog(LOG_ERR, "gssapi: %s[min]: %s\n", where,
+			  (char *)status.value);
 		gss_release_buffer(&minor, &status);
 	} while (msg_ctx);
 }
 
-const gss_OID_desc spnego_mech = {6, (void *)"\x2b\x06\x01\x05\x05\x02"};
-const gss_OID_set_desc desired_mechs = {
-	.count = 1,
-	.elements = (gss_OID)&spnego_mech
-};
+const gss_OID_desc spnego_mech = { 6, (void *)"\x2b\x06\x01\x05\x05\x02" };
+const gss_OID_set_desc desired_mechs = { .count = 1,
+					 .elements = (gss_OID)&spnego_mech };
 
 static void gssapi_vhost_init(void **_vctx, void *pool, void *additional)
 {
@@ -118,21 +116,26 @@ static void gssapi_vhost_init(void **_vctx, void *pool, void *additional)
 		cred_store.count = 1;
 		cred_store.elements = &element;
 
-		ret = gss_acquire_cred_from(&minor, name, 0, (gss_OID_set)&desired_mechs, 2,
-			&cred_store, &vctx->creds, &vctx->oids, &time);
+		ret = gss_acquire_cred_from(&minor, name, 0,
+					    (gss_OID_set)&desired_mechs, 2,
+					    &cred_store, &vctx->creds,
+					    &vctx->oids, &time);
 
 		if (ret != GSS_S_COMPLETE) {
 			ret = -1;
-			print_gss_err("gss_acquire_cred(keytab)", GSS_C_NO_OID, ret, minor);
+			print_gss_err("gss_acquire_cred(keytab)", GSS_C_NO_OID,
+				      ret, minor);
 			exit(EXIT_FAILURE);
 		}
 	} else {
-		ret = gss_acquire_cred(&minor, name, 0, (gss_OID_set)&desired_mechs, 2,
-			&vctx->creds, &vctx->oids, &time);
+		ret = gss_acquire_cred(&minor, name, 0,
+				       (gss_OID_set)&desired_mechs, 2,
+				       &vctx->creds, &vctx->oids, &time);
 
 		if (ret != GSS_S_COMPLETE) {
 			ret = -1;
-			print_gss_err("gss_acquire_cred", GSS_C_NO_OID, ret, minor);
+			print_gss_err("gss_acquire_cred", GSS_C_NO_OID, ret,
+				      minor);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -149,7 +152,8 @@ static void gssapi_vhost_deinit(void *_vctx)
 		gss_release_cred(&minor, &vctx->creds);
 }
 
-static int get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech_type)
+static int get_name(struct gssapi_ctx_st *pctx, gss_name_t client,
+		    gss_OID mech_type)
 {
 	int ret;
 	OM_uint32 minor;
@@ -168,20 +172,24 @@ static int get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech_
 		pctx->username[name.length] = 0;
 	}
 
-	oc_syslog(LOG_DEBUG, "gssapi: authenticated GSSAPI user: %.*s", (unsigned)name.length, (char*)name.value);
+	oc_syslog(LOG_DEBUG, "gssapi: authenticated GSSAPI user: %.*s",
+		  (unsigned int)name.length, (char *)name.value);
 	gss_release_buffer(&minor, &name);
 
 	if (pctx->vctx->no_local_map == 0) {
 		ret = gss_localname(&minor, client, mech_type, &name);
 		if (GSS_ERROR(ret) || name.length >= MAX_USERNAME_SIZE) {
 			print_gss_err("gss_localname", mech_type, ret, minor);
-			oc_syslog(LOG_INFO, "gssapi: authenticated user doesn't map to a local user");
+			oc_syslog(
+				LOG_INFO,
+				"gssapi: authenticated user doesn't map to a local user");
 			return -1;
 		}
 
 		memcpy(pctx->username, name.value, name.length);
 		pctx->username[name.length] = 0;
-		oc_syslog(LOG_INFO, "gssapi: authenticated local user: %s", pctx->username);
+		oc_syslog(LOG_INFO, "gssapi: authenticated local user: %s",
+			  pctx->username);
 
 		gss_release_buffer(&minor, &name);
 	}
@@ -192,38 +200,49 @@ static int get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech_
 		return 0;
 }
 
-static int verify_krb5_constraints(struct gssapi_ctx_st *pctx, gss_OID mech_type)
+static int verify_krb5_constraints(struct gssapi_ctx_st *pctx,
+				   gss_OID mech_type)
 {
 	int ret;
 	OM_uint32 minor;
 	krb5_timestamp authtime;
 
 	if (mech_type == NULL ||
-	   ((mech_type->length != gss_mech_krb5->length || memcmp(mech_type->elements, gss_mech_krb5->elements, mech_type->length) != 0) &&
-	    (mech_type->length != gss_mech_krb5_old->length || memcmp(mech_type->elements, gss_mech_krb5_old->elements, mech_type->length) != 0)) ||
+	    ((mech_type->length != gss_mech_krb5->length ||
+	      memcmp(mech_type->elements, gss_mech_krb5->elements,
+		     mech_type->length) != 0) &&
+	     (mech_type->length != gss_mech_krb5_old->length ||
+	      memcmp(mech_type->elements, gss_mech_krb5_old->elements,
+		     mech_type->length) != 0)) ||
 	    pctx->vctx->ticket_freshness_secs == 0) {
 		return 0;
 	}
 
-	ret = gsskrb5_extract_authtime_from_sec_context (&minor, pctx->gssctx, &authtime);
+	ret = gsskrb5_extract_authtime_from_sec_context(&minor, pctx->gssctx,
+							&authtime);
 	if (GSS_ERROR(ret)) {
-		print_gss_err("gsskrb5_extract_authtime_from_sec_context", mech_type, ret, minor);
+		print_gss_err("gsskrb5_extract_authtime_from_sec_context",
+			      mech_type, ret, minor);
 		return -1;
 	}
 
 	if (time(NULL) > authtime + pctx->vctx->ticket_freshness_secs) {
-		oc_syslog(LOG_INFO, "gssapi: the presented kerberos ticket for %s is too old", pctx->username);
+		oc_syslog(
+			LOG_INFO,
+			"gssapi: the presented kerberos ticket for %s is too old",
+			pctx->username);
 		return -1;
 	}
 
 	return 0;
 }
 
-static int gssapi_auth_init(void **ctx, void *pool, void *_vctx, const common_auth_init_st *info)
+static int gssapi_auth_init(void **ctx, void *pool, void *_vctx,
+			    const common_auth_init_st *info)
 {
 	struct gssapi_ctx_st *pctx;
 	OM_uint32 minor, flags, time;
-	gss_buffer_desc buf= GSS_C_EMPTY_BUFFER;
+	gss_buffer_desc buf = GSS_C_EMPTY_BUFFER;
 	gss_name_t client = GSS_C_NO_NAME;
 	gss_OID mech_type = GSS_C_NO_OID;
 	int ret;
@@ -243,19 +262,21 @@ static int gssapi_auth_init(void **ctx, void *pool, void *_vctx, const common_au
 
 	pctx->vctx = vctx;
 
-	ret = oc_base64_decode_alloc(pctx, spnego, strlen(spnego), &raw, &raw_len);
+	ret = oc_base64_decode_alloc(pctx, spnego, strlen(spnego), &raw,
+				     &raw_len);
 	if (ret == 0) {
-		oc_syslog(LOG_ERR, "gssapi: error in base64 decoding %s", __func__);
+		oc_syslog(LOG_ERR, "gssapi: error in base64 decoding %s",
+			  __func__);
 		return ERR_AUTH_FAIL;
 	}
 
 	buf.value = raw;
 	buf.length = raw_len;
 	ret = gss_accept_sec_context(&minor, &pctx->gssctx, vctx->creds, &buf,
-		GSS_C_NO_CHANNEL_BINDINGS, &client, &mech_type, &pctx->msg,
-		&flags, &time, &pctx->delegated_creds);
+				     GSS_C_NO_CHANNEL_BINDINGS, &client,
+				     &mech_type, &pctx->msg, &flags, &time,
+				     &pctx->delegated_creds);
 	talloc_free(raw);
-
 
 	if (ret == GSS_S_CONTINUE_NEEDED) {
 		gss_release_name(&minor, &client);
@@ -277,11 +298,13 @@ static int gssapi_auth_init(void **ctx, void *pool, void *_vctx, const common_au
 	return ret;
 }
 
-static int gssapi_auth_group(void *ctx, const char *suggested, char *groupname, int groupname_size)
+static int gssapi_auth_group(void *ctx, const char *suggested, char *groupname,
+			     int groupname_size)
 {
 	struct gssapi_ctx_st *pctx = ctx;
 
-	return get_user_auth_group(pctx->username, suggested, groupname, groupname_size);
+	return get_user_auth_group(pctx->username, suggested, groupname,
+				   groupname_size);
 }
 
 static int gssapi_auth_user(void *ctx, char *username, int username_size)
@@ -294,7 +317,8 @@ static int gssapi_auth_user(void *ctx, char *username, int username_size)
 
 /* Returns 0 if the user is successfully authenticated, and sets the appropriate group name.
  */
-static int gssapi_auth_pass(void *ctx, const char *spnego, unsigned spnego_len)
+static int gssapi_auth_pass(void *ctx, const char *spnego,
+			    unsigned int spnego_len)
 {
 	struct gssapi_ctx_st *pctx = ctx;
 	OM_uint32 minor, flags, time;
@@ -308,15 +332,17 @@ static int gssapi_auth_pass(void *ctx, const char *spnego, unsigned spnego_len)
 	/* nothing to be done */
 	ret = oc_base64_decode_alloc(pctx, spnego, spnego_len, &raw, &raw_len);
 	if (ret == 0) {
-		oc_syslog(LOG_ERR, "gssapi: error in base64 decoding %s", __func__);
+		oc_syslog(LOG_ERR, "gssapi: error in base64 decoding %s",
+			  __func__);
 		return ERR_AUTH_FAIL;
 	}
 
 	buf.value = raw;
 	buf.length = raw_len;
-	ret = gss_accept_sec_context(&minor, &pctx->gssctx, pctx->vctx->creds, &buf,
-		GSS_C_NO_CHANNEL_BINDINGS, &client, &mech_type, &pctx->msg,
-		&flags, &time, &pctx->delegated_creds);
+	ret = gss_accept_sec_context(&minor, &pctx->gssctx, pctx->vctx->creds,
+				     &buf, GSS_C_NO_CHANNEL_BINDINGS, &client,
+				     &mech_type, &pctx->msg, &flags, &time,
+				     &pctx->delegated_creds);
 	talloc_free(raw);
 
 	if (ret == GSS_S_CONTINUE_NEEDED) {
@@ -340,15 +366,15 @@ static int gssapi_auth_msg(void *ctx, void *pool, passwd_msg_st *pst)
 {
 	struct gssapi_ctx_st *pctx = ctx;
 	OM_uint32 min;
-	unsigned length;
+	unsigned int length;
 
 	/* our msg is our SPNEGO reply */
 	if (pctx->msg.value != NULL) {
-		length = BASE64_ENCODE_RAW_LENGTH(pctx->msg.length)+1;
+		length = BASE64_ENCODE_RAW_LENGTH(pctx->msg.length) + 1;
 		pst->msg_str = talloc_size(pool, length);
 
 		oc_base64_encode(pctx->msg.value, pctx->msg.length,
-			         pst->msg_str, length);
+				 pst->msg_str, length);
 
 		gss_release_buffer(&min, &pctx->msg);
 		pctx->msg.value = NULL;
@@ -367,7 +393,8 @@ static void gssapi_auth_deinit(void *ctx)
 	talloc_free(ctx);
 }
 
-static void gssapi_group_list(void *pool, void *_additional, char ***groupname, unsigned *groupname_size)
+static void gssapi_group_list(void *pool, void *_additional, char ***groupname,
+			      unsigned int *groupname_size)
 {
 	gssapi_cfg_st *config = _additional;
 	gid_t min = 0;

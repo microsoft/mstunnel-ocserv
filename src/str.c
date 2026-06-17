@@ -31,11 +31,11 @@
 
 void trim_trailing_whitespace(char *str)
 {
-	unsigned len = strlen(str);
+	unsigned int len = strlen(str);
 	char *p;
 
 	if (len > 0) {
-		p = str+len-1;
+		p = str + len - 1;
 		while (p >= str && isspace(*p)) {
 			*p = 0;
 			p--;
@@ -43,9 +43,9 @@ void trim_trailing_whitespace(char *str)
 	}
 }
 
-#define MEMSUB(x,y) ((ssize_t)((ptrdiff_t)x-(ptrdiff_t)y))
+#define MEMSUB(x, y) ((ssize_t)((ptrdiff_t)x - (ptrdiff_t)y))
 
-void str_clear(str_st * str)
+void str_clear(str_st *str)
 {
 	if (str == NULL || str->allocd == NULL)
 		return;
@@ -59,20 +59,19 @@ void str_clear(str_st * str)
 #define MIN_CHUNK 64
 /* This function makes sure there is an additional byte in dest;
  */
-int str_append_size(str_st * dest, size_t data_size)
+int str_append_size(str_st *dest, size_t data_size)
 {
 	size_t tot_len = data_size + dest->length;
 
 	if (data_size == 0)
 		return 0;
 
-	if (dest->max_length >= tot_len+1) {
+	if (dest->max_length >= tot_len + 1) {
 		size_t unused = MEMSUB(dest->data, dest->allocd);
 
 		if (dest->max_length - unused <= tot_len) {
 			if (dest->length && dest->data)
-				memmove(dest->allocd, dest->data,
-					dest->length);
+				memmove(dest->allocd, dest->data, dest->length);
 
 			dest->data = dest->allocd;
 		}
@@ -80,11 +79,11 @@ int str_append_size(str_st * dest, size_t data_size)
 		return tot_len;
 	} else {
 		size_t unused = MEMSUB(dest->data, dest->allocd);
-		size_t new_len =
-		    MAX(data_size, MIN_CHUNK) + MAX(dest->max_length,
-						    MIN_CHUNK);
+		size_t new_len = MAX(data_size, MIN_CHUNK) +
+				 MAX(dest->max_length, MIN_CHUNK);
 
-		dest->allocd = talloc_realloc_size(dest->pool, dest->allocd, new_len+1);
+		dest->allocd = talloc_realloc_size(dest->pool, dest->allocd,
+						   new_len + 1);
 		if (dest->allocd == NULL)
 			return ERR_MEM;
 		dest->max_length = new_len;
@@ -100,11 +99,11 @@ int str_append_size(str_st * dest, size_t data_size)
 
 /* This function always null terminates the string in dest.
  */
-int str_append_data(str_st * dest, const void *data, size_t data_size)
+int str_append_data(str_st *dest, const void *data, size_t data_size)
 {
-    int ret;
+	int ret;
 
-	ret = str_append_size(dest, data_size+1);
+	ret = str_append_size(dest, data_size + 1);
 	if (ret < 0)
 		return ret;
 
@@ -115,7 +114,7 @@ int str_append_data(str_st * dest, const void *data, size_t data_size)
 	return 0;
 }
 
-int str_append_data_prefix1(str_st * dest, const void *data, size_t data_size)
+int str_append_data_prefix1(str_st *dest, const void *data, size_t data_size)
 {
 	int ret;
 	uint8_t prefix = data_size;
@@ -131,7 +130,7 @@ int str_append_data_prefix1(str_st * dest, const void *data, size_t data_size)
 /* Appends the provided string. The null termination byte is appended
  * but not included in length.
  */
-int str_append_str(str_st * dest, const char *src)
+int str_append_str(str_st *dest, const char *src)
 {
 	int ret;
 
@@ -145,8 +144,7 @@ int str_append_str(str_st * dest, const char *src)
 	return ret;
 }
 
-int
-str_append_printf(str_st *dest, const char *fmt, ...)
+int str_append_printf(str_st *dest, const char *fmt, ...)
 {
 	va_list args;
 	int len;
@@ -170,9 +168,9 @@ int str_replace_str(str_st *str, const str_rep_tab *tab)
 {
 	uint8_t *p;
 	const str_rep_tab *ptab;
-	unsigned length;
+	unsigned int length;
 	char *final;
-	unsigned final_len;
+	unsigned int final_len;
 	int ret;
 	size_t pos;
 
@@ -183,25 +181,32 @@ int str_replace_str(str_st *str, const str_rep_tab *tab)
 		if (p == NULL)
 			break;
 
-		pos = (ptrdiff_t)(p-str->data);
+		pos = (ptrdiff_t)(p - str->data);
 
 		length = str->length - pos;
 
 		ptab = tab;
 		do {
 			if (length >= ptab->pattern_length &&
-			    memcmp(ptab->pattern, p, ptab->pattern_length) == 0) {
+			    memcmp(ptab->pattern, p, ptab->pattern_length) ==
+				    0) {
 				/* replace */
 				final_len = length - ptab->pattern_length;
-				final = talloc_memdup(str->allocd, p+ptab->pattern_length, final_len);
+				final = talloc_memdup(str->allocd,
+						      p + ptab->pattern_length,
+						      final_len);
 				if (final == NULL)
 					return -1;
 
 				str->length -= final_len + ptab->pattern_length;
 				if (ptab->rep_val)
-					ret = str_append_str(str, ptab->rep_val);
+					ret = str_append_str(str,
+							     ptab->rep_val);
 				else {
-					char *t = ptab->rep_func(str->pool, ptab->rep_func_input);
+					char *t = ptab->rep_func(
+						str->pool,
+						ptab->rep_func_input);
+
 					ret = str_append_str(str, t);
 					talloc_free(t);
 				}

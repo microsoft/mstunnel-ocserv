@@ -73,12 +73,13 @@ function finish {
   test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
   test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
   rm -f ${OUTFILE} 2>&1
+  test -f "${RADIUSLOG}" && cat "${RADIUSLOG}"
+  rm -f "${RADIUSLOG}"
 }
 trap finish EXIT
 
 # server address
-ADDRESS=10.173.78.1
-CLI_ADDRESS=10.173.79.1
+. `dirname $0`/random-net.sh
 
 # These must match the data/raddb/users:test-class user
 VPNNET=192.168.55.0/24
@@ -92,7 +93,7 @@ OCCTL_SOCKET=./occtl-radius-otp-$$.socket
 ${CMDNS2} ${IP} link set dev lo up
 
 # Run servers
-${CMDNS2} ${RADIUSD} -d ${srcdir}/data/raddb/ -s -Xx -l ${RADIUSLOG} &
+${CMDNS2} ${RADIUSD} -d ${srcdir}/data/raddb/ -s -xx -l ${RADIUSLOG} &
 RADIUSPID=$!
 
 update_config radius-otp.config

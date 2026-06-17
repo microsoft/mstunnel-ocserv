@@ -17,15 +17,14 @@
  */
 
 #ifndef MAIN_LIMITS_H
-# define MAIN_LIMITS_H
+#define MAIN_LIMITS_H
 
-
-void init_fd_limits_default(struct main_server_st * s);
+void init_fd_limits_default(struct main_server_st *s);
 
 /* Adjusts the file descriptor limits for the main or worker processes
  */
-void set_main_fd_limits(struct main_server_st * s);
+void set_main_fd_limits(struct main_server_st *s);
 
-void set_self_oom_score_adj(struct main_server_st * s);
+void set_self_oom_score_adj(struct main_server_st *s);
 
 #endif

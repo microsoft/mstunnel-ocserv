@@ -6,7 +6,8 @@ AM_CPPFLAGS += \
 	$(LIBPROTOBUF_C_CFLAGS) $(LIBLZ4_CFLAGS) \
 	$(LIBREADLINE_CFLAGS) $(CODE_COVERAGE_CFLAGS) \
 	$(LIBTALLOC_CFLAGS) $(LIBDBUS_CFLAGS) $(LIBOATH_CFLAGS) \
-	$(LIBKRB5_CFLAGS) $(LIBTASN1_CFLAGS) $(RADCLI_CFLAGS) $(SRC_CFLAGS)
+	$(LIBKRB5_CFLAGS) $(LIBTASN1_CFLAGS) $(RADCLI_CFLAGS) $(SRC_CFLAGS) \
+	-DOCSERV_FW_SCRIPT=\"${libexecdir}/ocserv-fw\"
 
 if ENABLE_OIDC_AUTH
 AM_CPPFLAGS += $(LIBCURL_CFLAGS) $(CJOSE_CFLAGS) $(JANSSON_CFLAGS)
@@ -20,21 +21,21 @@ EXTRA_DIST = version.inc.in version.inc \
 
 CORE_LDADD = libccan.a libcommon.a
 CORE_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
-	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
+	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_LLHTTP_LIBS) \
 	$(NEEDED_LIBPROTOBUF_LIBS) $(LIBSYSTEMD) $(LIBTALLOC_LIBS) \
 	$(RADCLI_LIBS) $(LIBLZ4_LIBS) $(LIBKRB5_LIBS) \
 	$(LIBTASN1_LIBS) $(LIBOATH_LIBS) $(LIBNETTLE_LIBS) \
 	$(LIBEV_LIBS) libipc.a $(NEEDED_LIBPROTOBUF_LIBS) \
 	$(CODE_COVERAGE_LDFLAGS)
 
-if LOCAL_HTTP_PARSER
-HTTP_PARSER_SOURCES = http-parser/http_parser.c http-parser/http_parser.h
+if LOCAL_LLHTTP
+LLHTTP_SOURCES = llhttp/llhttp.c llhttp/llhttp.h llhttp/api.c llhttp/http.c
 endif
 
-CORE_SOURCES = $(HTTP_PARSER_SOURCES) \
+CORE_SOURCES = $(LLHTTP_SOURCES) \
 	common/hmac.c common/hmac.h common/snapshot.c common/snapshot.h \
 	common-config.h config.c config-kkdcp.c config-ports.c defs.h gettime.h \
-	inih/ini.c inih/ini.h \
+	gnulib/cloexec.c gnulib/cloexec.h inih/ini.c inih/ini.h \
 	ip-util.c ip-util.h main.h main-ctl.h \
 	script-list.h setproctitle.c setproctitle.h str.c str.h subconfig.c \
 	sup-config/file.c sup-config/file.h sup-config/radius.c \
@@ -156,7 +157,7 @@ ocpasswd_ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT) $(CODE_COVERAGE_LDFLAGS
 # Files common to ocserv and occtl.
 libcommon_a_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/common
 libcommon_a_SOURCES=common/common.c common/common.h common/system.c common/system.h \
-	common/cloexec.c common/cloexec.h common/base64-helper.c common/base64-helper.h \
+	common/base64-helper.c common/base64-helper.h \
 	log.c log.h
 libcommon_a_LIBS = $(NEEDED_LIBPROTOBUF_LIBS)
 noinst_LIBRARIES += libcommon.a

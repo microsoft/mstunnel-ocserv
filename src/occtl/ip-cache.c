@@ -28,45 +28,49 @@
 
 typedef struct ip_entries_st {
 	char ip[MAX_IP_STR];
-	unsigned ip_size;
+	unsigned int ip_size;
 } ip_entries_st;
 
-static ip_entries_st *ip_entries = NULL;
-static unsigned ip_entries_size = 0;
-static unsigned max_ip_entries_size = 0;
+static ip_entries_st *ip_entries;
+static unsigned int ip_entries_size;
+static unsigned int max_ip_entries_size;
 
 void ip_entries_clear(void)
 {
-unsigned i;
+	unsigned int i;
 
-	for (i=0;i<ip_entries_size;i++) {
+	for (i = 0; i < ip_entries_size; i++) {
 		ip_entries[i].ip_size = 0;
 	}
 	ip_entries_size = 0;
 }
 
-void ip_entries_add(void *pool, const char* ip, unsigned ip_size)
+void ip_entries_add(void *pool, const char *ip, unsigned int ip_size)
 {
-	if (ip_entries_size+1 > max_ip_entries_size) {
+	if (ip_entries_size + 1 > max_ip_entries_size) {
 		max_ip_entries_size += 128;
-		ip_entries = talloc_realloc_size(pool, ip_entries, sizeof(ip_entries_st)*max_ip_entries_size);
+		ip_entries = talloc_realloc_size(pool, ip_entries,
+						 sizeof(ip_entries_st) *
+							 max_ip_entries_size);
 	}
 
-	strlcpy(ip_entries[ip_entries_size].ip, ip, sizeof(ip_entries[ip_entries_size].ip));
+	strlcpy(ip_entries[ip_entries_size].ip, ip,
+		sizeof(ip_entries[ip_entries_size].ip));
 	ip_entries[ip_entries_size].ip_size = ip_size;
 	ip_entries_size++;
 }
 
-char* search_for_ip(unsigned idx, const char* match, int match_size)
+char *search_for_ip(unsigned int idx, const char *match, int match_size)
 {
-unsigned i;
+	unsigned int i;
 
 	if (idx >= ip_entries_size)
 		return NULL;
 
-	for (i=idx;i<ip_entries_size;i++) {
+	for (i = idx; i < ip_entries_size; i++) {
 		if (match_size <= ip_entries[i].ip_size) {
-			if (strncasecmp(match, ip_entries[i].ip, match_size) == 0)
+			if (strncasecmp(match, ip_entries[i].ip, match_size) ==
+			    0)
 				return strdup(ip_entries[i].ip);
 		}
 	}

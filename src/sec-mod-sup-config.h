@@ -19,15 +19,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #ifndef OC_SEC_MOD_SUP_CONFIG_H
-# define OC_SEC_MOD_SUP_CONFIG_H
+#define OC_SEC_MOD_SUP_CONFIG_H
 
 #include <sec-mod.h>
 
 #define SUP_CONFIG_FILE 1
 #define SUP_CONFIG_RADIUS 2
 
-inline static
-const char *sup_config_name(unsigned s)
+inline static const char *sup_config_name(unsigned int s)
 {
 	switch (s) {
 	case SUP_CONFIG_FILE:
@@ -43,8 +42,9 @@ const char *sup_config_name(unsigned s)
  * proc->username/proc->groupname and save it in proc->config.
  */
 struct config_mod_st {
-	int (*get_sup_config)(struct cfg_st *perm_config, client_entry_st *entry,
-	                      SecmSessionReplyMsg *msg, void *pool);
+	int (*get_sup_config)(struct cfg_st *perm_config,
+			      client_entry_st *entry, SecmSessionReplyMsg *msg,
+			      void *pool);
 };
 
 void sup_config_init(sec_mod_st *sec);

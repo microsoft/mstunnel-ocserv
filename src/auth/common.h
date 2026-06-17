@@ -1,5 +1,5 @@
 #ifndef AUTH_COMMON_H
-# define AUTH_COMMON_H
+#define AUTH_COMMON_H
 
 #define MAX_PASSWORD_TRIES 3
 

@@ -35,17 +35,15 @@ void set_worker_fd_limits(struct worker_st *ws)
 	ret = getrlimit(RLIMIT_NOFILE, &def_set);
 	if (ret < 0) {
 		int e = errno;
-		oclog(ws, LOG_ERR,
-		      "error in getrlimit: %s\n", strerror(e));
+
+		oclog(ws, LOG_ERR, "error in getrlimit: %s\n", strerror(e));
 		exit(EXIT_FAILURE);
 	}
 
 	ret = setrlimit(RLIMIT_NOFILE, &def_set);
 	if (ret < 0) {
-		oclog(ws, LOG_INFO,
-		      "cannot update file limit(%u): %s\n",
-		      (unsigned)def_set.rlim_cur,
-		      strerror(errno));
+		oclog(ws, LOG_INFO, "cannot update file limit(%u): %s\n",
+		      (unsigned int)def_set.rlim_cur, strerror(errno));
 	}
 #endif
 }
@@ -69,6 +67,14 @@ void drop_privileges(struct worker_st *ws, main_server_st *s)
 			e = errno;
 			oclog(ws, LOG_ERR, "cannot chroot to %s: %s",
 			      GETPCONFIG(s)->chroot_dir, strerror(e));
+			exit(EXIT_FAILURE);
+		}
+
+		ret = chdir("/");
+		if (ret != 0) {
+			e = errno;
+			oclog(ws, LOG_ERR, "cannot chdir to '/': %s",
+			      strerror(e));
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -98,7 +104,6 @@ void drop_privileges(struct worker_st *ws, main_server_st *s)
 			oclog(ws, LOG_ERR, "cannot set uid to %d: %s\n",
 			      (int)GETPCONFIG(s)->uid, strerror(e));
 			exit(EXIT_FAILURE);
-
 		}
 	}
 

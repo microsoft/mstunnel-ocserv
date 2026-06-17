@@ -22,14 +22,14 @@
 #include <sys/resource.h>
 #include <grp.h>
 
-
 #include <main.h>
 #include <limits.h>
 
-void init_fd_limits_default(main_server_st * s)
+void init_fd_limits_default(main_server_st *s)
 {
 #ifdef RLIMIT_NOFILE
 	int ret = getrlimit(RLIMIT_NOFILE, &s->fd_limits_default_set);
+
 	if (ret < 0) {
 		oc_syslog(LOG_ERR, "error in getrlimit: %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
@@ -46,11 +46,11 @@ void init_fd_limits_default(main_server_st * s)
 
 /* Adjusts the file descriptor limits for the main or worker processes
  */
-void set_main_fd_limits(main_server_st * s)
+void set_main_fd_limits(main_server_st *s)
 {
 #ifdef RLIMIT_NOFILE
 	struct rlimit new_set;
-	unsigned max;
+	unsigned int max;
 	int ret;
 
 	if (GETCONFIG(s)->max_clients > 0)
@@ -66,19 +66,19 @@ void set_main_fd_limits(main_server_st * s)
 		ret = setrlimit(RLIMIT_NOFILE, &new_set);
 		if (ret < 0) {
 			fprintf(stderr,
-				"error in setrlimit(%u): %s (cur: %u)\n",
-				max, strerror(errno),
-				(unsigned)s->fd_limits_default_set.
-				rlim_cur);
+				"error in setrlimit(%u): %s (cur: %u)\n", max,
+				strerror(errno),
+				(unsigned int)s->fd_limits_default_set.rlim_cur);
 		}
 	}
 #endif
 }
 
-void set_self_oom_score_adj(main_server_st * s)
+void set_self_oom_score_adj(main_server_st *s)
 {
 #ifdef __linux__
-	static const char proc_self_oom_adj_score_path[] = "/proc/self/oom_score_adj";
+	static const char proc_self_oom_adj_score_path[] =
+		"/proc/self/oom_score_adj";
 	static const char oom_adj_score_value[] = "1000";
 	size_t written = 0;
 	int fd;
@@ -87,6 +87,7 @@ void set_self_oom_score_adj(main_server_st * s)
 		  S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (fd == -1) {
 		int e = errno;
+
 		mslog(s, NULL, LOG_ERR, "cannot open %s: %s",
 		      proc_self_oom_adj_score_path, strerror(e));
 		goto cleanup;
@@ -95,12 +96,13 @@ void set_self_oom_score_adj(main_server_st * s)
 	written = write(fd, oom_adj_score_value, sizeof(oom_adj_score_value));
 	if (written != sizeof(oom_adj_score_value)) {
 		int e = errno;
+
 		mslog(s, NULL, LOG_ERR, "cannot write %s: %s",
 		      proc_self_oom_adj_score_path, strerror(e));
 		goto cleanup;
 	}
 
- cleanup:
+cleanup:
 	if (fd >= 0) {
 		close(fd);
 	}

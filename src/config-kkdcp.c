@@ -38,7 +38,8 @@ static char *find_space(char *str)
 	return NULL;
 }
 
-void parse_kkdcp_string(char *str, int *socktype, char **_port, char **_server, char **_path, char **_realm)
+void parse_kkdcp_string(char *str, int *socktype, char **_port, char **_server,
+			char **_path, char **_realm)
 {
 	char *path, *server, *port, *realm, *p;
 
@@ -73,7 +74,7 @@ void parse_kkdcp_string(char *str, int *socktype, char **_port, char **_server, 
 		*socktype = SOCK_STREAM;
 	} else {
 		fprintf(stderr, "cannot handle protocol %s\n", server);
-			exit(EXIT_FAILURE);
+		exit(EXIT_FAILURE);
 	}
 	server += 4;
 
@@ -86,7 +87,7 @@ void parse_kkdcp_string(char *str, int *socktype, char **_port, char **_server, 
 			*p = 0;
 			p = strchr(server, '[');
 			if (p)
-				server = p+1;
+				server = p + 1;
 		}
 	}
 

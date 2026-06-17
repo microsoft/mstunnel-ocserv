@@ -26,39 +26,40 @@
 #include "../src/html.h"
 #include "../src/html.c"
 
-int syslog_open = 0;
+int syslog_open;
 
-static char *strings[] =
-{
-	"Laguna+Beach",
-	"_+-.~%2C",
-	"Laguna%25%2B%40Beach"
+static char *strings[] = {
+
+	"Laguna+Beach", "_+-.~%2C", "Laguna%25%2B%40Beach"
 };
 
-static char *decoded_strings[] =
-{
-	"Laguna Beach",
-	"_ -.~,",
-	"Laguna%+@Beach"
+static char *decoded_strings[] = {
+
+	"Laguna Beach", "_ -.~,", "Laguna%+@Beach"
 };
 
 int main(void)
 {
 	char *dec, *url;
-	unsigned i;
-	unsigned len;
+	unsigned int i;
+	unsigned int len;
 
-	for (i=0;i<ARRAY_SIZE(strings);i++) {
+	for (i = 0; i < ARRAY_SIZE(strings); i++) {
 		dec = unescape_url(NULL, strings[i], strlen(strings[i]), &len);
 		if (strcmp(dec, decoded_strings[i]) != 0) {
-			fprintf(stderr, "string %d, fails decoding:\n\tinput: '%s'\n\toutput: '%s'\n", i, decoded_strings[i], dec);
+			fprintf(stderr,
+				"string %d, fails decoding:\n\tinput: '%s'\n\toutput: '%s'\n",
+				i, decoded_strings[i], dec);
 			exit(1);
 		}
 		talloc_free(dec);
 
-		url = escape_url(NULL, decoded_strings[i], strlen(decoded_strings[i]), &len);
+		url = escape_url(NULL, decoded_strings[i],
+				 strlen(decoded_strings[i]), &len);
 		if (strcmp(url, strings[i]) != 0) {
-			fprintf(stderr, "string %d, fails encoding:\n\tinput: '%s'\n\toutput: '%s'\n", i, decoded_strings[i], url);
+			fprintf(stderr,
+				"string %d, fails encoding:\n\tinput: '%s'\n\toutput: '%s'\n",
+				i, decoded_strings[i], url);
 			exit(1);
 		}
 		talloc_free(url);

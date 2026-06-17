@@ -230,18 +230,6 @@ should be generated as follows.
                --load-ca-certificate ca-cert.pem \
                --template crl.tmpl --outfile crl.pem
 
-## IMPLEMENTATION NOTES
-Note that while this server utilizes privilege separation and all
-authentication occurs on the security module, this does not apply for TLS client
-certificate authentication. That is due to TLS protocol limitation.
-
-
-## NETWORKING CONSIDERATIONS
-In certain setups, where a firewall may be blocking ICMP responses, setting the
-MSS of TCP connections to MTU will eliminate the "black hole" connection issues.
-See http://lartc.org/howto/lartc.cookbook.mtu-mss.html for instructions
-to enable it on a Linux system.
-
 ## FILES
 
 ### ocserv's configuration file format
@@ -250,14 +238,29 @@ file at _/etc/ocserv/ocserv.conf_. An example configuration file follows.
 
 @CONFIGFILE@
 
+## IMPLEMENTATION NOTES
+Note that while this server utilizes privilege separation and all
+authentication occurs on the security module, due to a TLS protocol
+limitation this does not apply for TLS client certificate authentication.
+To take advantage of privilege separation combine certificate and password
+authentication.
+
+## NETWORKING CONSIDERATIONS
+In certain setups, where a firewall may be blocking ICMP responses, setting the
+MSS of TCP connections to MTU will eliminate the "black hole" connection issues.
+See http://lartc.org/howto/lartc.cookbook.mtu-mss.html for instructions
+to enable it on a Linux system.
+
+## AUTHORS
+Written by Nikos Mavrogiannopoulos. Many people have contributed to it.
+
+## REPORTING BUGS
+Issue tracker: https://gitlab.com/openconnect/ocserv/-/issues
+
+## COPYRIGHT
+Copyright (C) 2013-2024 Nikos Mavrogiannopoulos and others, all rights reserved.
+This program is released under the terms of the GNU General Public License, version 2.
+
 ## SEE ALSO
 
 occtl(8), ocpasswd(8), openconnect(8)
-
-## COPYRIGHT
-Copyright (C) 2013-2018 Nikos Mavrogiannopoulos and others, all rights reserved.
-This program is released under the terms of the GNU General Public License, version 2.
-
-## AUTHORS
-Written by Nikos Mavrogiannopoulos. Many people have
-contributed to it.

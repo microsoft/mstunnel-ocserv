@@ -42,7 +42,7 @@
 typedef struct oidc_vctx_st {
 	json_t *config;
 	json_t *jwks;
-	void * pool;
+	void *pool;
 	int minimum_jwk_refresh_time;
 	time_t last_jwks_load_time;
 } oidc_vctx_st;
@@ -53,10 +53,10 @@ typedef struct oidc_ctx_st {
 	int token_verified;
 } oidc_ctx_st;
 
-static bool oidc_fetch_oidc_keys(oidc_vctx_st * vctx);
-static bool oidc_verify_token(oidc_vctx_st * vctx, const char *token,
-				size_t token_length,
-				char user_name[MAX_USERNAME_SIZE]);
+static bool oidc_fetch_oidc_keys(oidc_vctx_st *vctx);
+static bool oidc_verify_token(oidc_vctx_st *vctx, const char *token,
+			      size_t token_length,
+			      char user_name[MAX_USERNAME_SIZE]);
 
 static void oidc_vhost_init(void **vctx, void *pool, void *additional)
 {
@@ -80,30 +80,35 @@ static void oidc_vhost_init(void **vctx, void *pool, void *additional)
 
 	vc->config = json_load_file(config, 0, &err);
 	if (vc->config == NULL) {
-		oc_syslog(LOG_ERR, "ocserv-oidc: failed to load config file: %s\n", config);
+		oc_syslog(LOG_ERR,
+			  "ocserv-oidc: failed to load config file: %s\n",
+			  config);
 		exit(EXIT_FAILURE);
 	}
 
 	if (!json_object_get(vc->config, "openid_configuration_url")) {
-		oc_syslog(LOG_ERR,
-		       "ocserv-oidc: config file missing openid_configuration_url\n");
+		oc_syslog(
+			LOG_ERR,
+			"ocserv-oidc: config file missing openid_configuration_url\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (!json_object_get(vc->config, "required_claims")) {
 		oc_syslog(LOG_ERR,
-		       "ocserv-oidc: config file missing required_claims\n");
+			  "ocserv-oidc: config file missing required_claims\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (!json_object_get(vc->config, "user_name_claim")) {
 		oc_syslog(LOG_ERR,
-		       "ocserv-oidc: config file missing user_name_claim\n");
+			  "ocserv-oidc: config file missing user_name_claim\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (json_object_get(vc->config, "minimum_jwk_refresh_time")) {
-		vc->minimum_jwk_refresh_time = json_integer_value(json_object_get(vc->config, "minimum_jwk_refresh_time"));
+		vc->minimum_jwk_refresh_time = json_integer_value(
+			json_object_get(vc->config,
+					"minimum_jwk_refresh_time"));
 	} else {
 		vc->minimum_jwk_refresh_time = MINIMUM_KEY_REFRESH_INTERVAL;
 	}
@@ -118,7 +123,7 @@ static void oidc_vhost_init(void **vctx, void *pool, void *additional)
 
 static void oidc_vhost_deinit(void *ctx)
 {
-	oidc_vctx_st *vctx = (oidc_vctx_st *) ctx;
+	oidc_vctx_st *vctx = (oidc_vctx_st *)ctx;
 
 	if (!vctx) {
 		return;
@@ -146,10 +151,11 @@ void on_sigabrt(int signum)
 }
 
 static int oidc_auth_init(void **ctx, void *pool, void *vctx,
-			    const common_auth_init_st * info)
+			  const common_auth_init_st *info)
 {
-	oidc_vctx_st *vt = (oidc_vctx_st *) vctx;
+	oidc_vctx_st *vt = (oidc_vctx_st *)vctx;
 	oidc_ctx_st *ct;
+
 	ct = talloc_zero(pool, struct oidc_ctx_st);
 	if (!ct) {
 		return ERR_AUTH_FAIL;
@@ -180,7 +186,7 @@ static int oidc_auth_init(void **ctx, void *pool, void *vctx,
 
 static int oidc_auth_user(void *ctx, char *username, int username_size)
 {
-	oidc_ctx_st *ct = (oidc_ctx_st *) ctx;
+	oidc_ctx_st *ct = (oidc_ctx_st *)ctx;
 
 	if (ct->token_verified) {
 		strlcpy(username, ct->username, username_size);
@@ -189,14 +195,14 @@ static int oidc_auth_user(void *ctx, char *username, int username_size)
 	return ERR_AUTH_FAIL;
 }
 
-static int oidc_auth_pass(void *ctx, const char *pass, unsigned pass_len)
+static int oidc_auth_pass(void *ctx, const char *pass, unsigned int pass_len)
 {
 	return ERR_AUTH_FAIL;
 }
 
-static int oidc_auth_msg(void *ctx, void *pool, passwd_msg_st * pst)
+static int oidc_auth_msg(void *ctx, void *pool, passwd_msg_st *pst)
 {
-	pst->counter = 0;	/* we support a single password */
+	pst->counter = 0; /* we support a single password */
 
 	/* use the default prompt */
 	return 0;
@@ -207,19 +213,17 @@ static void oidc_auth_deinit(void *ctx)
 	talloc_free(ctx);
 }
 
-const struct auth_mod_st oidc_auth_funcs = {
-	.type = AUTH_TYPE_OIDC,
-	.allows_retries = 1,
-	.vhost_init = oidc_vhost_init,
-	.vhost_deinit = oidc_vhost_deinit,
-	.auth_init = oidc_auth_init,
-	.auth_deinit = oidc_auth_deinit,
-	.auth_msg = oidc_auth_msg,
-	.auth_pass = oidc_auth_pass,
-	.auth_user = oidc_auth_user,
-	.auth_group = NULL,
-	.group_list = NULL
-};
+const struct auth_mod_st oidc_auth_funcs = { .type = AUTH_TYPE_OIDC,
+					     .allows_retries = 1,
+					     .vhost_init = oidc_vhost_init,
+					     .vhost_deinit = oidc_vhost_deinit,
+					     .auth_init = oidc_auth_init,
+					     .auth_deinit = oidc_auth_deinit,
+					     .auth_msg = oidc_auth_msg,
+					     .auth_pass = oidc_auth_pass,
+					     .auth_user = oidc_auth_user,
+					     .auth_group = NULL,
+					     .group_list = NULL };
 
 // Key management
 typedef struct oidc_json_parser_context {
@@ -231,10 +235,10 @@ typedef struct oidc_json_parser_context {
 
 // Callback from CURL for each block as it is downloaded
 static size_t oidc_json_parser_context_callback(char *ptr, size_t size,
-						  size_t nmemb, void *userdata)
+						size_t nmemb, void *userdata)
 {
 	oidc_json_parser_context *context =
-	    (oidc_json_parser_context *) userdata;
+		(oidc_json_parser_context *)userdata;
 	size_t new_offset = context->offset + nmemb;
 
 	// Check for buffer overflow
@@ -244,7 +248,9 @@ static size_t oidc_json_parser_context_callback(char *ptr, size_t size,
 
 	if (context->offset + nmemb > context->length) {
 		size_t new_size = (nmemb + context->length) * 3 / 2;
-		void * new_buffer = talloc_realloc_size(context->pool, context->buffer, new_size);
+		void *new_buffer = talloc_realloc_size(
+			context->pool, context->buffer, new_size);
+
 		if (new_buffer) {
 			context->buffer = new_buffer;
 			context->length = new_size;
@@ -260,7 +266,7 @@ static size_t oidc_json_parser_context_callback(char *ptr, size_t size,
 }
 
 // Download a JSON file from the provided URI and return it in a jansson object
-static json_t *oidc_fetch_json_from_uri(void * pool, const char *uri)
+static json_t *oidc_fetch_json_from_uri(void *pool, const char *uri)
 {
 	oidc_json_parser_context context = { pool, NULL, 0, 0 };
 	json_t *json = NULL;
@@ -277,55 +283,60 @@ static json_t *oidc_fetch_json_from_uri(void * pool, const char *uri)
 
 	curl = curl_easy_init();
 	if (!curl) {
-		oc_syslog(LOG_ERR,
-		       "ocserv-oidc: failed to download JSON document: URI %s\n",
-		       uri);
+		oc_syslog(
+			LOG_ERR,
+			"ocserv-oidc: failed to download JSON document: URI %s\n",
+			uri);
 		goto cleanup;
 	}
 
 	res = curl_easy_setopt(curl, CURLOPT_URL, uri);
 	if (res != CURLE_OK) {
-		oc_syslog(LOG_ERR,
-		       "ocserv-oidc: failed to download JSON document: URI %s, CURLcode %d\n",
-		       uri, res);
+		oc_syslog(
+			LOG_ERR,
+			"ocserv-oidc: failed to download JSON document: URI %s, CURLcode %d\n",
+			uri, res);
 		goto cleanup;
 	}
 
-	res =
-	    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
-			     oidc_json_parser_context_callback);
+	res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
+			       oidc_json_parser_context_callback);
 	if (res != CURLE_OK) {
-		oc_syslog(LOG_ERR,
-		       "ocserv-oidc: failed to download JSON document: URI %s, CURLcode %d\n",
-		       uri, res);
+		oc_syslog(
+			LOG_ERR,
+			"ocserv-oidc: failed to download JSON document: URI %s, CURLcode %d\n",
+			uri, res);
 		goto cleanup;
 	}
 
 	res = curl_easy_setopt(curl, CURLOPT_WRITEDATA, &context);
 	if (res != CURLE_OK) {
-		oc_syslog(LOG_ERR,
-		       "ocserv-oidc: failed to download JSON document: URI %s, CURLcode %d\n",
-		       uri, res);
+		oc_syslog(
+			LOG_ERR,
+			"ocserv-oidc: failed to download JSON document: URI %s, CURLcode %d\n",
+			uri, res);
 		goto cleanup;
 	}
 
 	res = curl_easy_perform(curl);
 	if (res != CURLE_OK) {
-		oc_syslog(LOG_ERR,
-		       "ocserv-oidc: failed to download JSON document: URI %s, CURLcode %d\n",
-		       uri, res);
+		oc_syslog(
+			LOG_ERR,
+			"ocserv-oidc: failed to download JSON document: URI %s, CURLcode %d\n",
+			uri, res);
 		goto cleanup;
 	}
 
 	json = json_loadb(context.buffer, context.offset, 0, &err);
 	if (!json) {
-		oc_syslog(LOG_ERR,
-		       "ocserv-oidc: failed to parse JSON document: URI %s\n",
-		       uri);
+		oc_syslog(
+			LOG_ERR,
+			"ocserv-oidc: failed to parse JSON document: URI %s\n",
+			uri);
 		goto cleanup;
 	}
 
- cleanup:
+cleanup:
 	if (context.buffer) {
 		talloc_free(context.buffer);
 	}
@@ -338,47 +349,50 @@ static json_t *oidc_fetch_json_from_uri(void * pool, const char *uri)
 }
 
 // Download and parse the JWT keys for this virtual server context
-static bool oidc_fetch_oidc_keys(oidc_vctx_st * vctx)
+static bool oidc_fetch_oidc_keys(oidc_vctx_st *vctx)
 {
 	bool result = false;
 	json_t *jwks = NULL;
 	json_t *oidc_config = NULL;
 	json_t *openid_configuration_url =
-	    json_object_get(vctx->config, "openid_configuration_url");
+		json_object_get(vctx->config, "openid_configuration_url");
 
 	json_t *array;
 	size_t index;
 	json_t *value;
 
 	if (!openid_configuration_url) {
-		oc_syslog(LOG_ERR,
-		       "ocserv-oidc: openid_configuration_url missing from config\n");
+		oc_syslog(
+			LOG_ERR,
+			"ocserv-oidc: openid_configuration_url missing from config\n");
 		goto cleanup;
 	}
 
-	oidc_config =
-	    oidc_fetch_json_from_uri(vctx->pool,
-					   json_string_value
-				       (openid_configuration_url));
+	oidc_config = oidc_fetch_json_from_uri(
+		vctx->pool, json_string_value(openid_configuration_url));
 
 	if (!oidc_config) {
 		oc_syslog(LOG_ERR,
-		       "ocserv-oidc: Unable to fetch config doc from %s\n", json_string_value(openid_configuration_url));
+			  "ocserv-oidc: Unable to fetch config doc from %s\n",
+			  json_string_value(openid_configuration_url));
 		goto cleanup;
 	}
 
 	json_t *jwks_uri = json_object_get(oidc_config, "jwks_uri");
+
 	if (!jwks_uri || !json_string_value(jwks_uri)) {
 		oc_syslog(LOG_ERR,
-		       "ocserv-oidc: jwks_uri missing from config doc\n");
+			  "ocserv-oidc: jwks_uri missing from config doc\n");
 		goto cleanup;
 	}
 
-	jwks = oidc_fetch_json_from_uri(vctx->pool, json_string_value(jwks_uri));
+	jwks = oidc_fetch_json_from_uri(vctx->pool,
+					json_string_value(jwks_uri));
 	if (!jwks) {
-		oc_syslog(LOG_ERR,
-		       "ocserv-oidc: failed to fetch keys from jwks_uri %s\n",
-		       json_string_value(jwks_uri));
+		oc_syslog(
+			LOG_ERR,
+			"ocserv-oidc: failed to fetch keys from jwks_uri %s\n",
+			json_string_value(jwks_uri));
 		goto cleanup;
 	}
 
@@ -389,12 +403,12 @@ static bool oidc_fetch_oidc_keys(oidc_vctx_st * vctx)
 	}
 
 	// Log the keys obtained
-	json_array_foreach(array, index, value) {
+	json_array_foreach(array, index, value)
+	{
 		json_t *key_kid = json_object_get(value, "kid");
-		oc_syslog(LOG_INFO,
-		       "ocserv-oidc: fetched new JWK %s\n",
-			   json_string_value(key_kid)
-		       );
+
+		oc_syslog(LOG_INFO, "ocserv-oidc: fetched new JWK %s\n",
+			  json_string_value(key_kid));
 	}
 
 	if (vctx->jwks) {
@@ -407,7 +421,7 @@ static bool oidc_fetch_oidc_keys(oidc_vctx_st * vctx)
 	jwks = NULL;
 	result = true;
 
- cleanup:
+cleanup:
 	if (oidc_config) {
 		json_decref(oidc_config);
 	}
@@ -418,7 +432,7 @@ static bool oidc_fetch_oidc_keys(oidc_vctx_st * vctx)
 	return result;
 }
 
-static bool oidc_verify_lifetime(json_t * token_claims)
+static bool oidc_verify_lifetime(json_t *token_claims)
 {
 	bool result = false;
 
@@ -429,38 +443,42 @@ static bool oidc_verify_lifetime(json_t * token_claims)
 	time_t current_time = time(NULL);
 
 	if (!token_nbf || !json_integer_value(token_nbf)) {
-		oc_syslog(LOG_NOTICE, "ocserv-oidc: Token missing 'nbf' claim\n");
+		oc_syslog(LOG_NOTICE,
+			  "ocserv-oidc: Token missing 'nbf' claim\n");
 		goto cleanup;
 	}
 
 	if (!token_exp || !json_integer_value(token_exp)) {
-		oc_syslog(LOG_NOTICE, "ocserv-oidc: Token missing 'exp' claim\n");
+		oc_syslog(LOG_NOTICE,
+			  "ocserv-oidc: Token missing 'exp' claim\n");
 		goto cleanup;
 	}
 
 	if (!token_iat || !json_integer_value(token_iat)) {
-		oc_syslog(LOG_NOTICE, "ocserv-oidc: Token missing 'iat' claim\n");
+		oc_syslog(LOG_NOTICE,
+			  "ocserv-oidc: Token missing 'iat' claim\n");
 		goto cleanup;
 	}
 
 	// Check to ensure the token is within it's validity
-	if (json_integer_value(token_nbf) > current_time
-	    || json_integer_value(token_exp) < current_time) {
-		oc_syslog(LOG_NOTICE,
-		       "ocserv-oidc: Token not within validity period NBF: %lld EXP: %lld Current: %ld\n",
-		       json_integer_value(token_nbf),
-		       json_integer_value(token_exp), current_time);
+	if (json_integer_value(token_nbf) > current_time ||
+	    json_integer_value(token_exp) < current_time) {
+		oc_syslog(
+			LOG_NOTICE,
+			"ocserv-oidc: Token not within validity period NBF: %lld EXP: %lld Current: %ld\n",
+			json_integer_value(token_nbf),
+			json_integer_value(token_exp), current_time);
 		goto cleanup;
 	}
 
 	result = true;
 
- cleanup:
+cleanup:
 	return result;
 }
 
-static bool oidc_verify_required_claims(json_t * required_claims,
-					  json_t * token_claims)
+static bool oidc_verify_required_claims(json_t *required_claims,
+					json_t *token_claims)
 {
 	bool result = false;
 
@@ -470,36 +488,38 @@ static bool oidc_verify_required_claims(json_t * required_claims,
 
 	// Ensure all the required claims are present in the token
 	json_object_foreach(required_claims, required_claim_name,
-			    required_claim_value) {
+			    required_claim_value)
+	{
 		token_claim_value =
-		    json_object_get(token_claims, required_claim_name);
+			json_object_get(token_claims, required_claim_name);
 		if (!json_equal(required_claim_value, token_claim_value)) {
-			oc_syslog(LOG_NOTICE,
-			       "ocserv-oidc: Required claim not met. Claim: %s Expected Value: %s\n",
-			       required_claim_name,
-			       json_string_value(required_claim_value));
+			oc_syslog(
+				LOG_NOTICE,
+				"ocserv-oidc: Required claim not met. Claim: %s Expected Value: %s\n",
+				required_claim_name,
+				json_string_value(required_claim_value));
 			goto cleanup;
 		}
 	}
 
 	result = true;
 
- cleanup:
+cleanup:
 	return result;
 }
 
-static bool oidc_map_user_name(json_t * user_name_claim,
-				 json_t * token_claims,
-				 char user_name[MAX_USERNAME_SIZE])
+static bool oidc_map_user_name(json_t *user_name_claim, json_t *token_claims,
+			       char user_name[MAX_USERNAME_SIZE])
 {
 	bool result = false;
 
 	// Pull the user name from the token
-	json_t *token_user_name_claim =
-	    json_object_get(token_claims, json_string_value(user_name_claim));
-	if (!token_user_name_claim || !json_string_value(token_user_name_claim)) {
+	json_t *token_user_name_claim = json_object_get(
+		token_claims, json_string_value(user_name_claim));
+	if (!token_user_name_claim ||
+	    !json_string_value(token_user_name_claim)) {
 		oc_syslog(LOG_NOTICE, "ocserv-oidc: Token missing '%s' claim\n",
-		       json_string_value(user_name_claim));
+			  json_string_value(user_name_claim));
 		goto cleanup;
 	}
 
@@ -507,11 +527,11 @@ static bool oidc_map_user_name(json_t * user_name_claim,
 		MAX_USERNAME_SIZE);
 	result = true;
 
- cleanup:
+cleanup:
 	return result;
 }
 
-static json_t *oidc_extract_claims(cjose_jws_t * jws)
+static json_t *oidc_extract_claims(cjose_jws_t *jws)
 {
 	cjose_err err;
 	json_error_t json_err;
@@ -520,26 +540,27 @@ static json_t *oidc_extract_claims(cjose_jws_t * jws)
 	json_t *token_claims = NULL;
 
 	// Extract the claim portion from the token
-	if (!cjose_jws_get_plaintext(jws, &plain_text, &plain_text_size, &err)) {
+	if (!cjose_jws_get_plaintext(jws, &plain_text, &plain_text_size,
+				     &err)) {
 		oc_syslog(LOG_NOTICE,
-		       "ocserv-oidc: Failed to get plain text from token\n");
+			  "ocserv-oidc: Failed to get plain text from token\n");
 		goto cleanup;
 	}
 
 	// Parse the claim JSON
 	token_claims =
-	    json_loadb((char *)plain_text, plain_text_size, 0, &json_err);
+		json_loadb((char *)plain_text, plain_text_size, 0, &json_err);
 	if (!token_claims) {
 		oc_syslog(LOG_NOTICE,
-		       "ocserv-oidc: Failed to get claims from token\n");
+			  "ocserv-oidc: Failed to get claims from token\n");
 		goto cleanup;
 	}
 
- cleanup:
+cleanup:
 	return token_claims;
 }
 
-static bool oidc_verify_signature(oidc_vctx_st * vctx, cjose_jws_t * jws)
+static bool oidc_verify_signature(oidc_vctx_st *vctx, cjose_jws_t *jws)
 {
 	bool result = false;
 
@@ -567,26 +588,31 @@ static bool oidc_verify_signature(oidc_vctx_st * vctx, cjose_jws_t * jws)
 	token_header = cjose_jws_get_protected(jws);
 	if (token_header == NULL) {
 		oc_syslog(LOG_NOTICE,
-		       "ocserv-oidc: Token malformed - no header\n");
+			  "ocserv-oidc: Token malformed - no header\n");
 		goto cleanup;
 	}
 
 	// Get the kid of the key used to sign this token
 	token_kid = json_object_get(token_header, "kid");
 	if (token_kid == NULL || !json_string_value(token_kid)) {
-		oc_syslog(LOG_NOTICE, "ocserv-oidc: Token malformed - no kid\n");
+		oc_syslog(LOG_NOTICE,
+			  "ocserv-oidc: Token malformed - no kid\n");
 		goto cleanup;
 	}
 
 	token_typ = json_object_get(token_header, "typ");
-	if (token_typ == NULL || !json_string_value(token_typ) || strcmp(json_string_value(token_typ), "JWT")) {
-		oc_syslog(LOG_NOTICE, "ocserv-oidc: Token malformed - wrong typ claim\n");
+	if (token_typ == NULL || !json_string_value(token_typ) ||
+	    strcmp(json_string_value(token_typ), "JWT")) {
+		oc_syslog(LOG_NOTICE,
+			  "ocserv-oidc: Token malformed - wrong typ claim\n");
 		goto cleanup;
 	}
 
 	// Find the signing key in the keys collection
-	json_array_foreach(array, index, value) {
+	json_array_foreach(array, index, value)
+	{
 		json_t *key_kid = json_object_get(value, "kid");
+
 		if (json_equal(key_kid, token_kid)) {
 			jwk = cjose_jwk_import_json(value, &err);
 			break;
@@ -595,16 +621,20 @@ static bool oidc_verify_signature(oidc_vctx_st * vctx, cjose_jws_t * jws)
 
 	if (jwk == NULL) {
 		time_t now;
-		oc_syslog(LOG_NOTICE, "ocserv-oidc: JWK with kid=%s not found\n",
-		       json_string_value(token_kid));
 
-		oc_syslog(LOG_NOTICE, "ocserv-oidc: attempting to download new JWKs");
+		oc_syslog(LOG_NOTICE,
+			  "ocserv-oidc: JWK with kid=%s not found\n",
+			  json_string_value(token_kid));
+
+		oc_syslog(LOG_NOTICE,
+			  "ocserv-oidc: attempting to download new JWKs");
 		now = time(NULL);
-		if ((now - vctx->last_jwks_load_time) > vctx->minimum_jwk_refresh_time) {
+		if ((now - vctx->last_jwks_load_time) >
+		    vctx->minimum_jwk_refresh_time) {
 			oidc_fetch_oidc_keys(vctx);
-		}
-		else {
-			oc_syslog(LOG_NOTICE, "ocserv-oidc: skipping JWK refresh");
+		} else {
+			oc_syslog(LOG_NOTICE,
+				  "ocserv-oidc: skipping JWK refresh");
 		}
 
 		// Fail the request and let the client try again.
@@ -612,14 +642,15 @@ static bool oidc_verify_signature(oidc_vctx_st * vctx, cjose_jws_t * jws)
 	}
 
 	if (!cjose_jws_verify(jws, jwk, &err)) {
-		oc_syslog(LOG_NOTICE, "ocserv-oidc: Token failed validation %s\n",
-		       err.message);
+		oc_syslog(LOG_NOTICE,
+			  "ocserv-oidc: Token failed validation %s\n",
+			  err.message);
 		goto cleanup;
 	}
 
 	result = true;
 
- cleanup:
+cleanup:
 	if (jwk) {
 		cjose_jwk_release(jwk);
 	}
@@ -628,9 +659,9 @@ static bool oidc_verify_signature(oidc_vctx_st * vctx, cjose_jws_t * jws)
 }
 
 // Verify that the provided token is signed
-static bool oidc_verify_token(oidc_vctx_st * vctx, const char *token,
-				size_t token_length,
-				char user_name[MAX_USERNAME_SIZE])
+static bool oidc_verify_token(oidc_vctx_st *vctx, const char *token,
+			      size_t token_length,
+			      char user_name[MAX_USERNAME_SIZE])
 {
 	bool result = false;
 	cjose_err err;
@@ -640,47 +671,49 @@ static bool oidc_verify_token(oidc_vctx_st * vctx, const char *token,
 	jws = cjose_jws_import(token, token_length, &err);
 	if (jws == NULL) {
 		oc_syslog(LOG_NOTICE, "ocserv-oidc: Token malformed - %s\n",
-		       err.message);
+			  err.message);
 		goto cleanup;
 	}
 
 	if (!oidc_verify_signature(vctx, jws)) {
 		oc_syslog(LOG_NOTICE,
-		       "ocserv-oidc: Token signature validation failed\n");
+			  "ocserv-oidc: Token signature validation failed\n");
 		goto cleanup;
 	}
 
 	token_claims = oidc_extract_claims(jws);
 	if (!token_claims) {
 		oc_syslog(LOG_NOTICE,
-		       "ocserv-oidc: Unable to access token claims\n");
+			  "ocserv-oidc: Unable to access token claims\n");
 		goto cleanup;
 	}
 
 	if (!oidc_verify_lifetime(token_claims)) {
 		oc_syslog(LOG_NOTICE,
-		       "ocserv-oidc: Token lifetime validation failed\n");
+			  "ocserv-oidc: Token lifetime validation failed\n");
 		goto cleanup;
 	}
 
-	if (!oidc_verify_required_claims
-	    (json_object_get(vctx->config, "required_claims"), token_claims)) {
-		oc_syslog(LOG_NOTICE,
-		       "ocserv-oidc: Token required claims validation failed\n");
+	if (!oidc_verify_required_claims(json_object_get(vctx->config,
+							 "required_claims"),
+					 token_claims)) {
+		oc_syslog(
+			LOG_NOTICE,
+			"ocserv-oidc: Token required claims validation failed\n");
 		goto cleanup;
 	}
 
-	if (!oidc_map_user_name
-	    (json_object_get(vctx->config, "user_name_claim"), token_claims,
-	     user_name)) {
+	if (!oidc_map_user_name(json_object_get(vctx->config,
+						"user_name_claim"),
+				token_claims, user_name)) {
 		oc_syslog(LOG_NOTICE,
-		       "ocserv-oidc: Unable to map user name claim\n");
+			  "ocserv-oidc: Unable to map user name claim\n");
 		goto cleanup;
 	}
 
 	result = true;
 
- cleanup:
+cleanup:
 	if (jws) {
 		cjose_jws_release(jws);
 	}

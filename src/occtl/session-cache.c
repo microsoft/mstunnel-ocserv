@@ -30,35 +30,39 @@ typedef struct session_entries_st {
 	char session[SAFE_ID_SIZE];
 } session_entries_st;
 
-static session_entries_st *session_entries = NULL;
-static unsigned session_entries_size = 0;
-static unsigned max_session_entries_size = 0;
+static session_entries_st *session_entries;
+static unsigned int session_entries_size;
+static unsigned int max_session_entries_size;
 
 void session_entries_clear(void)
 {
 	session_entries_size = 0;
 }
 
-void session_entries_add(void *pool, const char* session)
+void session_entries_add(void *pool, const char *session)
 {
-	if (session_entries_size+1 > max_session_entries_size) {
+	if (session_entries_size + 1 > max_session_entries_size) {
 		max_session_entries_size += 128;
-		session_entries = talloc_realloc_size(pool, session_entries, sizeof(session_entries_st)*max_session_entries_size);
+		session_entries = talloc_realloc_size(
+			pool, session_entries,
+			sizeof(session_entries_st) * max_session_entries_size);
 	}
 
-	strlcpy(session_entries[session_entries_size].session, session, sizeof(session_entries[session_entries_size].session));
+	strlcpy(session_entries[session_entries_size].session, session,
+		sizeof(session_entries[session_entries_size].session));
 	session_entries_size++;
 }
 
-char* search_for_session(unsigned idx, const char* match, int match_size)
+char *search_for_session(unsigned int idx, const char *match, int match_size)
 {
-unsigned i;
+	unsigned int i;
 
 	if (idx >= session_entries_size)
 		return NULL;
 
-	for (i=idx;i<session_entries_size;i++) {
-		if (strncasecmp(match, session_entries[i].session, MIN(match_size, SAFE_ID_SIZE)) == 0)
+	for (i = idx; i < session_entries_size; i++) {
+		if (strncasecmp(match, session_entries[i].session,
+				MIN(match_size, SAFE_ID_SIZE)) == 0)
 			return strdup(session_entries[i].session);
 	}
 

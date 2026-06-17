@@ -19,20 +19,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #ifndef BASE64_HELPER_H
-# define BASE64_HELPER_H
+#define BASE64_HELPER_H
 
 #include <nettle/base64.h>
 
 /* Prototypes compatible with the gnulib's */
 
-int
-oc_base64_decode(const uint8_t *src, unsigned src_length,
-	      uint8_t *dst, size_t *dst_length);
+int oc_base64_decode(const uint8_t *src, unsigned int src_length, uint8_t *dst,
+		     size_t *dst_length);
 
-int oc_base64_decode_alloc(void *pool, const char *in, size_t inlen,
-                           char **out, size_t *outlen);
+int oc_base64_decode_alloc(void *pool, const char *in, size_t inlen, char **out,
+			   size_t *outlen);
 
-void oc_base64_encode (const char *in, size_t inlen,
-                       char *out, size_t outlen);
+void oc_base64_encode(const char *in, size_t inlen, char *out, size_t outlen);
 
 #endif

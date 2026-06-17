@@ -24,7 +24,7 @@
 #include <string.h>
 #include <ctype.h>
 
-unsigned valid_hostname(const char *host)
+unsigned int valid_hostname(const char *host)
 {
 	const char *p;
 

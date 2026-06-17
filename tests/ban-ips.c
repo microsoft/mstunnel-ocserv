@@ -30,11 +30,10 @@
 #include "../src/ip-util.h"
 #include "../src/main-ban.c"
 
-int syslog_open = 0;
+int syslog_open;
 
 /* Test the IP banning functionality */
-static
-unsigned check_if_banned_str(main_server_st *s, const char *ip)
+static unsigned int check_if_banned_str(main_server_st *s, const char *ip)
 {
 	struct sockaddr_storage addr;
 	int ret;
@@ -51,7 +50,10 @@ unsigned check_if_banned_str(main_server_st *s, const char *ip)
 		fprintf(stderr, "cannot convert IP: %s\n", ip);
 		exit(1);
 	}
-	return check_if_banned(s, &addr, addr.ss_family==AF_INET?sizeof(struct sockaddr_in):sizeof(struct sockaddr_in6));
+	return check_if_banned(s, &addr,
+			       addr.ss_family == AF_INET ?
+				       sizeof(struct sockaddr_in) :
+				       sizeof(struct sockaddr_in6));
 }
 
 int main(void)
@@ -111,37 +113,43 @@ int main(void)
 
 	/* a single /64 */
 	add_str_ip_to_ban_list(s, "fc8e:899a:0624:5a89:1a45:63d8:1c92:0bc1", 5);
-	add_str_ip_to_ban_list(s, "fc8e:899a:0624:5a89:1a45:63d9:1c92:0bc1", 10);
+	add_str_ip_to_ban_list(s, "fc8e:899a:0624:5a89:1a45:63d9:1c92:0bc1",
+			       10);
 	add_str_ip_to_ban_list(s, "fc8e:899a:0624:5a89:1a45:63d8:1c93:0bc1", 5);
 
 	add_str_ip_to_ban_list(s, "fdd9:1ce6:1bee:bdea:5d8c:0840:8666:5942", 5);
 
-	add_str_ip_to_ban_list(s, "fdc0:c81f:22ab:23a2:4479:f107:1855:bf50", 40);
+	add_str_ip_to_ban_list(s, "fdc0:c81f:22ab:23a2:4479:f107:1855:bf50",
+			       40);
 
 	/* check /64 */
-	if (check_if_banned_str(s, "fc8e:899a:0624:5a89:1a45:63d8:1c93:0bc1") == 0) {
+	if (check_if_banned_str(s, "fc8e:899a:0624:5a89:1a45:63d8:1c93:0bc1") ==
+	    0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}
 
-	if (check_if_banned_str(s, "fc8e:899a:0624:5a89:1a46:63d9:1c93:0bc1") == 0) {
+	if (check_if_banned_str(s, "fc8e:899a:0624:5a89:1a46:63d9:1c93:0bc1") ==
+	    0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}
 
 	/* check individual */
-	if (check_if_banned_str(s, "fdd9:1ce6:1bee:bdea:5d8c:0840:8666:5942") != 0) {
+	if (check_if_banned_str(s, "fdd9:1ce6:1bee:bdea:5d8c:0840:8666:5942") !=
+	    0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}
 
-	if (check_if_banned_str(s, "fdc0:c81f:22ab:23a2:4479:f107:1855:bf50") == 0) {
+	if (check_if_banned_str(s, "fdc0:c81f:22ab:23a2:4479:f107:1855:bf50") ==
+	    0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}
 
 	/* check expiration of entries */
-	sleep(GETCONFIG(s)->min_reauth_time+1);
+	sleep(GETCONFIG(s)->min_reauth_time + 1);
 
 	if (check_if_banned_str(s, "192.168.1.1") != 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
@@ -158,18 +166,20 @@ int main(void)
 		exit(1);
 	}
 
-	if (check_if_banned_str(s, "fdc0:c81f:22ab:23a2:4479:f107:1855:bf50") != 0) {
+	if (check_if_banned_str(s, "fdc0:c81f:22ab:23a2:4479:f107:1855:bf50") !=
+	    0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}
 
 	/* check cleanup */
-	sleep(GETCONFIG(s)->min_reauth_time+1);
+	sleep(GETCONFIG(s)->min_reauth_time + 1);
 
 	cleanup_banned_entries(s);
 
 	if (main_ban_db_elems(s) != 0) {
-		fprintf(stderr, "error in %d: have %d entries\n", __LINE__, main_ban_db_elems(s));
+		fprintf(stderr, "error in %d: have %d entries\n", __LINE__,
+			main_ban_db_elems(s));
 		exit(1);
 	}
 

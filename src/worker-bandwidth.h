@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #ifndef OC_WORKER_BANDWIDTH_H
-# define OC_WORKER_BANDWIDTH_H
+#define OC_WORKER_BANDWIDTH_H
 
 #include <gettime.h>
 #include <time.h>
@@ -37,19 +37,19 @@ typedef struct bandwidth_st {
 	size_t kb_per_sec;
 } bandwidth_st;
 
-inline static void bandwidth_init(bandwidth_st* b, size_t kb_per_sec)
+inline static void bandwidth_init(bandwidth_st *b, size_t kb_per_sec)
 {
 	memset(b, 0, sizeof(*b));
 	b->kb_per_sec = kb_per_sec;
-	b->allowed_kb_per_count = (b->kb_per_sec*COUNT_UPDATE_MS)/1000;
+	b->allowed_kb_per_count = (b->kb_per_sec * COUNT_UPDATE_MS) / 1000;
 }
 
-int _bandwidth_update(bandwidth_st* b, size_t bytes, struct timespec* now);
+int _bandwidth_update(bandwidth_st *b, size_t bytes, struct timespec *now);
 
 /* returns true or false, depending on whether to send
  * the bytes */
-inline static
-int bandwidth_update(bandwidth_st* b, size_t bytes, struct timespec* now)
+inline static int bandwidth_update(bandwidth_st *b, size_t bytes,
+				   struct timespec *now)
 {
 	/* if bandwidth control is disabled */
 	if (b->kb_per_sec == 0)

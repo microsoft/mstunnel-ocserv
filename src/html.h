@@ -19,10 +19,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #ifndef OC_HTML_H
-# define OC_HTML_H
+#define OC_HTML_H
 
-char* unescape_html(void *pool, const char *html, unsigned len, unsigned *out_len);
-char *unescape_url(void *pool, const char *url, unsigned len, unsigned *out_len);
-char *escape_url(void *pool, const char *url, unsigned len, unsigned *out_len);
+char *unescape_html(void *pool, const char *html, unsigned int len,
+		    unsigned int *out_len);
+char *unescape_url(void *pool, const char *url, unsigned int len,
+		   unsigned int *out_len);
+char *escape_url(void *pool, const char *url, unsigned int len,
+		 unsigned int *out_len);
 
 #endif

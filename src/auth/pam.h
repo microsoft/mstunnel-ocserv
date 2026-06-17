@@ -35,17 +35,17 @@ extern const struct auth_mod_st pam_auth_funcs;
 struct pam_ctx_st {
 	char password[MAX_PASSWORD_SIZE];
 	char username[MAX_USERNAME_SIZE];
-	pam_handle_t * ph;
+	pam_handle_t *ph;
 	struct pam_conv dc;
 	coroutine_t cr;
 	int cr_ret;
-	unsigned changing; /* whether we are entering a new password */
+	unsigned int changing; /* whether we are entering a new password */
 	str_st msg;
 	str_st prompt;
-	unsigned sent_msg;
+	unsigned int sent_msg;
 	struct pam_response *replies; /* for safety */
-	unsigned state; /* PAM_S_ */
-	unsigned passwd_counter;
+	unsigned int state; /* PAM_S_ */
+	unsigned int passwd_counter;
 	size_t prev_prompt_hash;
 };
 

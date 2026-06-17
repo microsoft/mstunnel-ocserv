@@ -17,7 +17,7 @@
  */
 
 #ifndef OC_ISOLATE_H
-# define OC_ISOLATE_H
+#define OC_ISOLATE_H
 
 void set_worker_fd_limits(struct worker_st *);
 
