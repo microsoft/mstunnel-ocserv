@@ -296,6 +296,8 @@ void *pam_get_brackets_string(void *pool, struct perm_cfg_st *config,
 					additional->gid_min);
 				exit(EXIT_FAILURE);
 			}
+		} else if (strcasecmp(vals[i].name, "use-token") == 0) {
+			additional->use_token = CHECK_TRUE(vals[i].value);
 		} else {
 			fprintf(stderr, "unknown option '%s'\n", vals[i].name);
 			exit(EXIT_FAILURE);

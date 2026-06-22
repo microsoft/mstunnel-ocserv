@@ -57,6 +57,7 @@ typedef struct plain_cfg_st {
 
 typedef struct pam_cfg_st {
 	int gid_min;
+	bool use_token;
 } pam_cfg_st;
 
 #define CHECK_TRUE(str)                                                    \
