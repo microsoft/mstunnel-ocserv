@@ -2797,6 +2797,17 @@ static int parse_dtls_data(struct worker_st *ws, uint8_t *buf, size_t buf_size,
 	return ret;
 }
 
+// Wrappers so the CSTP/DTLS framing validators can be called by fuzz tests.
+int parse_cstp_data_caller(struct worker_st *ws, uint8_t *buf, size_t buf_size, time_t now)
+{
+	return parse_cstp_data(ws, buf, buf_size, now);
+}
+
+int parse_dtls_data_caller(struct worker_st *ws, uint8_t *buf, size_t buf_size, time_t now)
+{
+	return parse_dtls_data(ws, buf, buf_size, now);
+}
+
 static int test_for_tcp_health_probe(struct worker_st *ws)
 {
 	int ret;
