@@ -20,6 +20,7 @@
 
 #include <config.h>
 #include <common-config.h>
+#include <http-auth.h>
 
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>
@@ -109,16 +110,10 @@ static const char ocv3_success_msg_foot[] = "</auth>\n";
 
 #define OCV3_LOGIN_END "</form></auth>\n"
 
-#ifdef SUPPORT_OIDC_AUTH
-#define HTTP_AUTH_OIDC_PREFIX "Bearer"
-#endif
-
 static int basic_auth_handler(worker_st *ws, unsigned int http_ver,
 			      const char *msg);
 
-#ifdef SUPPORT_OIDC_AUTH
-static int oidc_auth_handler(worker_st *ws, unsigned int http_ver);
-#endif
+static int bearer_auth_handler(worker_st *ws, unsigned int http_ver);
 
 int ws_switch_auth_to(struct worker_st *ws, unsigned int auth)
 {
@@ -1469,8 +1464,7 @@ cleanup:
 	return ret;
 }
 
-#ifdef SUPPORT_OIDC_AUTH
-static int oidc_auth_handler(worker_st *ws, unsigned int http_ver)
+static int bearer_auth_handler(worker_st *ws, unsigned int http_ver)
 {
 	int ret;
 
@@ -1481,9 +1475,9 @@ static int oidc_auth_handler(worker_st *ws, unsigned int http_ver)
 		return -1;
 
 	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: WWW-Authenticate: %s",
-	      HTTP_AUTH_OIDC_PREFIX);
+	      HTTP_AUTH_BEARER_SCHEME);
 	ret = cstp_printf(ws, "WWW-Authenticate: %s\r\n",
-			  HTTP_AUTH_OIDC_PREFIX);
+			  HTTP_AUTH_BEARER_SCHEME);
 
 	if (ret < 0)
 		return -1;
@@ -1511,7 +1505,6 @@ static int oidc_auth_handler(worker_st *ws, unsigned int http_ver)
 cleanup:
 	return ret;
 }
-#endif
 
 #define USERNAME_FIELD "username"
 #define GROUPNAME_FIELD "group%5flist"
@@ -1635,16 +1628,17 @@ int post_auth_handler(worker_st *ws, unsigned int http_ver)
 		if (ws->selected_auth->type & AUTH_TYPE_OIDC) {
 			if (req->authorization == NULL ||
 			    req->authorization_size == 0)
-				return oidc_auth_handler(ws, http_ver);
+				return bearer_auth_handler(ws, http_ver);
 
 			if ((req->authorization_size >
-			     (sizeof(HTTP_AUTH_OIDC_PREFIX) - 1)) &&
+			     (sizeof(HTTP_AUTH_BEARER_SCHEME) - 1)) &&
 			    strncasecmp(
-				    req->authorization, HTTP_AUTH_OIDC_PREFIX,
-				    sizeof(HTTP_AUTH_OIDC_PREFIX) - 1) == 0) {
+				    req->authorization,
+				    HTTP_AUTH_BEARER_SCHEME,
+				    sizeof(HTTP_AUTH_BEARER_SCHEME) - 1) == 0) {
 				ireq.auth_type |= AUTH_TYPE_OIDC;
 				ireq.user_name = req->authorization +
-						 sizeof(HTTP_AUTH_OIDC_PREFIX);
+						 sizeof(HTTP_AUTH_BEARER_SCHEME);
 			} else {
 				oclog(ws, LOG_HTTP_DEBUG,
 				      "Invalid authorization data: %.*s",
@@ -1684,10 +1678,13 @@ int post_auth_handler(worker_st *ws, unsigned int http_ver)
 			if (pam_cfg != NULL && pam_cfg->use_token) {
 				use_username_pass = false;
 
-				if (req->authorization == NULL ||
-				    req->authorization_size == 0)
-					return basic_auth_handler(ws, http_ver,
-								  NULL);
+				if (!http_auth_is_bearer(
+					    req->authorization,
+					    req->authorization_size)) {
+					oclog(ws, LOG_HTTP_DEBUG,
+					      "PAM token authentication requires Bearer scheme");
+					return bearer_auth_handler(ws, http_ver);
+				}
 
 				ireq.auth_type |= AUTH_TYPE_PAM;
 				ireq.user_name = req->authorization;

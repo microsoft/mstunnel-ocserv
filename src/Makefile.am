@@ -36,7 +36,7 @@ CORE_SOURCES = $(LLHTTP_SOURCES) \
 	common/hmac.c common/hmac.h common/snapshot.c common/snapshot.h \
 	common-config.h config.c config-kkdcp.c config-ports.c defs.h gettime.h \
 	gnulib/cloexec.c gnulib/cloexec.h inih/ini.c inih/ini.h \
-	ip-util.c ip-util.h main.h main-ctl.h \
+	http-auth.c http-auth.h ip-util.c ip-util.h main.h main-ctl.h \
 	script-list.h setproctitle.c setproctitle.h str.c str.h subconfig.c \
 	sup-config/file.c sup-config/file.h sup-config/radius.c \
 	sup-config/radius.h tlslib.c tlslib.h valid-hostname.c \
