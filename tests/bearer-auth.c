@@ -10,7 +10,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "../src/http-auth.c"
+#include "../src/http-auth.h"
 
 static void assert_bearer(const char *authorization)
 {

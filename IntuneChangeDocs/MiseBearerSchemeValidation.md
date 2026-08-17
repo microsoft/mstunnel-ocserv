@@ -42,8 +42,10 @@ For PAM token authentication, ocserv now:
 
 ## Code changes
 
-- `src/http-auth.c` and `src/http-auth.h`
-  - Add the shared `http_auth_is_bearer()` validator.
+- `src/http-auth.h`
+  - Add the shared inline `http_auth_is_bearer()` validator. Keeping the
+    validator header-only also supports standalone worker fuzzers without an
+    additional link dependency.
 - `src/worker-auth.c`
   - Validate the header in the PAM `use-token` path.
   - Reuse a Bearer challenge handler for PAM and OIDC responses.
