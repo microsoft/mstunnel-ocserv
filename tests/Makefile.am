@@ -181,7 +181,7 @@ valid_hostname_LDADD = $(LDADD)
 port_parsing_CPPFLAGS = $(AM_CPPFLAGS) -DUNDER_TEST
 port_parsing_LDADD = $(LDADD)
 
-check_PROGRAMS = str-test str-test2 ipv4-prefix ipv6-prefix kkdcp-parsing json-escape ban-ips \
+check_PROGRAMS = str-test str-test2 ipv4-prefix ipv6-prefix kkdcp-parsing json-escape ban-ips bearer-auth \
 	port-parsing human_addr valid-hostname url-escape html-escape cstp-recv \
 	proxyproto-v1
 
