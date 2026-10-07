@@ -1,5 +1,6 @@
 * Version 1.4.1 (unreased)
-- 
+- [SECURITY] Fixed unauthenticated heap buffer overflow in the unprivileged
+  worker process via an oversized webvpncontext= cookie value (#719)
 
 
 * Version 1.4.0 (released 2026-01-04)
