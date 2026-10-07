@@ -365,7 +365,7 @@ ssize_t dtls_send(struct dtls_st *dtls, const void *data, size_t data_size)
 	if (dtls->dtls_session == NULL) {
 		return GNUTLS_E_INVALID_SESSION;
 	}
-	
+
 	while (left > 0) {
 		ret = gnutls_record_send(dtls->dtls_session, p, left);
 		if (ret < 0) {
