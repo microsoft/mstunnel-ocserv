@@ -2008,8 +2008,11 @@ static void calc_mtu_values(worker_st *ws)
 				gnutls_mac_get(ws->session));
 	}
 
-	/* link MTU is the device MTU */
-	ws->link_mtu = ws->vinfo.mtu;
+	/* link MTU is the device MTU if smaller */
+	oclog(ws, LOG_INFO, "Current link MTU is %u", ws->link_mtu);
+	if (ws->link_mtu <= 0 || ws->vinfo.mtu < ws->link_mtu) {
+		ws->link_mtu = ws->vinfo.mtu;
+	}
 
 	if (DTLS_ACTIVE(ws)->udp_state != UP_DISABLED) {
 		/* crypto overhead for DTLS */
@@ -2848,6 +2851,12 @@ static int parse_data(struct worker_st *ws, uint8_t *buf, size_t buf_size,
 	return 0;
 }
 
+// Wrapper of parse_data so it can be called by tests.
+int parse_data_caller(struct worker_st *ws, uint8_t *buf, size_t buf_siz, time_t now, unsigned is_dtls)
+{
+	return parse_data(ws, buf, buf_siz, now, is_dtls);
+}
+
 static int parse_cstp_data(struct worker_st *ws, uint8_t *buf, size_t buf_size,
 			   time_t now)
 {
@@ -2904,6 +2913,17 @@ static int parse_dtls_data(struct worker_st *ws, uint8_t *buf, size_t buf_size,
 	ret = parse_data(ws, buf, buf_size, now, 1);
 	ws->last_msg_udp = now;
 	return ret;
+}
+
+// Wrappers so the CSTP/DTLS framing validators can be called by fuzz tests.
+int parse_cstp_data_caller(struct worker_st *ws, uint8_t *buf, size_t buf_size, time_t now)
+{
+	return parse_cstp_data(ws, buf, buf_size, now);
+}
+
+int parse_dtls_data_caller(struct worker_st *ws, uint8_t *buf, size_t buf_size, time_t now)
+{
+	return parse_dtls_data(ws, buf, buf_size, now);
 }
 
 static int test_for_tcp_health_probe(struct worker_st *ws)

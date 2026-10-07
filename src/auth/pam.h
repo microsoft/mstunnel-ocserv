@@ -33,6 +33,7 @@
 
 extern const struct auth_mod_st pam_auth_funcs;
 
+
 struct pam_ctx_st {
 	char password[MAX_PASSWORD_SIZE];
 	char username[MAX_USERNAME_SIZE];

@@ -206,6 +206,16 @@ void generate_token(const char *output_folder, const char *token_name,
 	json_decref(claims);
 }
 
+// Generate test token directly from BASE64 encoded token string.
+void generate_token_direct(const char *output_folder, const char *token_name, const char *token_str)
+{
+	char token_file[1024];
+	snprintf(token_file, sizeof(token_file), "%s/%s.token", output_folder, token_name);
+	FILE *f = fopen(token_file, "w");
+	fprintf(f, "%s", token_str);
+	fclose(f);
+}
+
 void generate_config_files(const char *output_folder, cjose_jwk_t *key,
 			   const char *expected_audience,
 			   const char *expected_issuer,
@@ -298,6 +308,8 @@ int main(void)
 	generate_token(working_directory, "fail_bad_alg", key, typ, "FOO", kid,
 		       audience, issuer, user_name, now - 60, now - 60,
 		       now + 3600);
+	// Test token that fails shift check during decoding
+	generate_token_direct(working_directory, "fail_bad_shift", "sZyI6=CJFUzICJFUzICzraWQiOiAia2lkIn0.fQ.Jw");
 	generate_token(working_directory, "fail_wrong_kid", key, typ, alg,
 		       "FOO", audience, issuer, user_name, now - 60, now - 60,
 		       now + 3600);

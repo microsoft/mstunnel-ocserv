@@ -19,6 +19,8 @@
  */
 
 #include <config.h>
+#include <common-config.h>
+#include <http-auth.h>
 
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>
@@ -84,7 +86,11 @@ static const char ocv3_success_msg_foot[] = "</auth>\n";
 	"<message>%s</message>\n" \
 	"<form method=\"post\" action=\"/auth\">\n"
 
-#define OC_LOGIN_END "</form></auth>\n</config-auth>"
+#define OC_MESSAGE \
+	"<message>%s</message>\n"
+
+#define OC_LOGIN_END \
+    "</form></auth>\n" "</config-auth>"
 
 #define OC_LOGIN_FORM_INPUT_USER \
 	"<input type=\"text\" name=\"username\" label=\"Username:\" />\n"
@@ -105,16 +111,10 @@ static const char ocv3_success_msg_foot[] = "</auth>\n";
 
 #define OCV3_LOGIN_END "</form></auth>\n"
 
-#ifdef SUPPORT_OIDC_AUTH
-#define HTTP_AUTH_OIDC_PREFIX "Bearer"
-#endif
-
 static int basic_auth_handler(worker_st *ws, unsigned int http_ver,
 			      const char *msg);
 
-#ifdef SUPPORT_OIDC_AUTH
-static int oidc_auth_handler(worker_st *ws, unsigned int http_ver);
-#endif
+static int bearer_auth_handler(worker_st *ws, unsigned int http_ver);
 
 int ws_switch_auth_to(struct worker_st *ws, unsigned int auth)
 {
@@ -257,7 +257,12 @@ int get_auth_handler2(worker_st *ws, unsigned int http_ver, const char *pmsg,
 		else
 			login_start = OCV3_LOGIN_START;
 		login_end = OCV3_LOGIN_END;
-	} else {
+	}
+	else if (ws->req.user_agent_type == AGENT_UNKNOWN) {
+		login_start = "";
+		login_end = "";
+	}
+	else {
 		login_start = OC_LOGIN_START;
 		login_end = OC_LOGIN_END;
 	}
@@ -350,7 +355,7 @@ int get_auth_handler2(worker_st *ws, unsigned int http_ver, const char *pmsg,
 	} else {
 		/* Username / Groups Form */
 		if (pmsg == NULL)
-			pmsg = "Please enter your username and password.";
+			pmsg = (ws->req.user_agent_type == AGENT_UNKNOWN) ? "I am still alive!!" : "Please enter your username.";
 
 		ret = str_append_str(&str, login_start);
 		if (ret < 0) {
@@ -368,7 +373,7 @@ int get_auth_handler2(worker_st *ws, unsigned int http_ver, const char *pmsg,
 			}
 		}
 
-		ret = str_append_printf(&str, OC_LOGIN_FORM_START, pmsg);
+		ret = (ws->req.user_agent_type == AGENT_UNKNOWN) ? str_append_printf(&str, OC_MESSAGE, pmsg) : str_append_printf(&str, OC_LOGIN_FORM_START, pmsg);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;
@@ -1515,8 +1520,7 @@ cleanup:
 	return ret;
 }
 
-#ifdef SUPPORT_OIDC_AUTH
-static int oidc_auth_handler(worker_st *ws, unsigned int http_ver)
+static int bearer_auth_handler(worker_st *ws, unsigned int http_ver)
 {
 	int ret;
 
@@ -1527,9 +1531,9 @@ static int oidc_auth_handler(worker_st *ws, unsigned int http_ver)
 		return -1;
 
 	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: WWW-Authenticate: %s",
-	      HTTP_AUTH_OIDC_PREFIX);
+	      HTTP_AUTH_BEARER_SCHEME);
 	ret = cstp_printf(ws, "WWW-Authenticate: %s\r\n",
-			  HTTP_AUTH_OIDC_PREFIX);
+			  HTTP_AUTH_BEARER_SCHEME);
 
 	if (ret < 0)
 		return -1;
@@ -1557,7 +1561,6 @@ static int oidc_auth_handler(worker_st *ws, unsigned int http_ver)
 cleanup:
 	return ret;
 }
-#endif
 
 #define USERNAME_FIELD "username"
 #define GROUPNAME_FIELD "group%5flist"
@@ -1651,16 +1654,17 @@ int post_auth_handler(worker_st *ws, unsigned int http_ver)
 		if (ws->selected_auth->type & AUTH_TYPE_OIDC) {
 			if (req->authorization == NULL ||
 			    req->authorization_size == 0)
-				return oidc_auth_handler(ws, http_ver);
+				return bearer_auth_handler(ws, http_ver);
 
 			if ((req->authorization_size >
-			     (sizeof(HTTP_AUTH_OIDC_PREFIX) - 1)) &&
+			     (sizeof(HTTP_AUTH_BEARER_SCHEME) - 1)) &&
 			    strncasecmp(
-				    req->authorization, HTTP_AUTH_OIDC_PREFIX,
-				    sizeof(HTTP_AUTH_OIDC_PREFIX) - 1) == 0) {
+				    req->authorization,
+				    HTTP_AUTH_BEARER_SCHEME,
+				    sizeof(HTTP_AUTH_BEARER_SCHEME) - 1) == 0) {
 				ireq.auth_type |= AUTH_TYPE_OIDC;
 				ireq.user_name = req->authorization +
-						 sizeof(HTTP_AUTH_OIDC_PREFIX);
+						 sizeof(HTTP_AUTH_BEARER_SCHEME);
 			} else {
 				oclog(ws, LOG_HTTP_DEBUG,
 				      "Invalid authorization data: %.*s",
@@ -1688,7 +1692,33 @@ int post_auth_handler(worker_st *ws, unsigned int http_ver)
 			}
 		}
 
-		if (ws->selected_auth->type & AUTH_TYPE_USERNAME_PASS) {
+		bool use_username_pass = ws->selected_auth->type &
+					 AUTH_TYPE_USERNAME_PASS;
+
+#ifdef HAVE_PAM
+		if ((ws->selected_auth->type & AUTH_TYPE_PAM) ==
+		    AUTH_TYPE_PAM) {
+			pam_cfg_st *pam_cfg =
+				(pam_cfg_st *)ws->selected_auth->additional;
+
+			if (pam_cfg != NULL && pam_cfg->use_token) {
+				use_username_pass = false;
+
+				if (!http_auth_is_bearer(
+					    req->authorization,
+					    req->authorization_size)) {
+					oclog(ws, LOG_HTTP_DEBUG,
+					      "PAM token authentication requires Bearer scheme");
+					return bearer_auth_handler(ws, http_ver);
+				}
+
+				ireq.auth_type |= AUTH_TYPE_PAM;
+				ireq.user_name = req->authorization;
+			}
+		}
+#endif
+
+		if (use_username_pass) {
 			ret = parse_reply(ws, req->body, req->body_length,
 					  USERNAME_FIELD,
 					  sizeof(USERNAME_FIELD) - 1, NULL, 0,

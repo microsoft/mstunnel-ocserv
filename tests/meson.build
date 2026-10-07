@@ -36,6 +36,7 @@ subdir('data/radiusclient')
 unit_tests = {
   'str-test':       {'src': ['str-test.c'],      'args': [], 'timeout': 30},
   'str-test2':      {'src': ['str-test2.c'],     'args': [], 'timeout': 30},
+  'bearer-auth':     {'src': ['bearer-auth.c'],   'args': [], 'timeout': 30},
   'kkdcp-parsing':  {'src': ['kkdcp-parsing.c'], 'args': [], 'timeout': 30},
   'json-escape':    {'src': ['json-escape.c'],   'args': [], 'timeout': 30},
   'ban-ips':        {'src': ['ban-ips.c'],        'args': ['-DUNDER_TEST'], 'timeout': 120},

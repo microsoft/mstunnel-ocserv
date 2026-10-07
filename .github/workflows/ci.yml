@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: ["develop", "main", "master"]
+  pull_request:
+    branches: ["develop", "main", "master"]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ipcalc openconnect \
+            meson ninja-build pkg-config gcc g++ \
+            libgnutls28-dev libev-dev libtasn1-bin \
+            libpam0g-dev liblz4-dev libseccomp-dev \
+            libreadline-dev libnl-route-3-dev libkrb5-dev libradcli-dev \
+            libcurl4-gnutls-dev libcjose-dev libjansson-dev liboath-dev \
+            libprotobuf-c-dev libtalloc-dev libllhttp-dev protobuf-c-compiler \
+            gperf iperf3 lcov libuid-wrapper libpam-wrapper libnss-wrapper \
+            libsocket-wrapper gss-ntlmssp haproxy iputils-ping freeradius \
+            gawk gnutls-bin iproute2 jq tcpdump
+
+      - name: Configure
+        run: meson setup build -Doidc-auth=enabled -Dlatency-stats=enabled -Droot-tests=false -Dtun-tests=false
+
+      - name: Build
+        run: meson compile -C build
+
+      - name: Test
+        run: meson test -C build --no-rebuild --print-errorlogs

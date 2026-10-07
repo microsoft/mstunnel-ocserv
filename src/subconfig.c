@@ -312,6 +312,8 @@ void *pam_get_brackets_string(void *pool, struct static_cfg_st *config,
 		} else if (strcasecmp(vals[i].name, "service") == 0) {
 			additional->service_name = vals[i].value;
 			vals[i].value = NULL;
+		} else if (strcasecmp(vals[i].name, "use-token") == 0) {
+			additional->use_token = CHECK_TRUE(vals[i].value);
 		} else {
 			fprintf(stderr, "unknown option '%s'\n", vals[i].name);
 			exit(EXIT_FAILURE);

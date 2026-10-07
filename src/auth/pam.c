@@ -251,12 +251,26 @@ static int pam_auth_init(void **ctx, void *pool, void *vctx,
 		goto fail2;
 	}
 
-	strlcpy(pctx->username, info->username, sizeof(pctx->username));
+	if (!pctx->config->use_token) {
+		strlcpy(pctx->username, info->username, sizeof(pctx->username));
+	}
 
 	if (info->ip != NULL)
 		pam_set_item(pctx->ph, PAM_RHOST, info->ip);
 
 	*ctx = pctx;
+
+	if (pctx->config->use_token) {
+		co_call(pctx->cr);
+
+		if (pctx->cr_ret != PAM_SUCCESS) {
+			oc_syslog(LOG_NOTICE, "PAM-auth pam_auth_msg: %s",
+				  pam_strerror(pctx->ph, pctx->cr_ret));
+			return ERR_AUTH_FAIL;
+		}
+
+		return 0;
+	}
 
 	return ERR_AUTH_CONTINUE;
 
