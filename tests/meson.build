@@ -240,20 +240,10 @@ endif
 
 # OIDC test
 if oidc_enabled
-  # gen_oidc_test_data must run before test-oidc to generate data/oidc.json and
-  # the token files consumed by the test.  Use priority so meson schedules it
-  # first (higher priority runs first).
-  test('gen_oidc_test_data', gen_oidc_exe,
-    env:          test_env,
-    timeout:      30,
-    workdir:      test_workdir,
-    priority:     1,
-  )
   test('test-oidc', find_program('test-oidc'),
     env:          test_env,
     timeout:      180,
     workdir:      test_workdir,
-    priority:     0,
   )
 endif
 
