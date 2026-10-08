@@ -33,6 +33,10 @@
 
 extern const struct auth_mod_st pam_auth_funcs;
 
+struct pam_vhost_ctx {
+	const char *service_name;
+	bool use_token;
+};
 
 struct pam_ctx_st {
 	char password[MAX_PASSWORD_SIZE];
@@ -51,7 +55,7 @@ struct pam_ctx_st {
 	unsigned int state; /* PAM_S_ */
 	unsigned int passwd_counter;
 	size_t prev_prompt_hash;
-	const struct pam_cfg_st *config;
+	const struct pam_vhost_ctx *config;
 };
 
 #endif

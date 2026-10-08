@@ -56,22 +56,26 @@ enum {
 	PAM_S_COMPLETE,
 };
 
-static void pam_vhost_init(void **vctx, void *pool, void *additional)
+static void pam_vhost_init(void **_vctx, void *pool, void *additional)
 {
 	struct pam_cfg_st *config = additional;
-
-	/* vctx is pam_cfg_st */
+	struct pam_vhost_ctx *vctx = talloc_zero(pool, struct pam_vhost_ctx);
 
 	/* Defensive check; config is always allocated by pam_get_brackets_string() */
 	if (config == NULL) {
 		fprintf(stderr, "pam: no configuration passed!\n");
 		exit(EXIT_FAILURE);
 	}
+	if (vctx == NULL) {
+		fprintf(stderr, "PAM-auth: memory error\n");
+		exit(EXIT_FAILURE);
+	}
 
-	if (config->service_name == NULL)
-		config->service_name = PACKAGE;
-
-	*vctx = (void *)config;
+	vctx->service_name = config->service_name != NULL ?
+				     config->service_name :
+				     PACKAGE;
+	vctx->use_token = config->use_token;
+	*_vctx = vctx;
 }
 
 static int ocserv_conv(int msg_size, const struct pam_message **msg,
