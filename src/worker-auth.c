@@ -237,8 +237,7 @@ int get_auth_handler2(worker_st *ws, unsigned int http_ver, const char *pmsg,
 		login_end = OC_LOGIN_END;
 	}
 
-	if (!is_health_request &&
-	    (ws->selected_auth->type & AUTH_TYPE_GSSAPI) &&
+	if ((ws->selected_auth->type & AUTH_TYPE_GSSAPI) &&
 	    ws->auth_state < S_AUTH_COOKIE) {
 		if (ws->req.authorization == NULL ||
 		    ws->req.authorization_size == 0)
