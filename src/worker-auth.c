@@ -215,6 +215,9 @@ int get_auth_handler2(worker_st *ws, unsigned int http_ver, const char *pmsg,
 	str_st str;
 	const char *login_start;
 	const char *login_end;
+	const bool is_health_request =
+		ws->req.user_agent_type == AGENT_UNKNOWN &&
+		strcmp(ws->req.url, "/") == 0;
 
 	if (ws->req.user_agent_type == AGENT_OPENCONNECT_V3) {
 		/* certain v2.x modified clients require a different auth_id
@@ -280,6 +283,16 @@ int get_auth_handler2(worker_st *ws, unsigned int http_ver, const char *pmsg,
 	if (ret < 0) {
 		ret = -1;
 		goto cleanup;
+	}
+
+	if (is_health_request) {
+		ret = str_append_printf(&str, OC_MESSAGE,
+					"I am still alive!!");
+		if (ret < 0) {
+			ret = -1;
+			goto cleanup;
+		}
+		goto response_ready;
 	}
 
 	if (ws->auth_state == S_AUTH_REQ) {
@@ -474,6 +487,7 @@ int get_auth_handler2(worker_st *ws, unsigned int http_ver, const char *pmsg,
 		}
 	}
 
+response_ready:
 	ret = cstp_printf(ws, "Content-Length: %u\r\n",
 			  (unsigned int)str.length);
 	if (ret < 0) {
