@@ -1,0 +1,95 @@
+#!/bin/bash
+#
+# Copyright (C) 2026 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+# Regression test for the bug fixed in commit af108817 (issue #657).
+#
+# When the PAM conversation coroutine is suspended in PAM_S_WAIT_FOR_PASS
+# and pam_auth_deinit() is called (e.g. during maintenance cleanup of a
+# stale pre-auth entry), the fix must resume the coroutine so it can
+# return PAM_CONV_ERR before pam_end() is called.
+#
+# Bug detection:
+#   pam_abort_test.so registers a pam_set_data() cleanup that calls
+#   abort() if pam_end() fires while the conversation flag is still set.
+#   The flag is cleared only after the conversation function returns.
+#   Without the fix, pam_end() fires with the coroutine still live,
+#   the cleanup aborts the sec-mod process, and subsequent
+#   authentication fails.  With the fix, the coroutine is resumed
+#   cleanly before pam_end() and the server survives.
+#
+# Trigger (PAM_S_WAIT_FOR_PASS):
+#   curl sends POST /auth with only "username=testuser" (no password
+#   field).  The worker parses the username, sends SEC_AUTH_INIT to
+#   sec-mod which starts the PAM coroutine; the coroutine calls the
+#   conversation function and suspends.  The worker then fails to
+#   extract a password from the POST body, returns 401, and exits.
+#   Because proc->active_sid is 0 for unauthenticated workers, main
+#   does not send SECM_SESSION_CLOSE to sec-mod.  The stale pre-auth
+#   entry (in_use == 0) stays in sec-mod's database.
+#
+# Cleanup:
+#   exptime = now + cookie_timeout(0) + AUTH_SLACK_TIME(15) = now + 15 s
+#   sec-mod-db-cleanup-time = 3 s  →  maintenance fires every 3 s
+#   pam_auth_deinit() is called within ~18 s of the POST.
+#   Sleep 25 s to be safe.
+
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+
+. "$(dirname "$0")"/common.sh
+
+eval "${GETPORT}"
+
+echo "Testing PAM cleanup when client aborts during conversation (issue #657)..."
+
+export TEST_PAMDIR=data/pam
+update_config test-pam-abort.config
+
+launch_sr_pam_server -d 1 -f -c ${CONFIG} & PID=$!
+wait_server $PID
+
+echo ""
+echo "Sending username-only POST to trigger PAM_S_WAIT_FOR_PASS..."
+
+# POST with only username= and no password field.
+# Worker sends SEC_AUTH_INIT → PAM coroutine starts, calls conv(), suspends.
+# Worker fails to extract password from body → 401 → exits.
+# The pre-auth entry remains in sec-mod (in_use=0, expires in 15 s).
+LD_PRELOAD=libsocket_wrapper.so curl -sk \
+	--max-time 10 \
+	--data 'username=testuser' \
+	"https://$ADDRESS:$PORT/auth" >/dev/null 2>&1 || true
+
+# exptime ≈ now + 15 s; maintenance fires every 3 s → cleanup within 18 s.
+echo ""
+echo "Waiting for maintenance cycle to call pam_auth_deinit() (~15 s)..."
+sleep 25
+
+echo ""
+echo "Verifying server is still functional after abort..."
+( echo "anypass" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q \
+	"$ADDRESS:$PORT" -u testuser \
+	--servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= \
+	--cookieonly 2>&1 ) ||
+	fail $PID "Server not functional after client abort during PAM conversation"
+
+cleanup
+
+exit 0

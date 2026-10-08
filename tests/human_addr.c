@@ -25,8 +25,6 @@
 #include "../src/ip-util.h"
 #include "../src/ip-util.c"
 
-int syslog_open = 0;
-
 static unsigned int ip_to_sockaddr(const char *ip, unsigned int port,
 				   struct sockaddr_storage *ss)
 {

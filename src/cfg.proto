@@ -1,0 +1,181 @@
+syntax = "proto2";
+
+/*
+ * ReloadableConfig — per-virtual-host configuration for ocserv.
+ *
+ * This file is the single source of truth for:
+ *   - the set of config fields (adding a field here is the only required change)
+ *   - scope annotations consumed by tests/check-config-scope.py
+ *
+ * Scope tags (must appear verbatim in field comments):
+ *   [scope: global]      -- reloadable; error if set in a [vhost:X] section
+ *   [scope: vhost]       -- reloadable; can differ per virtual host
+ *   [scope: vhost user]  -- reloadable; settable per-vhost and overridable per-user/group
+ *
+ * Field number rules:
+ *   - Once assigned, a field number MUST NOT be changed or reused.
+ *   - Retired numbers are marked with a comment; do not reclaim them.
+ *
+ * Memory model:
+ *   These messages are never packed/unpacked for IPC.  protoc-c is used only
+ *   to generate the C struct (with has_X presence fields) and the
+ *   ProtobufCMessageDescriptor.  All string/bytes/sub-message pointers are
+ *   talloc children of the ReloadableConfig allocation; talloc_free(config)
+ *   cascades to all associated memory.
+ */
+
+import "ipc.proto";   /* reuse fw_port_st */
+
+/* Serialized form of struct vpn_st */
+message NetworkConfig {
+  optional string name               =  1; /* TUN device name prefix */
+  optional string ipv4_netmask       =  2;
+  optional string ipv4_network       =  3;
+  optional string ipv4               =  4;
+  optional string ipv4_local         =  5;
+  optional string ipv6_network       =  6;
+  optional uint32 ipv6_prefix        =  7;
+  optional string ipv6               =  8;
+  optional string ipv6_local         =  9;
+  optional uint32 mtu                = 10;
+  optional uint32 ipv6_subnet_prefix = 11;
+  repeated string routes             = 12;
+  repeated string no_routes          = 13;
+  repeated string dns                = 14;
+  repeated string nbns               = 15;
+}
+
+/* Serialized form of kkdcp_realm_st */
+message KkdcpRealmConfig {
+  optional string realm       = 1;
+  optional bytes  addr        = 2; /* struct sockaddr_storage, raw binary; .len == addr_len */
+  /* field 3 retired — do not reuse */
+  optional int32  ai_family   = 4;
+  optional int32  ai_socktype = 5;
+  optional int32  ai_protocol = 6;
+}
+
+/* Serialized form of kkdcp_st (one entry per URL path) */
+message KkdcpConfig {
+  optional string           url    = 1;
+  repeated KkdcpRealmConfig realms = 2;
+}
+
+message ReloadableConfig {
+  /* ------------------------------------------------------------------ */
+  /* Scalars — optional generates has_X boolean for presence tracking    */
+  /* ------------------------------------------------------------------ */
+
+  optional uint32 is_dyndns              =  1; /* [scope: vhost] */
+  optional uint32 listen_proxy_proto     =  2; /* [scope: global] */
+  optional uint32 stats_report_time      =  3; /* [scope: vhost user] */
+  optional uint32 cert_req               =  4; /* [scope: vhost] gnutls_certificate_request_t */
+  optional uint32 enable_compression     =  5; /* [scope: vhost] ENABLE_COMPRESSION builds only */
+  optional uint32 no_compress_limit      =  6; /* [scope: vhost] ENABLE_COMPRESSION builds only */
+  optional uint32 select_group_by_url    =  7; /* [scope: vhost] */
+  optional uint32 auto_select_group      =  8; /* [scope: vhost] */
+  optional uint32 append_routes          =  9; /* [scope: vhost] */
+  optional uint32 restrict_user_to_routes = 10; /* [scope: vhost user] */
+  optional uint32 deny_roaming           = 11; /* [scope: vhost user] */
+  optional int64  cookie_timeout         = 12; /* [scope: vhost] seconds */
+  optional int64  session_timeout        = 13; /* [scope: vhost user] seconds */
+  optional uint32 persistent_cookies     = 14; /* [scope: vhost] */
+  optional int64  rekey_time             = 15; /* [scope: vhost] seconds */
+  optional uint32 rekey_method           = 16; /* [scope: vhost] REKEY_METHOD_* */
+  optional int64  ban_time               = 17; /* [scope: global] seconds */
+  optional uint32 max_ban_score          = 18; /* [scope: global] */
+  optional int32  ban_reset_time         = 19; /* [scope: global] */
+  optional uint32 ban_points_wrong_password = 20; /* [scope: global] */
+  optional uint32 ban_points_connect     = 21; /* [scope: global] */
+  optional uint32 ban_points_kkdcp       = 22; /* [scope: global] */
+  optional uint32 match_dtls_and_tls     = 23; /* [scope: vhost] */
+  optional uint32 dtls_psk               = 24; /* [scope: global] */
+  optional uint32 dtls_legacy            = 25; /* [scope: vhost] */
+  optional uint32 isolate                = 26; /* [scope: global] */
+  optional uint32 auth_timeout           = 27; /* [scope: global] */
+  optional uint32 idle_timeout           = 28; /* [scope: vhost user] */
+  optional uint32 mobile_idle_timeout    = 29; /* [scope: vhost user] */
+  optional uint32 switch_to_tcp_timeout  = 30; /* [scope: vhost] */
+  optional uint32 keepalive              = 31; /* [scope: vhost user] */
+  optional uint32 dpd                    = 32; /* [scope: vhost user] */
+  optional uint32 mobile_dpd             = 33; /* [scope: vhost user] */
+  optional uint32 max_clients            = 34; /* [scope: global] */
+  optional uint32 max_same_clients       = 35; /* [scope: vhost user] */
+  optional uint32 use_utmp               = 36; /* [scope: global] */
+  optional uint32 tunnel_all_dns         = 37; /* [scope: vhost user] */
+  optional uint32 use_occtl              = 38; /* [scope: global] */
+  optional uint32 try_mtu                = 39; /* [scope: global] */
+  optional uint32 cisco_client_compat    = 40; /* [scope: vhost] */
+  optional uint32 cisco_svc_client_compat = 41; /* [scope: vhost] */
+  optional uint32 rate_limit_ms          = 42; /* [scope: global] */
+  optional uint32 ping_leases            = 43; /* [scope: global] */
+  optional uint32 server_drain_ms        = 44; /* [scope: global] */
+  optional uint64 rx_per_sec             = 45; /* [scope: vhost user] */
+  optional uint64 tx_per_sec             = 46; /* [scope: vhost user] */
+  optional uint32 net_priority           = 47; /* [scope: vhost user] */
+  optional uint32 output_buffer          = 48; /* [scope: vhost] */
+  optional uint32 default_mtu            = 49; /* [scope: vhost user] */
+  optional uint32 predictable_ips        = 50; /* [scope: vhost] */
+  optional uint32 client_bypass_protocol = 51; /* [scope: vhost user] */
+  optional bool   gssapi_no_local_user_map = 52; /* [scope: vhost] */
+  optional bool   camouflage             = 53; /* [scope: vhost] */
+  optional bool   no_udp                 = 54; /* [scope: vhost user] */
+  optional bool   expose_iroutes         = 55; /* [scope: vhost] */
+  optional uint32 limit_worker_memory   =  56; /* [scope: global] */
+  optional uint32 sec_mod_db_cleanup_time = 57; /* [scope: global] undocumented; 0 = use built-in default (310 s) */
+
+  /* ------------------------------------------------------------------ */
+  /* Strings — NULL pointer means "not set"; no has_X for proto2 strings */
+  /* ------------------------------------------------------------------ */
+
+  optional string cert_user_oid      = 100; /* [scope: vhost] OID for username extraction */
+  optional string cert_group_oid     = 101; /* [scope: vhost] OID for groupname extraction */
+  optional string priorities         = 102; /* [scope: vhost] GnuTLS priority string */
+  optional string banner             = 103; /* [scope: vhost] */
+  optional string pre_login_banner   = 104; /* [scope: vhost] */
+  optional string ocsp_response      = 105; /* [scope: vhost] file with OCSP response */
+  optional string default_domain     = 106; /* [scope: vhost] domain advertised to client */
+  optional string default_select_group = 107; /* [scope: vhost] */
+  optional string crl                = 108; /* [scope: vhost] */
+  optional string route_add_cmd      = 109; /* [scope: global] */
+  optional string route_del_cmd      = 110; /* [scope: global] */
+  optional string connect_script     = 111; /* [scope: global] */
+  optional string host_update_script = 112; /* [scope: global] */
+  optional string disconnect_script  = 113; /* [scope: global] */
+
+  optional string proxy_url          = 115; /* [scope: vhost] */
+  optional string xml_config_file    = 116; /* [scope: vhost user] ANYCONNECT_CLIENT_COMPAT only */
+  optional string xml_config_hash    = 117; /* [scope: vhost user] ANYCONNECT_CLIENT_COMPAT only */
+  optional string per_group_dir      = 118; /* [scope: vhost] */
+  optional string per_user_dir       = 119; /* [scope: vhost] */
+  optional string default_group_conf = 120; /* [scope: vhost] */
+  optional string default_user_conf  = 121; /* [scope: vhost] */
+  optional string camouflage_secret  = 122; /* [scope: vhost] */
+  optional string camouflage_realm   = 123; /* [scope: vhost] */
+
+  /* ------------------------------------------------------------------ */
+  /* String arrays                                                        */
+  /* ------------------------------------------------------------------ */
+
+  repeated string group_list            = 200; /* [scope: vhost] select_group */
+  repeated string friendly_group_list   = 201; /* [scope: vhost] parallel to group_list */
+  repeated string custom_header         = 202; /* [scope: vhost] */
+  repeated string split_dns             = 203; /* [scope: vhost user] */
+  repeated string included_http_headers = 204; /* [scope: vhost] */
+  repeated string known_iroutes         = 205; /* [scope: vhost] */
+
+  /* ------------------------------------------------------------------ */
+  /* Nested messages and special repeated fields                          */
+  /* ------------------------------------------------------------------ */
+
+  /* [scope: vhost user] dns/routes/network sub-fields; exception: network.name is [scope: global] */
+  optional NetworkConfig network = 300;
+
+  /* [scope: vhost user] per-client firewall port rules */
+  repeated fw_port_st fw_ports = 301;
+
+  /*
+   * [scope: vhost] KKDCP (Kerberos KDC Proxy) configuration.
+   */
+  repeated KkdcpConfig kkdcp = 302;
+}

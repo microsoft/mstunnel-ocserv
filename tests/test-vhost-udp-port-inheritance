@@ -1,0 +1,132 @@
+#!/bin/bash
+#
+# Copyright (C) 2026 Grigory Trenin
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# Regression test for https://gitlab.com/openconnect/ocserv/-/work_items/612
+# Ensures 'udp-port' defined globally propagates to vhosts during initial
+# startup and after a SIGHUP/reload.
+
+
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+OCCTL_SOCKET=./occtl-vhost-udp-$$.socket
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+PATH=${PATH}:/usr/sbin
+OUTFILE=occtl-vhost-udp.$$.tmp
+USERNAME=vhost
+
+echo "Testing propagation of global 'udp-port' to vhosts..."
+
+finish() {
+	set +e
+	echo " * Cleaning up..."
+	test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+	test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
+	test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+	test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
+	test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+	rm -f ${OUTFILE}
+}
+
+test_vhost_dtls_connectivity() {
+	echo " * Connecting to vhost1.example.com (${ADDRESS}:${PORT})..."
+	( echo "vhost" | ${CMDNS1} ${OPENCONNECT} vhost1.example.com:${PORT} --resolve vhost1.example.com:${ADDRESS} -u ${USERNAME} --servercert=pin-sha256:UF0XTJGvhvLStRn7GnWDNN/vqjXQchr/3H7MuZJ7dco= -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+	if test $? != 0;then
+		fail $PID "Could not connect to server"
+	fi
+
+	${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME} >${OUTFILE}
+	if test $? != 0;then
+		cat ${OUTFILE}
+		fail $PID "occtl show user ${USERNAME} failed!"
+	fi
+
+	grep -i "Username: ${USERNAME}" ${OUTFILE} >/dev/null
+	if test $? != 0;then
+		cat ${OUTFILE}
+		fail $PID "Username missing in occtl show user output"
+	fi
+
+	grep -i "vhost: vhost1.example.com" ${OUTFILE} >/dev/null
+	if test $? != 0;then
+		cat ${OUTFILE}
+		fail $PID "Session associated with wrong vhost (expected: vhost1.example.com)"
+	fi
+
+	grep -i "DTLS cipher:" ${OUTFILE} >/dev/null
+	if test $? != 0;then
+		cat ${OUTFILE}
+		fail $PID "DTLS session was not established (cipher info missing)"
+	fi
+}
+
+. `dirname $0`/common.sh
+. `dirname $0`/random-net.sh
+. `dirname $0`/ns.sh
+
+eval "${GETPORT}"
+
+# Run server
+update_config test-vhost-udp-port-inheritance.config
+if test "$VERBOSE" = 1;then
+	DEBUG="-d 3"
+fi
+
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+
+sleep 4
+
+test_vhost_dtls_connectivity
+
+# Disconnect
+
+kill "$(cat ${CLIPID})" 2>/dev/null || true
+rm -f "${CLIPID}"
+sleep 3
+# Restore NS1 routing in case vpnc-script failed to run during server-initiated disconnect
+reset_client_routes
+
+# Verify the user has disconnected
+
+${OCCTL} -s ${OCCTL_SOCKET} --json show users >${OUTFILE}
+if test $? != 0;then
+	cat ${OUTFILE}
+	fail $PID "occtl show users failed!"
+fi
+
+TOTAL_USERS=$(jq '. | length' ${OUTFILE})
+if test "${TOTAL_USERS}" -ne 0;then
+	fail $PID "Disconnect failed. ${TOTAL_USERS} user(s) still active."
+fi
+
+# Reload the server
+
+${OCCTL} -s ${OCCTL_SOCKET} reload
+if test $? != 0;then
+        fail $PID "occtl reload failed"
+fi
+
+sleep 3
+
+# Repeat the test after reload
+test_vhost_dtls_connectivity
+
+exit 0

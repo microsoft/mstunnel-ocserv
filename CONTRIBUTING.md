@@ -10,13 +10,29 @@ We try to stick to the following rules, so when contributing please
 try to follow them too.
 
 
+## How to Report Issues and Contribute Fixes
+
+To report a bug or request a feature, open a GitLab issue. If you have a fix or
+implementation, open a merge request linked to that issue (`Resolves: #NNN` in the
+commit message).
+
+Do not attach patches to issues. Merge requests keep CI and commit authorship with
+the contributor, where they belong — review is the project's responsibility once an
+MR is open.
+
+Patches attached to issues will be closed with a request to open an MR instead.
+
+The MR does not need to be perfect on the first submission. Maintainers will review
+it, leave feedback, and approve once it meets the bar.
+
+
 ## Git commits:
 
 Note that when contributing code you will need to assert that the contribution is
 in accordance to the "Developer's Certificate of Origin" as found in the
 file [DCO.txt](doc/DCO.txt).
 
-To indicate that, make sure that your contributions (patches or merge requests),
+To indicate that, make sure that your contributions (merge requests),
 contain a "Signed-off-by" line, with your real name and e-mail address.
 To automate the process use "git am -s" to produce patches and/or set the
 a template to simplify this process, as follows.
@@ -41,6 +57,12 @@ every new merge request prior to merging. There are no particular rules for
 the test targets, except for them being reliable and running in a reasonable
 time frame (~1 hour).
 
+Tests must be **self-diagnosing**: a failure must be understandable from CI
+log output alone, without requiring local reproduction. Shell tests must print
+what they were testing and why it failed (e.g. `echo "FAIL: expected X, got Y"`).
+C unit tests must print the failing condition and relevant values before
+returning non-zero. Silent tests that fail with only an exit code will not be accepted.
+
 
 ## Reviewing code
 
@@ -55,11 +77,47 @@ as compiling and testing code and features.
 [Guidelines to consider when reviewing.](https://github.com/thoughtbot/guides/tree/master/code-review)
 
 
+## Before opening a merge request
+
+No review will begin before CI passes.
+
+- [ ] CI passes
+- [ ] Every changed line is relevant to the change — no drive-by refactoring
+- [ ] `ninja -C build` succeeds after each commit, not just at the final set
+- [ ] Every commit has `Signed-off-by: Your Name <email@example.com>`
+- [ ] Both a positive test (correct behavior) and a negative test (bad input rejected)
+- [ ] Tests are self-diagnosing: a CI failure is explainable from the log output alone
+- [ ] No new Linux-specific syscalls without `#ifdef __linux__` guard
+
+
 ## CCAN
 
 The directory `src/ccan` contains libraries from the
 [CCAN project](https://github.com/rustyrussell/ccan).
 When considering a helper module, check CCAN first.
+
+
+## AI Assistance Policy
+
+AI tool use is assumed and does not require disclosure. What matters is human
+accountability: every line you submit is your responsibility, regardless of how
+it was generated. Reviewers will hold you accountable as the author.
+
+**If you use AI assistance:**
+
+- Follow the guidance in [`AGENTS.md`](AGENTS.md) for all AI-assisted work.
+- External contributors should load the `ocserv-contributor` persona
+  (`contrib/ai/personas/ocserv-contributor.md`) before starting.
+- Maintainers doing AI-assisted review or development should load the
+  `ocserv-core-dev` persona (`contrib/ai/personas/ocserv-core-dev.md`).
+
+**Review calibration:** Reviewers may ask how a contribution was developed if it
+raises quality questions. Be prepared to explain your approach. Submissions that
+show signs of unchecked generation — hallucinated API calls, missing tests, style
+inconsistencies — may be returned with a request for additional work rather than
+an inline review.
+
+**Not acceptable:** Submitting code you cannot explain or defend. Own your patch.
 
 
 # Coding style

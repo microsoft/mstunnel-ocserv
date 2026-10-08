@@ -30,8 +30,6 @@
 #include "../src/ip-util.h"
 #include "../src/main-ban.c"
 
-int syslog_open;
-
 /* Test the IP banning functionality */
 static unsigned int check_if_banned_str(main_server_st *s, const char *ip)
 {
@@ -74,12 +72,20 @@ int main(void)
 	vhost = talloc_zero(s, struct vhost_cfg_st);
 	if (vhost == NULL)
 		exit(1);
-	vhost->perm_config.config = talloc_zero(vhost, struct cfg_st);
+
+	vhost->config = talloc_zero(vhost, ReloadableConfig);
+	if (vhost->config == NULL)
+		exit(1);
+
+	/* talloc_zero suffices for test-only field access; no pack/unpack needed */
+	vhost->config->network = talloc_zero(vhost->config, NetworkConfig);
+	if (vhost->config->network == NULL)
+		exit(1);
 
 	list_add(s->vconfig, &vhost->list);
 
-	vhost->perm_config.config->max_ban_score = 20;
-	vhost->perm_config.config->min_reauth_time = 30;
+	vhost->config->max_ban_score = 20;
+	vhost->config->ban_time = 30;
 
 	main_ban_db_init(s);
 
@@ -149,7 +155,7 @@ int main(void)
 	}
 
 	/* check expiration of entries */
-	sleep(GETCONFIG(s)->min_reauth_time + 1);
+	sleep(GETRCONFIG(s)->ban_time + 1);
 
 	if (check_if_banned_str(s, "192.168.1.1") != 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
@@ -173,7 +179,7 @@ int main(void)
 	}
 
 	/* check cleanup */
-	sleep(GETCONFIG(s)->min_reauth_time + 1);
+	sleep(GETRCONFIG(s)->ban_time + 1);
 
 	cleanup_banned_entries(s);
 
@@ -181,6 +187,31 @@ int main(void)
 		fprintf(stderr, "error in %d: have %d entries\n", __LINE__,
 			main_ban_db_elems(s));
 		exit(1);
+	}
+
+	/* Regression test: IPv6 local-address mishandling.
+	 *
+	 * if_address_st previously used struct sockaddr (16 bytes) for both
+	 * if_addr and if_netmask.  struct sockaddr_in6 is 28 bytes, so only
+	 * the first 16 bytes were stored by if_address_init().
+	 * test_local_ipv6() then cast those fields back to struct sockaddr_in6 *
+	 * and read all four 32-bit words, producing an out-of-bounds read for
+	 * words [2] and [3] of the netmask.  The fix uses struct sockaddr_storage
+	 * and copies sizeof(struct sockaddr_in6) bytes for AF_INET6 entries. */
+
+	if (if_address_init(s)) {
+		/* ::2 differs from ::1 only in the last bit; on a system
+		 * with ::1/128 (loopback) it must NOT be treated as local. */
+		add_str_ip_to_ban_list(s, "::2", 40);
+
+		if (check_if_banned_str(s, "::2") == 0) {
+			fprintf(stderr,
+				"error in %d: IPv6 address mishandling (::2 treated as local)\n",
+				__LINE__);
+			exit(1);
+		}
+
+		if_address_cleanup(s);
 	}
 
 	main_ban_db_deinit(s);

@@ -26,7 +26,7 @@ srcdir=${srcdir:-.}
 PIDFILE=ocserv-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
 PATH=${PATH}:/usr/sbin
-IP=$(which ip)
+IP=$(command -v ip)
 OUTFILE=traffic.$$.tmp
 
 . `dirname $0`/common.sh

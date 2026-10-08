@@ -24,7 +24,7 @@ NO_NEED_ROOT=1
 PIDFILE=ocserv-pid.$$.tmp
 PATH=${PATH}:/usr/sbin
 HACONFIG=haproxy.conf.$$.tmp
-HAPROXY=$(which haproxy)
+HAPROXY=$(command -v haproxy)
 
 . `dirname $0`/common.sh
 

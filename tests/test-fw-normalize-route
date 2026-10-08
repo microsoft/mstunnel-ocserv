@@ -1,0 +1,182 @@
+#!/bin/sh
+#
+# Copyright (C) 2026 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Unit test for the mask_to_prefix / normalize_route shell functions in
+# ocserv-fw-nftables.  The functions are extracted directly from the script
+# so this test always exercises the real implementation.
+
+srcdir=${srcdir:-.}
+FW_SCRIPT="${srcdir}/../src/ocserv-fw-nftables"
+
+if ! test -f "${FW_SCRIPT}"; then
+	echo "cannot find ${FW_SCRIPT}"
+	exit 1
+fi
+
+echo "Testing mask_to_prefix and normalize_route from ${FW_SCRIPT}..."
+
+# Load the two functions directly from the firewall script.  awk extracts
+# each function body (from "funcname() {" to the closing "}" at column 0).
+eval "$(awk '/^mask_to_prefix\(\)/,/^\}/' "${FW_SCRIPT}")"
+eval "$(awk '/^normalize_route\(\)/,/^\}/' "${FW_SCRIPT}")"
+
+if ! type mask_to_prefix > /dev/null 2>&1 || \
+   ! type normalize_route > /dev/null 2>&1; then
+	echo "failed to load functions from ${FW_SCRIPT}"
+	exit 1
+fi
+
+# ---- test harness -----------------------------------------------------------
+
+FAIL=0
+
+check() {
+	input="$1"
+	expected="$2"
+	got=$(normalize_route "$input")
+	if test "$got" != "$expected"; then
+		echo "FAIL: normalize_route '$input' -> '$got', expected '$expected'"
+		FAIL=1
+	fi
+}
+
+check_mask() {
+	mask="$1"
+	expected="$2"
+	got=$(mask_to_prefix "$mask")
+	if test "$got" != "$expected"; then
+		echo "FAIL: mask_to_prefix '$mask' -> '$got', expected '$expected'"
+		FAIL=1
+	fi
+}
+
+# Expect mask_to_prefix to fail (return non-zero, produce no output)
+check_mask_invalid() {
+	mask="$1"
+	got=$(mask_to_prefix "$mask" 2>/dev/null)
+	if test $? = 0 || test -n "$got"; then
+		echo "FAIL: mask_to_prefix '$mask' should have failed but returned '$got'"
+		FAIL=1
+	fi
+}
+
+# Expect normalize_route to fail (return non-zero, produce no output)
+check_route_invalid() {
+	route="$1"
+	got=$(normalize_route "$route" 2>/dev/null)
+	if test $? = 0 || test -n "$got"; then
+		echo "FAIL: normalize_route '$route' should have failed but returned '$got'"
+		FAIL=1
+	fi
+}
+
+# ---- mask_to_prefix: all 33 valid prefix lengths ----------------------------
+
+check_mask "0.0.0.0"         0
+check_mask "128.0.0.0"       1
+check_mask "192.0.0.0"       2
+check_mask "224.0.0.0"       3
+check_mask "240.0.0.0"       4
+check_mask "248.0.0.0"       5
+check_mask "252.0.0.0"       6
+check_mask "254.0.0.0"       7
+check_mask "255.0.0.0"       8
+check_mask "255.128.0.0"     9
+check_mask "255.192.0.0"     10
+check_mask "255.224.0.0"     11
+check_mask "255.240.0.0"     12
+check_mask "255.248.0.0"     13
+check_mask "255.252.0.0"     14
+check_mask "255.254.0.0"     15
+check_mask "255.255.0.0"     16
+check_mask "255.255.128.0"   17
+check_mask "255.255.192.0"   18
+check_mask "255.255.224.0"   19
+check_mask "255.255.240.0"   20
+check_mask "255.255.248.0"   21
+check_mask "255.255.252.0"   22
+check_mask "255.255.254.0"   23
+check_mask "255.255.255.0"   24
+check_mask "255.255.255.128" 25
+check_mask "255.255.255.192" 26
+check_mask "255.255.255.224" 27
+check_mask "255.255.255.240" 28
+check_mask "255.255.255.248" 29
+check_mask "255.255.255.252" 30
+check_mask "255.255.255.254" 31
+check_mask "255.255.255.255" 32
+
+# ---- normalize_route: dotted-decimal mask conversion ------------------------
+
+check "10.0.0.0/255.0.0.0"               "10.0.0.0/8"
+check "172.16.0.0/255.240.0.0"           "172.16.0.0/12"
+check "192.168.0.0/255.255.0.0"          "192.168.0.0/16"
+check "192.168.1.0/255.255.255.0"        "192.168.1.0/24"
+check "192.168.1.128/255.255.255.128"    "192.168.1.128/25"
+check "192.168.1.192/255.255.255.192"    "192.168.1.192/26"
+check "0.0.0.0/0.0.0.0"                  "0.0.0.0/0"
+check "192.168.1.1/255.255.255.255"      "192.168.1.1/32"
+
+# ---- normalize_route: already-CIDR IPv4 passed through ---------------------
+
+check "10.0.0.0/8"       "10.0.0.0/8"
+check "192.168.1.0/24"   "192.168.1.0/24"
+check "0.0.0.0/0"        "0.0.0.0/0"
+check "192.168.1.1/32"   "192.168.1.1/32"
+
+# ---- normalize_route: IPv6 passed through unchanged ------------------------
+
+check "fd00::/48"                     "fd00::/48"
+check "2001:db8::/32"                 "2001:db8::/32"
+check "fd91:6d14:7241:dc6a::/112"     "fd91:6d14:7241:dc6a::/112"
+check "fc7d:b139:f7ba:5f53:c634::/80" "fc7d:b139:f7ba:5f53:c634::/80"
+check "::/0"                          "::/0"
+check "::1/128"                       "::1/128"
+
+# ---- mask_to_prefix: invalid octet values -----------------------------------
+
+check_mask_invalid "255.300.0.0"
+check_mask_invalid "255.255.127.0"
+check_mask_invalid "255.1.0.0"
+
+# ---- mask_to_prefix: non-contiguous masks -----------------------------------
+
+check_mask_invalid "254.192.128.0"
+check_mask_invalid "255.0.255.0"
+check_mask_invalid "0.255.0.0"
+check_mask_invalid "255.255.0.255"
+
+# ---- mask_to_prefix: wrong number of octets ---------------------------------
+
+check_mask_invalid "255.255.0"
+check_mask_invalid "255.255.255.0.0"
+
+# ---- normalize_route: propagates mask_to_prefix failure ---------------------
+
+check_route_invalid "10.0.0.0/255.0.255.0"
+check_route_invalid "10.0.0.0/255.255.255.0.0"
+
+# ---- result -----------------------------------------------------------------
+
+if test "$FAIL" = "0"; then
+	echo "All tests passed."
+	exit 0
+else
+	exit 1
+fi

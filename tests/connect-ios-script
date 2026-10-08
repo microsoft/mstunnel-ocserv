@@ -22,11 +22,11 @@ case "$REASON" in
 	verify_env_set "DEVICE_PLATFORM"
 	verify_env_set "DEVICE_TYPE"
 
-	echo "${IP_REMOTE}" > connect.ios.ok
+	echo "${IP_REMOTE}" > "${builddir}/connect.ios.ok"
 	;;
   disconnect)
 	if ! test -z "$DEVICE";then
-		echo "${IP_REMOTE}" > disconnect.ios.ok
+		echo "${IP_REMOTE}" > "${builddir}/disconnect.ios.ok"
 	fi
 	;;
   "host-update")

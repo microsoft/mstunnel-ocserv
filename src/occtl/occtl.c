@@ -30,8 +30,6 @@
 #include <locale.h>
 #include <occtl/occtl.h>
 
-int syslog_open;
-
 static int handle_reset_cmd(CONN_TYPE *conn, const char *arg,
 			    cmd_params_st *params);
 static int handle_help_cmd(CONN_TYPE *conn, const char *arg,
@@ -57,6 +55,12 @@ static const commands_st commands[] = {
 	      "Disconnect the specified user", 1, 1),
 	ENTRY("disconnect id", "[ID]", handle_disconnect_id_cmd,
 	      "Disconnect the specified ID", 1, 1),
+	ENTRY("terminate user", "[NAME]", handle_terminate_user_cmd,
+	      "Disconnect user and invalidate session cookies", 1, 1),
+	ENTRY("terminate id", "[ID]", handle_terminate_id_cmd,
+	      "Disconnect ID and invalidate session cookies", 1, 1),
+	ENTRY("terminate session", "[SID]", handle_terminate_session_cmd,
+	      "Invalidate the specified session of a disconnected user", 1, 1),
 	ENTRY("unban ip", "[IP]", handle_unban_ip_cmd, "Unban the specified IP",
 	      1, 1),
 	ENTRY("reload", NULL, handle_reload_cmd,
@@ -171,7 +175,7 @@ unsigned int check_cmd_help(const char *line)
 
 static void usage(void)
 {
-	printf("occtl: [OPTIONS...] {COMMAND}\n\n");
+	printf("occtl: [OPTIONS...] [COMMAND]\n\n");
 	printf("  -s --socket-file       Specify the server's occtl socket file\n");
 	printf("  -h --help              Show this help\n");
 	printf("     --debug             Enable more verbose information in some commands\n");

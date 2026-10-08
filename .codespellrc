@@ -1,4 +1,4 @@
 [codespell]
-skip = ./.git,aclocal.m4,./autom4te.cache,./build-aux,config.log,ccan,pcl,*.pem
+skip = ./.git,aclocal.m4,./autom4te.cache,./build-aux,config.log,ccan,pcl,*.pem,./src/ocserv-fw-nftables,./tests/test-fw-script
 ignore-words-list = alloced,ans,anull,bu,gir,siz,te
 uri-ignore-words-list = gord,ist

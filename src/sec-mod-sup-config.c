@@ -36,13 +36,13 @@ void sup_config_init(sec_mod_st *sec)
 
 	list_for_each(sec->vconfig, vhost, list)
 	{
-		if (vhost->perm_config.sup_config_type == SUP_CONFIG_FILE) {
+		if (vhost->static_config.sup_config_type == SUP_CONFIG_FILE) {
 			seclog(sec, LOG_INFO,
 			       "%sreading supplemental config from files",
 			       PREFIX_VHOST(vhost));
 			vhost->config_module = &file_sup_config;
 #ifdef HAVE_RADIUS
-		} else if (vhost->perm_config.sup_config_type ==
+		} else if (vhost->static_config.sup_config_type ==
 			   SUP_CONFIG_RADIUS) {
 			seclog(sec, LOG_INFO,
 			       "%sreading supplemental config from radius",

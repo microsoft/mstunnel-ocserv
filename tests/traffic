@@ -24,7 +24,7 @@ srcdir=${srcdir:-.}
 PIDFILE=ocserv-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
 PATH=${PATH}:/usr/sbin
-IP=$(which ip)
+IP=$(command -v ip)
 OUTFILE=traffic.$$.tmp
 
 . `dirname $0`/common.sh
@@ -41,17 +41,12 @@ if test "$(id -u)" != "0";then
 	exit 77
 fi
 
-echo "Testing ocserv connection via haproxy... "
+echo "Testing ocserv traffic... "
 
 function finish {
-  set +e
   echo " * Cleaning up..."
-  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
-  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
-  test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
-  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
-  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
-  rm -f ${OUTFILE} 2>&1
+  cleanup_client_server
+  rm -f ${OUTFILE} 2>/dev/null
 }
 trap finish EXIT
 
@@ -100,10 +95,12 @@ echo " * Transmitting with iperf3"
 
 ${CMDNS1} iperf3 -t 6 -c ${VPNADDR}
 
-${CMDNS2} iperf3 -s -D -1
+# iperf3 might not release the port immediately; get an alternative port
+set +e; eval "${GETPORT}"; set -e
 
+${CMDNS2} iperf3 -s -D -1 -p ${PORT}
 
-${CMDNS1} iperf3 -t 6 -R -c ${VPNADDR}
+${CMDNS1} iperf3 -t 6 -R -c ${VPNADDR} -p ${PORT}
 
 echo " * ping ipv6 address"
 

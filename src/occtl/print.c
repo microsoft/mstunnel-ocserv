@@ -124,6 +124,12 @@ void print_start_block(FILE *out, cmd_params_st *params)
 		fprintf(out, "  {\n");
 }
 
+void print_end_block_simple(FILE *out, cmd_params_st *params)
+{
+	if (HAVE_JSON(params))
+		fprintf(out, "  }");
+}
+
 void print_end_block(FILE *out, cmd_params_st *params, unsigned int have_more)
 {
 	if (HAVE_JSON(params))
@@ -146,6 +152,12 @@ void print_separator(FILE *out, cmd_params_st *params)
 {
 	if (NO_JSON(params))
 		fprintf(out, "\n");
+}
+
+void print_value_separator(FILE *out, cmd_params_st *params, bool need_comma)
+{
+	if (HAVE_JSON(params) && need_comma)
+		fprintf(out, ",\n");
 }
 
 void print_single_value(FILE *out, cmd_params_st *params, const char *name,

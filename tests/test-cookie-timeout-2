@@ -26,7 +26,7 @@ srcdir=${srcdir:-.}
 eval "${GETPORT}"
 
 echo "Testing whether cookies will remain valid during the session time... "
-rm -f ${srcdir}/pid.$$
+rm -f pid.$$
 
 update_config test-cookie-timeout-2.config
 launch_server -d 1 -f -c ${CONFIG} & PID=$!
@@ -43,38 +43,38 @@ fi
 sleep 10
 echo ""
 echo "Connecting with cookie... "
-echo "test" | $OPENCONNECT -q -b localhost:$PORT -u test -C "$COOKIE" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --script=/bin/true --verbose --pid-file ${srcdir}/pid.$$ --background
+echo "test" | $OPENCONNECT -q -b localhost:$PORT -u test -C "$COOKIE" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --script=/bin/true --verbose --pid-file pid.$$ --background
 
 sleep 4
 
-if [ ! -f ${srcdir}/pid.$$ ];then
+if [ ! -f pid.$$ ];then
 	fail $PID "It was not possible to establish session!"
 fi
 
-CPID=`cat ${srcdir}/pid.$$`
-rm -f "${srcdir}/pid.$$"
-rm -f "${srcdir}/pid2.$$"
+CPID=`cat pid.$$`
+rm -f "pid.$$"
+rm -f "pid2.$$"
 
 sleep 30
 echo ""
 echo "Connecting again with cookie (overriding first session)... "
-echo "test" | $OPENCONNECT -b -q localhost:$PORT -u test -C "$COOKIE" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --script=/bin/true --verbose --pid-file ${srcdir}/pid2.$$ --background
+echo "test" | $OPENCONNECT -b -q localhost:$PORT -u test -C "$COOKIE" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --script=/bin/true --verbose --pid-file pid2.$$ --background
 
 sleep 6
 
 kill $CPID
-if [ ! -f ${srcdir}/pid2.$$ ];then
+if [ ! -f pid2.$$ ];then
 	fail $PID "It was not possible to establish second session!"
 else
-	CPID=`cat ${srcdir}/pid2.$$`
+	CPID=`cat pid2.$$`
 	kill $CPID
-	rm -f "${srcdir}/pid2.$$"
+	rm -f "pid2.$$"
 fi
 
 kill $PID
 wait
 
-rm -f ${srcdir}/pid.$$
-rm -f ${srcdir}/pid2.$$ ${CONFIG}
+rm -f pid.$$
+rm -f pid2.$$ ${CONFIG}
 
 exit 0

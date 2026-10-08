@@ -83,6 +83,7 @@ ATTRIBUTE	NAS-Port-Type		61	integer
 ATTRIBUTE	Port-Limit		62	integer
 ATTRIBUTE	Login-LAT-Port		63	integer
 ATTRIBUTE	Connect-Info		77	string
+ATTRIBUTE	Message-Authenticator	80	string
 ATTRIBUTE	Acct-Interim-Interval	85	integer
 
 #

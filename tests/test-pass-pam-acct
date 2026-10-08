@@ -1,0 +1,181 @@
+#!/bin/bash
+#
+# Copyright (C) 2025 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# Tests that PAM accounting (acct = "pam") gates VPN session establishment
+# even when plain authentication succeeds.
+#
+# The accounting check runs during the VPN CONNECT phase (AUTH_COOKIE_REQ ->
+# SECM_SESSION_OPEN), not during the initial password exchange that issues
+# the cookie.  A full connection attempt is therefore required to exercise it.
+#
+# Users:
+#   test  - present in both test1.passwd AND the PAM passdb -> may connect
+#   test2 - present in test1.passwd but NOT in the PAM passdb -> blocked
+
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+PATH=${PATH}:/usr/sbin
+IP=$(command -v ip)
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+
+if test -z "${IP}"; then
+	echo "no IP tool is present"
+	exit 77
+fi
+
+if test "$(id -u)" != "0"; then
+	echo "This test must be run as root"
+	exit 77
+fi
+
+# Locate pam_wrapper shared library and pam_matrix module.
+PAMWRAPDIR=$(pkg-config --variable=modules pam_wrapper 2>/dev/null)
+if test -z "${PAMWRAPDIR}"; then
+	PAMWRAPDIR=/usr/lib/pam_wrapper
+fi
+LIBPAM_WRAPPER="${PAMWRAPDIR%/*}/libpam_wrapper.so"
+if ! test -f "${LIBPAM_WRAPPER}"; then
+	# Try common Fedora/RHEL path
+	LIBPAM_WRAPPER=/usr/lib64/libpam_wrapper.so
+fi
+if ! test -f "${LIBPAM_WRAPPER}"; then
+	echo "pam_wrapper (libpam_wrapper.so) not available"
+	exit 77
+fi
+if ! test -f "${PAMWRAPDIR}/pam_matrix.so"; then
+	echo "pam_matrix.so not available in ${PAMWRAPDIR}"
+	exit 77
+fi
+
+# The generated PAM service config (ocserv) must exist in the build tree.
+PAM_ACCT_OCSERV="${builddir}/data/pam-acct/ocserv"
+if ! test -f "${PAM_ACCT_OCSERV}"; then
+	echo "Generated PAM service config not found: ${PAM_ACCT_OCSERV}"
+	exit 77
+fi
+
+echo "Testing PAM accounting with plain authentication..."
+
+function finish {
+	echo " * Cleaning up..."
+	cleanup_client_server
+	test -n "${PAM_WRAPPER_SERVICE_DIR}" && rm -rf "${PAM_WRAPPER_SERVICE_DIR}" >/dev/null 2>&1
+}
+trap finish EXIT
+
+OCCTL_SOCKET=./occtl-pam-acct-$$.socket
+
+# Build PAM wrapper service directory for this test run.
+PAM_WRAPPER_SERVICE_DIR=$(mktemp -d /tmp/pam-acct-XXXXXX)
+cp "${PAM_ACCT_OCSERV}" "${PAM_WRAPPER_SERVICE_DIR}/ocserv"
+sed -i "s|%PAM_WRAPPER_SERVICE_DIR%|${PAM_WRAPPER_SERVICE_DIR}|g" \
+	"${PAM_WRAPPER_SERVICE_DIR}/ocserv"
+cp "${srcdir}/data/pam-acct/passdb.templ" "${PAM_WRAPPER_SERVICE_DIR}/passdb"
+
+. `dirname $0`/random-net.sh
+. `dirname $0`/ns.sh
+
+update_config test-pass-pam-acct.config
+if test "$VERBOSE" = 1; then
+	DEBUG="-d 3"
+fi
+
+# Start server with pam_wrapper preloaded so that the accounting module
+# uses the fake PAM passdb instead of the real system PAM configuration.
+${CMDNS2} env \
+	LD_PRELOAD="${LIBPAM_WRAPPER}" \
+	PAM_WRAPPER=1 \
+	PAM_WRAPPER_SERVICE_DIR="${PAM_WRAPPER_SERVICE_DIR}" \
+	${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} &
+PID=$!
+
+sleep 4
+
+# --- Positive test: user 'test' is in the PAM passdb, must connect ---
+
+echo " * Getting cookie from ${ADDRESS}:${PORT} as 'test'..."
+( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u test \
+	--servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= \
+	--cookieonly )
+if test $? != 0; then
+	echo "Could not get cookie for 'test'"
+	exit 1
+fi
+
+echo " * Connecting as 'test' (should succeed)..."
+( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u test \
+	--servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= \
+	-s /bin/true --pid-file=${CLIPID} --passwd-on-stdin -b )
+if test $? != 0; then
+	echo "Could not connect as 'test'"
+	exit 1
+fi
+
+echo " * Verifying 'test' is listed as connected via occtl..."
+${CMDNS2} ${OCCTL} -s ${OCCTL_SOCKET} -n show user test
+if test $? != 0; then
+	echo "occtl did not find 'test' as connected"
+	kill $(cat ${CLIPID}) >/dev/null 2>&1
+	exit 1
+fi
+
+kill $(cat ${CLIPID}) >/dev/null 2>&1
+rm -f ${CLIPID}
+sleep 1
+
+# --- Negative test: user 'test2' is NOT in the PAM passdb, must be blocked ---
+
+echo " * Verifying 'test2' can still obtain a cookie (plain auth passes)..."
+( echo "test2" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u test2 \
+	--servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= \
+	--cookieonly )
+if test $? != 0; then
+	echo "test2 could not get a cookie; plain auth should pass independently of PAM accounting"
+	exit 1
+fi
+
+echo " * Attempting full VPN connection as 'test2' (PAM accounting must block)..."
+# Run without -b so that the exit status reflects the CONNECT-phase outcome.
+# pam_acct_mgmt returns PAM_PERM_DENIED for test2 (not in passdb) ->
+# ocserv sends HTTP 401 during CONNECT -> openconnect exits non-zero
+# before any TUN setup is attempted.
+( echo "test2" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u test2 \
+	--servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= \
+	-s /bin/true --passwd-on-stdin )
+if test $? = 0; then
+	echo "FAIL: 'test2' established a VPN session; PAM accounting did not block"
+	exit 1
+fi
+
+echo " * Verifying 'test2' is not listed as connected via occtl..."
+${CMDNS2} ${OCCTL} -s ${OCCTL_SOCKET} -n show user test2
+if test $? = 0; then
+	echo "FAIL: occtl found 'test2' as connected; PAM accounting did not block"
+	exit 1
+fi
+
+echo "PAM accounting correctly allowed 'test' and blocked 'test2'"
+exit 0

@@ -8,13 +8,29 @@ variables:
   ALPINE_BUILD: buildenv-alpine
   DEBIAN_BUILD: buildenv-debian
   DEBIAN_X86_CROSS_BUILD: buildenv-debian-x86
-  FEDORA_BUILD: buildenv-fedora42
-  UBUNTU20_BUILD: buildenv-ubuntu20
+  FEDORA_BUILD: buildenv-fedora44
   UBUNTU22_BUILD: buildenv-ubuntu22
+  UBUNTU26_BUILD: buildenv-ubuntu26
   CENTOS8_BUILD: buildenv-centos8
   CENTOS9_BUILD: buildenv-centos9
-  MINIMALCONFIG: "--without-protobuf --without-libtalloc-prefix --without-libnl --without-maxmind --without-geoip --without-libreadline-prefix --without-liboath --without-libc-prefix --without-pam --without-radius --without-libcrypt-prefix --without-utmp --without-libutil-prefix --without-libwrap --without-libwrap-prefix --without-libseccomp-prefix --without-libsystemd-prefix --without-llhttp --without-lz4 --without-gssapi --without-pcl-lib --disable-rpath --disable-seccomp --disable-anyconnect-compat --disable-compression"
-  JOBS: 2
+  CENTOS10_BUILD: buildenv-centos10
+  MINIMAL_OPTIONS: >-
+    -Dlocal-protobuf=true -Dlocal-talloc=true -Dlibnl=disabled
+    -Dmaxmind=disabled -Dgeoip=disabled -Dliboath=disabled
+    -Dpam=disabled -Dradius=disabled -Dutmp=disabled
+    -Dlibwrap=disabled -Dseccomp=disabled -Dsystemd=disabled
+    -Dlz4=disabled -Dgssapi=disabled
+    -Danyconnect-compat=disabled -Dcompression=disabled
+    -Droot-tests=false
+  JOBS: 6
+
+config-scope-check:
+  stage: preliminaries
+  script:
+  - python3 tests/check-config-scope.py
+  except:
+  - tags
+  - schedules
 
 Signoff:
   stage: preliminaries
@@ -24,6 +40,9 @@ Signoff:
   # Last bad commit
   - 'git log 6a65e3acdd3251fe20815cc2984a2781d9717173.. --grep "(^Signed-off-by)|(^Merge branch)|(^This reverts commit)" --extended-regexp --invert-grep --exit-code'
   - echo "None (good)"
+  except:
+  - tags
+  - schedules
 
 Debian:
   stage: testing
@@ -31,13 +50,12 @@ Debian:
   script:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
-  - autoreconf -fvi
-  - ./configure --enable-oidc-auth
-  - make -j$JOBS
+  - meson setup build -Doidc-auth=enabled
+  - ninja -C build -j$JOBS
   - export OCSERV_ALLOW_BROKEN_CLIENTS=1
-  - make check -j$JOBS
+  - meson test -C build --num-processes $JOBS --no-rebuild
   tags:
-  - saas-linux-small-amd64
+  - saas-linux-medium-amd64
   except:
   - tags
   - schedules
@@ -45,21 +63,19 @@ Debian:
     expire_in: 1 week
     when: on_failure
     paths:
-      - ./*.log
-      - ./tests/*.log
+      - build/meson-logs/
 
 i386/Debian:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$DEBIAN_X86_CROSS_BUILD
   script:
   - git submodule update --init
-  - autoreconf -fvi
-# Radius seems to be malfunctioning on i386 build
-  - ./configure --enable-oidc-auth --without-radius
-  - make -j$JOBS
-  - make check -j$JOBS VERBOSE=1
+  # Radius seems to be malfunctioning on i386 build
+  - meson setup build -Doidc-auth=enabled -Dradius=disabled
+  - ninja -C build -j$JOBS
+  - VERBOSE=1 meson test -C build --num-processes $JOBS --no-rebuild --no-suite fw
   tags:
-  - saas-linux-small-amd64
+  - saas-linux-medium-amd64
   except:
   - tags
   - schedules
@@ -67,21 +83,19 @@ i386/Debian:
     expire_in: 1 week
     when: on_failure
     paths:
-      - ./*.log
-      - ./tests/*.log
+      - build/meson-logs/
 
-Ubuntu20.04:
+Ubuntu26.04:
   stage: testing
-  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$UBUNTU20_BUILD
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$UBUNTU26_BUILD
   script:
   - git submodule update --init
-  - autoreconf -fvi
-  - ./configure --enable-oidc-auth --enable-latency-stats
-  - make -j$JOBS
+  - meson setup build -Doidc-auth=enabled -Dlatency-stats=enabled
+  - ninja -C build -j$JOBS
   - export MALLOC_CHECK_=3
-  - make check -j$JOBS
+  - meson test -C build --num-processes $JOBS --no-rebuild
   tags:
-  - saas-linux-small-amd64
+  - saas-linux-medium-amd64
   except:
   - tags
   - schedules
@@ -89,24 +103,21 @@ Ubuntu20.04:
     expire_in: 1 week
     when: on_failure
     paths:
-      - ./*.log
-      - ./tests/*.log
+      - build/meson-logs/
 
 Ubuntu22.04:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$UBUNTU22_BUILD
   script:
   - git submodule update --init
-  - autoreconf -fvi
-  - ./configure --enable-oidc-auth --enable-latency-stats
-  - make -j$JOBS
+  - meson setup build -Doidc-auth=enabled -Dlatency-stats=enabled
+  - ninja -C build -j$JOBS
   - export MALLOC_CHECK_=3
-# There is an issue with gssapi on this version of Ubuntu. While
-# the package exists, it doesn't work as openssl doesn't support
-# md4. See https://bugs.launchpad.net/ubuntu/+source/gss-ntlmssp/+bug/1995915
-  - make check -j$JOBS XFAIL_TESTS="test-gssapi"
+  # gssapi tests are skipped: openssl on Ubuntu22 doesn't support md4
+  # See https://bugs.launchpad.net/ubuntu/+source/gss-ntlmssp/+bug/1995915
+  - meson test -C build --num-processes $JOBS --no-rebuild --no-suite gssapi
   tags:
-  - saas-linux-small-amd64
+  - saas-linux-medium-amd64
   except:
   - tags
   - schedules
@@ -114,22 +125,20 @@ Ubuntu22.04:
     expire_in: 1 week
     when: on_failure
     paths:
-      - ./*.log
-      - ./tests/*.log
+      - build/meson-logs/
 
 Centos8:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS8_BUILD
   script:
   - git submodule update --init
-  - autoreconf -fvi
-  - ./configure
+  - meson setup build
   - chmod og-w tests/data/raddb
   - chmod og-w tests/data/raddb/*
-  - make -j$JOBS
-  - make check VERBOSE=1 -j$JOBS
+  - ninja -C build -j$JOBS
+  - VERBOSE=1 meson test -C build --num-processes $JOBS --no-rebuild
   tags:
-  - saas-linux-small-amd64
+  - saas-linux-medium-amd64
   except:
   - tags
   - schedules
@@ -137,22 +146,20 @@ Centos8:
     expire_in: 1 week
     when: on_failure
     paths:
-      - ./*.log
-      - ./tests/*.log
+      - build/meson-logs/
 
 Centos9:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS9_BUILD
   script:
   - git submodule update --init
-  - autoreconf -fvi
-  - ./configure
+  - meson setup build
   - chmod og-w tests/data/raddb
   - chmod og-w tests/data/raddb/*
-  - make -j$JOBS
-  - make check VERBOSE=1 -j$JOBS
+  - ninja -C build -j$JOBS
+  - VERBOSE=1 meson test -C build --num-processes $JOBS --no-rebuild
   tags:
-  - saas-linux-small-amd64
+  - saas-linux-medium-amd64
   except:
   - tags
   - schedules
@@ -160,11 +167,32 @@ Centos9:
     expire_in: 1 week
     when: on_failure
     paths:
-      - ./*.log
-      - ./tests/*.log
+      - build/meson-logs/
+
+Centos10:
+  stage: testing
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS10_BUILD
+  script:
+  - git submodule update --init
+  - meson setup build
+  - chmod og-w tests/data/raddb
+  - chmod og-w tests/data/raddb/*
+  - ninja -C build -j$JOBS
+  - VERBOSE=1 meson test -C build --num-processes $JOBS --no-rebuild
+  tags:
+  - saas-linux-medium-amd64
+  except:
+  - tags
+  - schedules
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - build/meson-logs/
 
 Coverity:
   stage: preliminaries
+  allow_failure: true
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS8_BUILD
   only:
   - schedules
@@ -173,9 +201,8 @@ Coverity:
   - wget --quiet https://scan.coverity.com/download/linux64 --post-data "token=$COVERITY_SCAN_TOKEN&project=$COVERITY_SCAN_PROJECT_NAME" -O /tmp/coverity_tool.tgz
   - tar xfz /tmp/coverity_tool.tgz
   - git submodule update --init
-  - autoreconf -fvi
-  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --enable-latency-stats
-  - cov-analysis-linux64-*/bin/cov-build --dir cov-int make -j$JOBS
+  - CFLAGS="-g -O0" meson setup build -Dlatency-stats=enabled
+  - cov-analysis-linux64-*/bin/cov-build --dir cov-int ninja -C build -j$JOBS
   - tar cfz cov-int.tar.gz cov-int
   - curl https://scan.coverity.com/builds?project=$COVERITY_SCAN_PROJECT_NAME
     --form token=$COVERITY_SCAN_TOKEN --form email=n.mavrogiannopoulos@gmail.com
@@ -194,9 +221,8 @@ musl/Alpine:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$ALPINE_BUILD
   script:
-  - autoreconf -fvi
-  - ./configure --disable-maintainer-mode --with-werror
-  - make -j$JOBS
+  - meson setup build -Dwith-werror=true
+  - ninja -C build -j$JOBS
   tags:
   - saas-linux-small-amd64
   except:
@@ -215,14 +241,13 @@ Fedora:
   - umask 000
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
-  - autoreconf -fvi
-  - CFLAGS="-g -O0" ./configure --enable-code-coverage --with-kerberos-tests --enable-oidc-auth
-  - make -j$JOBS
-  - make check -j$JOBS COVERAGE=1 VERBOSE=1
-  - make local-code-coverage-output
-  coverage: '/coverage lines: \d+\.\d+/'
+  - CFLAGS="-g -O0" meson setup build -Db_coverage=true -Dkerberos-tests=true -Doidc-auth=enabled
+  - ninja -C build -j$JOBS
+  - COVERAGE=1 VERBOSE=1 meson test -C build --num-processes $JOBS --no-rebuild
+  - ninja -C build coverage
+  coverage: '/lines[.]+: (\d+\.\d+)/'
   tags:
-  - saas-linux-small-amd64
+  - saas-linux-medium-amd64
   except:
   - tags
   artifacts:
@@ -230,16 +255,15 @@ Fedora:
     untracked: true
     when: always
 
-noprocfs/distcheck/Fedora:
+noprocfs/Fedora:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
-  - autoreconf -fvi
-  - ac_cv_file_FILE__proc_self_exe=no ./configure --disable-namespaces
-  - make -j$JOBS
-  - make distcheck VERBOSE=1 DISTCHECK_CONFIGURE_FLAGS="--disable-maintainer-mode" TESTS=""
+  - meson setup build -Dnamespaces=disabled
+  - ninja -C build -j$JOBS
+  - meson test -C build --num-processes $JOBS --no-rebuild
   tags:
   - saas-linux-small-amd64
   except:
@@ -250,18 +274,43 @@ noprocfs/distcheck/Fedora:
     untracked: true
     when: on_failure
 
+noprocfs/distcheck/Fedora:
+  stage: testing
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
+  script:
+  - chmod -R o-w tests/data/raddb
+  - git submodule update --init
+  - meson setup build -Dnamespaces=disabled
+  - ninja -C build -j$JOBS
+  - meson dist -C build --no-tests
+  - mkdir dist-unpack
+  - tar -xJf build/meson-dist/ocserv-*.tar.xz -C dist-unpack
+  - meson setup dist-unpack/ocserv-* dist-build -Dnamespaces=disabled
+  - ninja -C dist-build -j$JOBS
+  tags:
+  - saas-linux-small-amd64
+  except:
+  - tags
+  - schedules
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - build/meson-logs/
+      - build/meson-dist/
+      - dist-build/meson-logs/
+
 clang/Fedora:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
-  - autoreconf -fvi
-  - CC=clang ./configure --with-werror
-  - make -j$JOBS
-  - make check -j$JOBS
+  - CC=clang meson setup build -Dwith-werror=true
+  - ninja -C build -j$JOBS
+  - meson test -C build --num-processes $JOBS --no-rebuild
   tags:
-  - saas-linux-small-amd64
+  - saas-linux-medium-amd64
   except:
   - tags
   - schedules
@@ -277,12 +326,31 @@ seccomp/Fedora:
   script:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
-  - autoreconf -fvi
-  - ./configure --with-kerberos-tests --enable-oidc-auth --with-seccomp-trap
-  - make -j$JOBS
-  - make check -j$JOBS
+  - meson setup build -Dkerberos-tests=true -Doidc-auth=enabled -Dseccomp-trap=true
+  - ninja -C build -j$JOBS
+  - meson test -C build --num-processes $JOBS --no-rebuild
   tags:
-  - saas-linux-small-amd64
+  - saas-linux-medium-amd64
+  except:
+  - tags
+  - schedules
+  artifacts:
+    expire_in: 1 week
+    untracked: true
+    when: on_failure
+
+# Tests per-worker RLIMIT_DATA by making setrlimit failures fatal
+worker-memory-limit/Fedora:
+  stage: testing
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
+  script:
+  - chmod -R o-w tests/data/raddb
+  - git submodule update --init
+  - meson setup build -Dworker-memory-limit-test=true
+  - ninja -C build -j$JOBS
+  - meson test -C build --num-processes $JOBS --no-rebuild
+  tags:
+  - saas-linux-medium-amd64
   except:
   - tags
   - schedules
@@ -296,12 +364,11 @@ minimal:
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS8_BUILD
   script:
   - git submodule update --init
-  - autoreconf -fvi
-  - ./configure $MINIMALCONFIG
-  - make -j$JOBS
-  - make check -j$JOBS XFAIL_TESTS="lz4-compression lzs-compression"
+  - meson setup build $MINIMAL_OPTIONS
+  - ninja -C build -j$JOBS
+  - meson test -C build --num-processes $JOBS --no-rebuild
   tags:
-  - saas-linux-small-amd64
+  - saas-linux-medium-amd64
   except:
   - tags
   - schedules
@@ -309,21 +376,19 @@ minimal:
     expire_in: 1 week
     when: on_failure
     paths:
-      - ./*.log
-      - tests/*.log
+      - build/meson-logs/
 
 # Build a minimal version with every optional feature disabled
-minimal/Ubuntu20.04:
+minimal/Ubuntu26.04:
   stage: testing
-  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$UBUNTU20_BUILD
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$UBUNTU26_BUILD
   script:
   - git submodule update --init
-  - autoreconf -fvi
-  - ./configure $MINIMALCONFIG
-  - make -j$JOBS
-  - make check -j$JOBS XFAIL_TESTS="lz4-compression lzs-compression"
+  - meson setup build $MINIMAL_OPTIONS
+  - ninja -C build -j$JOBS
+  - meson test -C build --num-processes $JOBS --no-rebuild
   tags:
-  - saas-linux-small-amd64
+  - saas-linux-medium-amd64
   except:
   - tags
   - schedules
@@ -331,8 +396,7 @@ minimal/Ubuntu20.04:
     expire_in: 1 week
     when: on_failure
     paths:
-      - ./*.log
-      - ./tests/*.log
+      - build/meson-logs/
 
 # We do not compile with PAM under address sanitizer since we are using co-routines
 # without instrumentation for sanitizer.
@@ -342,12 +406,11 @@ asan/clang/Fedora:
   script:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
-  - autoreconf -fvi
-  - CC=clang CFLAGS="-fsanitize=address -fno-optimize-sibling-calls -fno-omit-frame-pointer -g -O1" ./configure --without-pam --without-asan-broken-tests
-  - make -j$JOBS
-  - make check -j$JOBS
+  - CC=clang CFLAGS="-fsanitize=address -fno-optimize-sibling-calls -fno-omit-frame-pointer -g -O1" meson setup build -Dpam=disabled -Db_lundef=false
+  - ninja -C build -j$JOBS
+  - DISABLE_ASAN_BROKEN_TESTS=1 meson test -C build --num-processes $JOBS --no-rebuild
   tags:
-  - saas-linux-small-amd64
+  - saas-linux-medium-amd64
   except:
   - tags
   - schedules
@@ -355,8 +418,7 @@ asan/clang/Fedora:
     expire_in: 1 week
     when: on_failure
     paths:
-      - ./*.log
-      - tests/*.log
+      - build/meson-logs/
 
 ubsan/Fedora:
   stage: testing
@@ -364,13 +426,12 @@ ubsan/Fedora:
   script:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
-  - autoreconf -fvi
-  - export UBCFLAGS="-Wall -Wextra -fsanitize=undefined -fsanitize=bool -fsanitize=alignment -fsanitize=null -fsanitize=bounds-strict -fsanitize=enum -fno-sanitize-recover -g -O2 -Werror"
-  - CFLAGS="$UBCFLAGS" ./configure
-  - make -j$JOBS
-  - make check -j$JOBS CFLAGS="$UBCFLAGS -Wno-unused-function -Wno-unused-parameter"
+  - export UBCFLAGS="-Wall -Wextra -fsanitize=undefined -fsanitize=bool -fsanitize=alignment -fsanitize=null -fsanitize=bounds-strict -fsanitize=enum -fno-sanitize-recover -g -O2 -Werror -Wno-unused-function -Wno-unused-parameter"
+  - CFLAGS="$UBCFLAGS" meson setup build
+  - ninja -C build -j$JOBS
+  - meson test -C build --num-processes $JOBS --no-rebuild
   tags:
-  - saas-linux-small-amd64
+  - saas-linux-medium-amd64
   except:
   - tags
   - schedules
@@ -378,18 +439,16 @@ ubsan/Fedora:
     expire_in: 1 week
     when: on_failure
     paths:
-      - ./*.log
-      - tests/*.log
+      - build/meson-logs/
 
 static-analyzer/Fedora:
   stage: preliminaries
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:
-  - autoreconf -fvi -Werror
-  - scan-build ./configure --enable-oidc-auth --enable-latency-stats --without-protobuf
-  - scan-build --status-bugs -o scan-build-src make -j$JOBS
+  - meson setup build -Doidc-auth=enabled -Dlatency-stats=enabled -Dlocal-protobuf=true
+  - scan-build --status-bugs -o scan-build-src ninja -C build -j$JOBS
   tags:
-  - saas-linux-small-amd64
+  - saas-linux-medium-amd64
   except:
   - tags
   - schedules
@@ -403,7 +462,7 @@ codingstyle/Fedora:
   stage: preliminaries
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:
-  - find src/ tests/ -name '*.[ch]'| grep -Ev '^(src/http-heads.h|src/pcl|src/protobuf|src/ccan|src/gnulib|src/inih|src/llhttp)'| xargs -I{} clang-format -style=file --dry-run {} -Werror
+  - find src/ tests/ -name '*.[ch]'| grep -Ev '^(src/http-heads.c|src/cfg.pb-c|src/ipc.pb-c|src/ctl.pb-c|src/pcl|src/protobuf|src/ccan|src/gnulib|src/inih|src/llhttp)'| xargs -I{} clang-format -style=file --dry-run {} -Werror
   tags:
   - saas-linux-small-amd64
   except:
@@ -414,12 +473,9 @@ codingstyle/Fedora:
   stage: testing
   script:
   - git submodule update --init
-  - sh autogen.sh
-  - mkdir build
-  - cd build
-  - LIBS="-L/usr/local/lib" ../configure --disable-nls --without-root-tests
-  - gmake -j$JOBS
-  - gmake check -j$JOBS
+  - meson setup build -Droot-tests=false
+  - ninja -C build -j$JOBS
+  - meson test -C build --num-processes $JOBS --no-rebuild
   tags:
   - freebsd
   only:
@@ -431,16 +487,15 @@ codingstyle/Fedora:
     expire_in: 1 week
     when: on_failure
     paths:
-      - build/*.log
-      - build/tests/*.log
+      - build/meson-logs/
 
 pages:
   stage: deploy
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:
   - mkdir -p public/coverage
-  - make V=1 CODE_COVERAGE_OUTPUT_DIRECTORY=public/coverage CODE_COVERAGE_BRANCH_COVERAGE=1 code-coverage-capture
-  - make CODE_COVERAGE_OUTPUT_DIRECTORY=public/coverage local-code-coverage-output
+  - ninja -C build coverage-html
+  - cp -r build/meson-logs/coveragereport/* public/coverage/
   tags:
   - saas-linux-small-amd64
   dependencies:
@@ -456,7 +511,7 @@ triage:
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:
   - gem install gitlab-triage
-  - gitlab-triage --source-id $CI_PROJECT_ID --token "$API_TOKEN"
+  - gitlab-triage --source-id $CI_PROJECT_ID --token "$API_TOKEN" -d
   tags:
   - saas-linux-small-amd64
   only:
@@ -467,6 +522,9 @@ codespell/Fedora:
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:
   - git submodule update --init
-  - autoreconf -fvi
-  - ./configure
-  - make codespell
+  - codespell .
+  tags:
+  - saas-linux-small-amd64
+  except:
+  - tags
+  - schedules

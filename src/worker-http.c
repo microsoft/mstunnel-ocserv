@@ -41,6 +41,12 @@
 #define CS_AES128_GCM "OC-DTLS1_2-AES128-GCM"
 #define CS_AES256_GCM "OC-DTLS1_2-AES256-GCM"
 
+/* Maximum accumulated HTTP request body size. Sized to comfortably cover the
+ * largest legitimate payload (KKDCP Kerberos messages, ~64 KB encoded) while
+ * preventing unauthenticated clients from exhausting worker memory. */
+#define MAX_HTTP_REQUEST_BODY (256 * 1024)
+#define MAX_HTTP_HEADERS_SIZE (16 * 1024)
+
 struct known_urls_st {
 	const char *url;
 	unsigned int url_size;
@@ -55,10 +61,6 @@ static const struct known_urls_st known_urls[] = {
 	LL("/", get_auth_handler, post_auth_handler),
 	LL("/auth", get_auth_handler, post_auth_handler),
 	LL("/VPN", get_auth_handler, post_auth_handler),
-	LL("/cert.pem", get_cert_handler, NULL),
-	LL("/cert.cer", get_cert_der_handler, NULL),
-	LL("/ca.pem", get_ca_handler, NULL),
-	LL("/ca.cer", get_ca_der_handler, NULL),
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	LL_DIR("/profiles", get_config_handler, NULL),
 	LL("/VPNManifest.xml", get_string_handler, NULL),
@@ -195,10 +197,10 @@ static const dtls_ciphersuite_st ciphersuites12[] = {
 };
 
 #define STR_ST(x) { .data = (uint8_t *)x, .length = sizeof(x) - 1 }
-static const str_st sensitve_http_headers[] = { STR_ST("Cookie"),
-						STR_ST("X-DTLS-Master-Secret"),
-						STR_ST("Authorization"),
-						{ NULL, 0 } };
+static const str_st sensitive_http_headers[] = { STR_ST("Cookie"),
+						 STR_ST("X-DTLS-Master-Secret"),
+						 STR_ST("Authorization"),
+						 { NULL, 0 } };
 
 #ifdef HAVE_LZ4
 /* Wrappers over LZ4 functions */
@@ -279,10 +281,10 @@ static bool header_is_sensitive(str_st *header)
 {
 	size_t i;
 
-	for (i = 0; sensitve_http_headers[i].length != 0; i++) {
-		if ((header->length == sensitve_http_headers[i].length) &&
+	for (i = 0; sensitive_http_headers[i].length != 0; i++) {
+		if ((header->length == sensitive_http_headers[i].length) &&
 		    (strncasecmp((char *)header->data,
-				 (char *)sensitve_http_headers[i].data,
+				 (char *)sensitive_http_headers[i].data,
 				 header->length) == 0))
 			return true;
 	}
@@ -303,10 +305,10 @@ static void header_value_check(struct worker_st *ws, struct http_req_st *req)
 	int want_cipher;
 	int want_mac;
 
-	if (req->value.length <= 0)
+	if (req->value.length == 0)
 		return;
 
-	if (WSPCONFIG(ws)->log_level < OCLOG_SENSITIVE &&
+	if (WSSCONFIG(ws)->log_level < OCLOG_SENSITIVE &&
 	    header_is_sensitive(&req->header))
 		oclog(ws, LOG_HTTP_DEBUG, "HTTP processing: %.*s: (censored)",
 		      (int)req->header.length, req->header.data);
@@ -326,7 +328,7 @@ static void header_value_check(struct worker_st *ws, struct http_req_st *req)
 
 	switch (req->next_header) {
 	case HEADER_MASTER_SECRET:
-		if (req->use_psk || !WSCONFIG(ws)->dtls_legacy) /* ignored */
+		if (req->use_psk || !WSRCONFIG(ws)->dtls_legacy) /* ignored */
 			break;
 
 		if (value_length < TLS_MASTER_SIZE * 2) {
@@ -349,6 +351,8 @@ static void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		}
 		memcpy(req->hostname, value, value_length);
 		req->hostname[value_length] = 0;
+
+		strip_domain(req->hostname);
 
 		/* check validity */
 		if (!valid_hostname(req->hostname)) {
@@ -479,7 +483,7 @@ static void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		if (p != NULL && (p[sizeof(DTLS_PROTO_INDICATOR) - 1] == 0 ||
 				  p[sizeof(DTLS_PROTO_INDICATOR) - 1] == ':')) {
 			/* OpenConnect DTLS setup was detected. */
-			if (WSCONFIG(ws)->dtls_psk) {
+			if (WSRCONFIG(ws)->dtls_psk) {
 				req->use_psk = 1;
 				req->master_secret_set =
 					1; /* we don't need it */
@@ -488,7 +492,7 @@ static void header_value_check(struct worker_st *ws, struct http_req_st *req)
 			}
 		}
 
-		if (req->use_psk || !WSCONFIG(ws)->dtls_legacy)
+		if (req->use_psk || !WSRCONFIG(ws)->dtls_legacy)
 			break;
 
 		if (req->selected_ciphersuite) /* if set via HEADER_DTLS12_CIPHERSUITE */
@@ -536,7 +540,7 @@ ciphersuite_finish:
 
 		break;
 	case HEADER_DTLS12_CIPHERSUITE:
-		if (req->use_psk || !WSCONFIG(ws)->dtls_legacy) {
+		if (req->use_psk || !WSRCONFIG(ws)->dtls_legacy) {
 			break;
 		}
 
@@ -558,7 +562,7 @@ ciphersuite_finish:
 		if (p != NULL && (p[sizeof(DTLS_PROTO_INDICATOR) - 1] == 0 ||
 				  p[sizeof(DTLS_PROTO_INDICATOR) - 1] == ':')) {
 			/* OpenConnect DTLS setup was detected. */
-			if (WSCONFIG(ws)->dtls_psk) {
+			if (WSRCONFIG(ws)->dtls_psk) {
 				req->use_psk = 1;
 				req->master_secret_set =
 					1; /* we don't need it */
@@ -618,7 +622,7 @@ ciphersuite12_finish:
 #ifdef ENABLE_COMPRESSION
 	case HEADER_DTLS_ENCODING:
 	case HEADER_CSTP_ENCODING:
-		if (WSCONFIG(ws)->enable_compression == 0)
+		if (WSRCONFIG(ws)->enable_compression == 0)
 			break;
 
 		if (req->next_header == HEADER_DTLS_ENCODING)
@@ -645,12 +649,16 @@ ciphersuite12_finish:
 		break;
 #endif
 
-	case HEADER_CSTP_BASE_MTU:
-		req->link_mtu = atoi((char *)value);
+	case HEADER_CSTP_BASE_MTU: {
+		unsigned long v = strtoul((char *)value, NULL, 10);
+		req->link_mtu = (v <= MAX_MSG_SIZE) ? (unsigned int)v : 0;
 		break;
-	case HEADER_CSTP_MTU:
-		req->tunnel_mtu = atoi((char *)value);
+	}
+	case HEADER_CSTP_MTU: {
+		unsigned long v = strtoul((char *)value, NULL, 10);
+		req->tunnel_mtu = (v <= MAX_MSG_SIZE) ? (unsigned int)v : 0;
 		break;
+	}
 	case HEADER_CSTP_ATYPE:
 		if (memmem(value, value_length, "IPv4", 4) == NULL)
 			req->no_ipv4 = 1;
@@ -719,14 +727,19 @@ ciphersuite12_finish:
 				    nlen > sizeof(ws->sid) + 8)
 					return;
 
+				if (sizeof(ws->buffer) < sizeof(ws->sid) + 8)
+					abort();
+
 				ret = oc_base64_decode((uint8_t *)p, tmplen,
-						       ws->sid, &nlen);
+						       ws->buffer, &nlen);
 				if (ret == 0 || nlen != sizeof(ws->sid)) {
 					oclog(ws, LOG_SENSITIVE,
 					      "could not decode sid: %.*s",
 					      tmplen, p);
 					ws->sid_set = 0;
 				} else {
+					memcpy(ws->sid, ws->buffer,
+					       sizeof(ws->sid));
 					ws->sid_set = 1;
 					oclog(ws, LOG_SENSITIVE,
 					      "received sid: %.*s", tmplen, p);
@@ -774,9 +787,9 @@ url_handler_fn http_post_known_service_check(struct worker_st *ws,
 			return p->post_handler;
 	}
 
-	for (i = 0; i < WSCONFIG(ws)->kkdcp_size; i++) {
-		if (WSCONFIG(ws)->kkdcp[i].url &&
-		    strcmp(WSCONFIG(ws)->kkdcp[i].url, url) == 0)
+	for (i = 0; i < WSRCONFIG(ws)->n_kkdcp; i++) {
+		if (WSRCONFIG(ws)->kkdcp[i]->url &&
+		    strcmp(WSRCONFIG(ws)->kkdcp[i]->url, url) == 0)
 			return post_kkdcp_handler;
 	}
 
@@ -802,7 +815,7 @@ int http_url_cb(llhttp_t *parser, const char *at, size_t length)
 
 	if (length >= sizeof(req->url)) {
 		req->url[0] = 0;
-		return 1;
+		return -1;
 	}
 
 	memcpy(req->url, at, length);
@@ -825,9 +838,18 @@ int http_header_field_cb(llhttp_t *parser, const char *at, size_t length)
 		str_reset(&req->header);
 	}
 
+	if (length > MAX_HTTP_HEADERS_SIZE ||
+	    req->header_bytes > MAX_HTTP_HEADERS_SIZE - length) {
+		oclog(ws, LOG_HTTP_DEBUG,
+		      "HTTP headers size limit exceeded (%zu+%zu > %u)",
+		      req->header_bytes, length, MAX_HTTP_HEADERS_SIZE);
+		return -1;
+	}
+	req->header_bytes += length;
+
 	ret = str_append_data(&req->header, at, length);
 	if (ret < 0)
-		return ret;
+		return -1;
 
 	return 0;
 }
@@ -860,9 +882,18 @@ int http_header_value_cb(llhttp_t *parser, const char *at, size_t length)
 		str_reset(&req->value);
 	}
 
+	if (length > MAX_HTTP_HEADERS_SIZE ||
+	    req->header_bytes > MAX_HTTP_HEADERS_SIZE - length) {
+		oclog(ws, LOG_HTTP_DEBUG,
+		      "HTTP headers size limit exceeded (%zu+%zu > %u)",
+		      req->header_bytes, length, MAX_HTTP_HEADERS_SIZE);
+		return -1;
+	}
+	req->header_bytes += length;
+
 	ret = str_append_data(&req->value, at, length);
 	if (ret < 0)
-		return ret;
+		return -1;
 
 	return 0;
 }
@@ -897,11 +928,32 @@ int http_message_complete_cb(llhttp_t *parser)
 	return 0;
 }
 
+int http_message_begin_cb(llhttp_t *parser)
+{
+	struct worker_st *ws = parser->data;
+	struct http_req_st *req = &ws->req;
+
+	/* headers_complete is 0 at the start of each keep-alive cycle
+	 * (http_req_reset() clears it).  If it is already 1 here a second
+	 * message has started before the first was dispatched — reject. */
+	if (req->headers_complete)
+		return HPE_PAUSED;
+	return 0;
+}
+
 int http_body_cb(llhttp_t *parser, const char *at, size_t length)
 {
 	struct worker_st *ws = parser->data;
 	struct http_req_st *req = &ws->req;
 	char *tmp;
+
+	if (length > MAX_HTTP_REQUEST_BODY ||
+	    req->body_length > MAX_HTTP_REQUEST_BODY - length) {
+		oclog(ws, LOG_HTTP_DEBUG,
+		      "HTTP body length limit exceeded (%u+%zu > %u)",
+		      req->body_length, length, MAX_HTTP_REQUEST_BODY);
+		return 1;
+	}
 
 	tmp = talloc_realloc_size(ws, req->body, req->body_length + length + 1);
 	if (tmp == NULL)
@@ -926,6 +978,7 @@ void http_req_reset(worker_st *ws)
 	ws->req.headers_complete = 0;
 	ws->req.message_complete = 0;
 	ws->req.body_length = 0;
+	ws->req.header_bytes = 0;
 	ws->req.spnego_set = 0;
 	ws->req.url[0] = 0;
 
@@ -954,9 +1007,9 @@ int add_owasp_headers(worker_st *ws)
 {
 	unsigned int i;
 
-	for (i = 0; i < GETCONFIG(ws)->included_http_headers_size; i++) {
+	for (i = 0; i < GETRCONFIG(ws)->n_included_http_headers; i++) {
 		if (cstp_printf(ws, "%s",
-				GETCONFIG(ws)->included_http_headers[i]) < 0 ||
+				GETRCONFIG(ws)->included_http_headers[i]) < 0 ||
 		    cstp_puts(ws, "\r\n") < 0) {
 			return -1;
 		}

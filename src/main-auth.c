@@ -45,60 +45,6 @@
 #include <ccan/list/list.h>
 #include <common.h>
 
-/* Puts the provided PIN into the config's cgroup */
-void put_into_cgroup(main_server_st *s, const char *_cgroup, pid_t pid)
-{
-#ifdef __linux__
-	char *name, *p, *savep;
-	char cgroup[128];
-	char file[_POSIX_PATH_MAX];
-	FILE *fd;
-
-	if (_cgroup == NULL)
-		return;
-
-	/* format: cpu,memory:cgroup-name */
-	strlcpy(cgroup, _cgroup, sizeof(cgroup));
-
-	name = strchr(cgroup, ':');
-	if (name == NULL) {
-		mslog(s, NULL, LOG_ERR, "error parsing cgroup name: %s",
-		      cgroup);
-		return;
-	}
-	name[0] = 0;
-	name++;
-
-	p = strtok_r(cgroup, ",", &savep);
-	while (p != NULL) {
-		mslog(s, NULL, LOG_DEBUG,
-		      "putting process %u to cgroup '%s:%s'", (unsigned int)pid,
-		      p, name);
-
-		snprintf(file, sizeof(file), "/sys/fs/cgroup/%s/%s/tasks", p,
-			 name);
-
-		fd = fopen(file, "w");
-		if (fd == NULL) {
-			mslog(s, NULL, LOG_ERR, "cannot open: %s", file);
-			return;
-		}
-
-		if (fprintf(fd, "%u", (unsigned int)pid) <= 0) {
-			mslog(s, NULL, LOG_ERR, "could not write to: %s", file);
-		}
-		fclose(fd);
-		p = strtok_r(NULL, ",", &savep);
-	}
-
-	return;
-#else
-	if (_cgroup != NULL)
-		mslog(s, NULL, LOG_WARNING,
-		      "Ignoring cgroup option as it is not supported on this system");
-#endif
-}
-
 int send_cookie_auth_reply(main_server_st *s, struct proc_st *proc, AUTHREP r)
 {
 	AuthCookieReplyMsg msg = AUTH_COOKIE_REPLY_MSG__INIT;
@@ -119,6 +65,7 @@ int send_cookie_auth_reply(main_server_st *s, struct proc_st *proc, AUTHREP r)
 
 		msg.sid.data = proc->sid;
 		msg.sid.len = sizeof(proc->sid);
+		msg.session_start_time = proc->session_start_time;
 
 		msg.vname = proc->tun_lease.name;
 		msg.user_name = proc->username;
@@ -211,11 +158,6 @@ int handle_auth_cookie_req(sec_mod_instance_st *sec_mod_instance,
 	if (ret < 0) {
 		mslog(s, proc, LOG_INFO, "could not open session");
 		return -1;
-	}
-
-	/* Put into right cgroup */
-	if (proc->config->cgroup != NULL) {
-		put_into_cgroup(s, proc->config->cgroup, proc->pid);
 	}
 
 	/* disconnect and reuse previous session's IPs*/

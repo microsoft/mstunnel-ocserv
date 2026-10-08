@@ -1,0 +1,349 @@
+#!/bin/bash
+#
+# Copyright (C) 2026 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# This file is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This file is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this file; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+# Test that ocserv-fw-iptables and/or ocserv-fw-nftables install and remove
+# firewall rules correctly for each supported feature combination.
+#
+# When FW_SCRIPT is set, only that script is tested.
+# Otherwise, all scripts for which the required tool is present are tested.
+#
+# Exits 77 (skip) only when run without root.
+
+srcdir=${srcdir:-.}
+DEVICE="octest0"
+
+if test "$(id -u)" != "0"; then
+	echo "Skipping: requires root"
+	exit 77
+fi
+
+cleanup_script() {
+	local script="$1"
+	REASON=disconnect DEVICE=$DEVICE sh "$script" 2>/dev/null || true
+	REASON=disconnect DEVICE="${DEVICE}a" sh "$script" 2>/dev/null || true
+	REASON=disconnect DEVICE="${DEVICE}b" sh "$script" 2>/dev/null || true
+	sh "$script" --removeall 2>/dev/null || true
+}
+
+cleanup() {
+	for script in $SCRIPTS_TO_TEST; do
+		cleanup_script "$script"
+	done
+	ip link del "$DEVICE" 2>/dev/null || true
+	ip link del "${DEVICE}a" 2>/dev/null || true
+	ip link del "${DEVICE}b" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+# Build the list of scripts to test
+if test -n "$FW_SCRIPT"; then
+	SCRIPTS_TO_TEST="$FW_SCRIPT"
+else
+	SCRIPTS_TO_TEST=""
+	for s in "$srcdir/../src/ocserv-fw-iptables" "$srcdir/../src/ocserv-fw-nftables"; do
+		case "$s" in
+			*nftables) tool=nft ;;
+			*)         tool=iptables ;;
+		esac
+		if command -v "$tool" >/dev/null 2>&1; then
+			SCRIPTS_TO_TEST="$SCRIPTS_TO_TEST $s"
+		fi
+	done
+	if test -z "$SCRIPTS_TO_TEST"; then
+		echo "FAIL: neither iptables nor nft found"
+		exit 1
+	fi
+fi
+
+fail() {
+	echo "FAIL: $1"
+	exit 1
+}
+
+dump_rules() {
+	case "$TOOL" in
+		nft)      nft list ruleset 2>/dev/null ;;
+		iptables) iptables-save 2>/dev/null; ip6tables-save 2>/dev/null ;;
+	esac
+}
+
+check_rules_exist() {
+	local desc="$1"
+	local pattern="$2"
+	dump_rules | grep -qE -- "$pattern" || fail "expected rule not found: $desc (pattern: $pattern)"
+}
+
+check_rules_absent() {
+	local desc="$1"
+	local pattern="$2"
+	dump_rules | grep -qE -- "$pattern" && fail "unexpected rule still present: $desc (pattern: $pattern)" || true
+}
+
+run_tests() {
+	# FW_SCRIPT and TOOL must be set by the caller
+
+	ip link add dev "$DEVICE" type dummy 2>/dev/null || true
+	ip link set "$DEVICE" up
+
+	echo "Testing firewall script: $FW_SCRIPT (tool: $TOOL)"
+
+	# --- Test 1: basic connect / disconnect ---
+	echo -n "  Test 1: basic connect/disconnect ... "
+
+	REASON=connect DEVICE=$DEVICE sh "$FW_SCRIPT"
+
+	case "$TOOL" in
+		nft)
+			check_rules_exist "ESTABLISHED/RELATED rule" "ct state (established,related|related,established) accept"
+			;;
+		iptables)
+			check_rules_exist "ESTABLISHED/RELATED rule" "RELATED,ESTABLISHED"
+			;;
+	esac
+
+	REASON=disconnect DEVICE=$DEVICE sh "$FW_SCRIPT"
+
+	case "$TOOL" in
+		nft)
+			check_rules_absent "nft table for device" "table inet ocserv_${DEVICE}"
+			;;
+		iptables)
+			check_rules_absent "iptables rules for device" "${DEVICE}.*ocserv-fw|ocserv-fw.*${DEVICE}"
+			;;
+	esac
+
+	echo "ok"
+
+	# --- Test 2: DNS allow rules ---
+	echo -n "  Test 2: DNS rules ... "
+
+	REASON=connect DEVICE=$DEVICE OCSERV_DNS4="192.0.2.1" OCSERV_DNS6="2001:db8::1" sh "$FW_SCRIPT"
+
+	case "$TOOL" in
+		nft)
+			check_rules_exist "IPv4 DNS accept rule" "192\.0\.2\.1.*dport 53.*accept"
+			check_rules_exist "IPv6 DNS accept rule" "2001:db8::1.*dport 53.*accept"
+			;;
+		iptables)
+			check_rules_exist "IPv4 DNS accept rule" "192\.0\.2\.1.*--dport 53"
+			check_rules_exist "IPv6 DNS accept rule" "2001:db8::1.*--dport 53"
+			;;
+	esac
+
+	REASON=disconnect DEVICE=$DEVICE sh "$FW_SCRIPT"
+	echo "ok"
+
+	# --- Test 3: RESTRICT_TO_ROUTES=1 with explicit routes ---
+	echo -n "  Test 3: route restriction with explicit routes ... "
+
+	REASON=connect DEVICE=$DEVICE \
+		OCSERV_RESTRICT_TO_ROUTES=1 \
+		OCSERV_ROUTES="10.0.0.0/8 fd00::/8" \
+		OCSERV_ROUTES4="10.0.0.0/8" \
+		OCSERV_ROUTES6="fd00::/8" \
+		sh "$FW_SCRIPT"
+
+	case "$TOOL" in
+		nft)
+			check_rules_exist "IPv4 route accept rule" "10\.0\.0\.0/8.*accept"
+			check_rules_exist "IPv6 route accept rule" "fd00::/8.*accept"
+			check_rules_exist "default reject rule"      "iif \"${DEVICE}\" reject"
+			;;
+		iptables)
+			check_rules_exist "IPv4 route accept rule" "10\.0\.0\.0/8.*ACCEPT"
+			check_rules_exist "IPv6 route accept rule" "fd00::/8.*ACCEPT"
+			check_rules_exist "default REJECT rule"    "${DEVICE}.*REJECT"
+			;;
+	esac
+
+	REASON=disconnect DEVICE=$DEVICE sh "$FW_SCRIPT"
+	echo "ok"
+
+	# --- Test 4: RESTRICT_TO_ROUTES=1 with NO_ROUTES (deny-list) ---
+	echo -n "  Test 4: route restriction with no-routes deny-list ... "
+
+	REASON=connect DEVICE=$DEVICE \
+		OCSERV_RESTRICT_TO_ROUTES=1 \
+		OCSERV_NO_ROUTES="10.1.0.0/16" \
+		OCSERV_NO_ROUTES4="10.1.0.0/16" \
+		sh "$FW_SCRIPT"
+
+	case "$TOOL" in
+		nft)
+			check_rules_exist "IPv4 no-route reject rule" "10\.1\.0\.0/16.*reject"
+			check_rules_exist "allow-all fall-through"  "iif \"${DEVICE}\" accept"
+			;;
+		iptables)
+			check_rules_exist "IPv4 no-route REJECT rule" "10\.1\.0\.0/16.*REJECT"
+			check_rules_exist "allow-all fall-through"    "${DEVICE}.*ACCEPT"
+			;;
+	esac
+
+	REASON=disconnect DEVICE=$DEVICE sh "$FW_SCRIPT"
+	echo "ok"
+
+	# --- Test 5: RESTRICT_TO_ROUTES=1 with no routes at all ---
+	echo -n "  Test 5: route restriction with no routes (allow-all) ... "
+
+	REASON=connect DEVICE=$DEVICE \
+		OCSERV_RESTRICT_TO_ROUTES=1 \
+		sh "$FW_SCRIPT"
+
+	case "$TOOL" in
+		nft)
+			check_rules_exist "allow-all fall-through" "iif \"${DEVICE}\" accept"
+			;;
+		iptables)
+			check_rules_exist "allow-all fall-through" "${DEVICE}.*ACCEPT"
+			;;
+	esac
+
+	REASON=disconnect DEVICE=$DEVICE sh "$FW_SCRIPT"
+	echo "ok"
+
+	# --- Test 6: RESTRICT_TO_ROUTES=1 with dotted-decimal masks (allow-list) ---
+	# ocserv always normalises IPv4 routes to dotted-decimal notation
+	# (e.g. 10.0.0.0/255.0.0.0) before passing them to the fw script.
+	# The nftables script must convert these to CIDR before use.
+	echo -n "  Test 6: route restriction with dotted-decimal subnet masks (allow-list) ... "
+
+	REASON=connect DEVICE=$DEVICE \
+		OCSERV_RESTRICT_TO_ROUTES=1 \
+		OCSERV_ROUTES="10.0.0.0/255.0.0.0" \
+		OCSERV_ROUTES4="10.0.0.0/255.0.0.0" \
+		sh "$FW_SCRIPT"
+
+	case "$TOOL" in
+		nft)
+			check_rules_exist "IPv4 route accept rule in CIDR" "10\.0\.0\.0/8.*accept"
+			check_rules_exist "default reject rule"              "iif \"${DEVICE}\" reject"
+			;;
+		iptables)
+			check_rules_exist "IPv4 route accept rule" "10\.0\.0\.0.*ACCEPT"
+			check_rules_exist "default REJECT rule"    "${DEVICE}.*REJECT"
+			;;
+	esac
+
+	REASON=disconnect DEVICE=$DEVICE sh "$FW_SCRIPT"
+	echo "ok"
+
+	# --- Test 7: RESTRICT_TO_ROUTES=1 with dotted-decimal masks (deny-list) ---
+	echo -n "  Test 7: route restriction with dotted-decimal subnet masks (deny-list) ... "
+
+	REASON=connect DEVICE=$DEVICE \
+		OCSERV_RESTRICT_TO_ROUTES=1 \
+		OCSERV_NO_ROUTES="10.1.0.0/255.255.0.0" \
+		OCSERV_NO_ROUTES4="10.1.0.0/255.255.0.0" \
+		sh "$FW_SCRIPT"
+
+	case "$TOOL" in
+		nft)
+			check_rules_exist "IPv4 no-route reject rule in CIDR" "10\.1\.0\.0/16.*reject"
+			check_rules_exist "allow-all fall-through"          "iif \"${DEVICE}\" accept"
+			;;
+		iptables)
+			check_rules_exist "IPv4 no-route REJECT rule" "10\.1\.0\.0.*REJECT"
+			check_rules_exist "allow-all fall-through"    "${DEVICE}.*ACCEPT"
+			;;
+	esac
+
+	REASON=disconnect DEVICE=$DEVICE sh "$FW_SCRIPT"
+	echo "ok"
+
+	# --- Test 8: DENY_PORTS ---
+	echo -n "  Test 8: deny ports ... "
+
+	REASON=connect DEVICE=$DEVICE \
+		OCSERV_DENY_PORTS="tcp 443" \
+		sh "$FW_SCRIPT"
+
+	case "$TOOL" in
+		nft)
+			check_rules_exist "tcp port 443 reject" "dport 443 reject"
+			;;
+		iptables)
+			check_rules_exist "tcp port 443 REJECT" "--dport 443.*REJECT"
+			;;
+	esac
+
+	REASON=disconnect DEVICE=$DEVICE sh "$FW_SCRIPT"
+	echo "ok"
+
+	# --- Test 9: ALLOW_PORTS ---
+	echo -n "  Test 9: allow ports ... "
+
+	REASON=connect DEVICE=$DEVICE \
+		OCSERV_ALLOW_PORTS="tcp 443" \
+		sh "$FW_SCRIPT"
+
+	case "$TOOL" in
+		nft)
+			check_rules_exist "tcp port 443 jump to route chain" "dport 443 jump"
+			check_rules_exist "default reject after allow-ports" "iif \"${DEVICE}\" reject"
+			;;
+		iptables)
+			check_rules_exist "tcp port 443 jump to per-device chain" "--dport 443.*FORWARD-ocserv-fw-${DEVICE}"
+			check_rules_exist "default REJECT after allow-ports" "${DEVICE}.*REJECT"
+			;;
+	esac
+
+	REASON=disconnect DEVICE=$DEVICE sh "$FW_SCRIPT"
+	echo "ok"
+
+	# --- Test 10: --removeall clears all rules ---
+	echo -n "  Test 10: --removeall ... "
+
+	ip link add dev "${DEVICE}a" type dummy 2>/dev/null || true
+	ip link set "${DEVICE}a" up
+	ip link add dev "${DEVICE}b" type dummy 2>/dev/null || true
+	ip link set "${DEVICE}b" up
+
+	REASON=connect DEVICE="${DEVICE}a" sh "$FW_SCRIPT"
+	REASON=connect DEVICE="${DEVICE}b" sh "$FW_SCRIPT"
+
+	sh "$FW_SCRIPT" --removeall
+
+	case "$TOOL" in
+		nft)
+			check_rules_absent "any ocserv nft tables"    "table inet ocserv_"
+			;;
+		iptables)
+			check_rules_absent "any ocserv iptables rules" "comment ocserv-fw"
+			;;
+	esac
+
+	echo "ok"
+
+	# final cleanup for this script
+	cleanup_script "$FW_SCRIPT"
+	ip link del "${DEVICE}a" 2>/dev/null || true
+	ip link del "${DEVICE}b" 2>/dev/null || true
+}
+
+for FW_SCRIPT in $SCRIPTS_TO_TEST; do
+	case "$FW_SCRIPT" in
+		*nftables) TOOL=nft ;;
+		*)         TOOL=iptables ;;
+	esac
+	run_tests
+done
+
+echo "All tests passed."
+exit 0

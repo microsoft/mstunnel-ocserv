@@ -32,10 +32,6 @@
 #define GNUTLS_DTLS1_2 202
 #endif
 
-#if GNUTLS_VERSION_NUMBER >= 0x030305
-#define ZERO_COPY
-#endif
-
 #define PSK_KEY_SIZE 32
 #if TLS_MASTER_SIZE < PSK_KEY_SIZE
 #error
@@ -169,12 +165,10 @@ ssize_t dtls_send(struct dtls_st *dtls, const void *data, size_t data_size);
 /* packet API */
 inline static void packet_deinit(void *p)
 {
-#ifdef ZERO_COPY
 	gnutls_packet_t packet = p;
 
 	if (packet)
 		gnutls_packet_deinit(packet);
-#endif
 }
 
 ssize_t cstp_recv_packet(struct worker_st *ws, gnutls_datum_t *data, void **p);

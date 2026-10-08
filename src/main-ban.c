@@ -74,7 +74,7 @@ void *main_ban_db_init(main_server_st *s)
 	struct htable *db = talloc(s, struct htable);
 
 	if (db == NULL) {
-		oc_syslog(LOG_ERR, "error initializing ban DB\n");
+		oc_syslog(LOG_ERR, "error initializing ban DB");
 		exit(EXIT_FAILURE);
 	}
 
@@ -102,7 +102,7 @@ unsigned int main_ban_db_elems(main_server_st *s)
 	time_t now = time(NULL);
 	unsigned int banned = 0;
 
-	if (db == NULL || GETCONFIG(s)->max_ban_score == 0)
+	if (db == NULL || GETRCONFIG(s)->max_ban_score == 0)
 		return 0;
 
 	t = htable_first(db, &iter);
@@ -130,13 +130,13 @@ static int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip,
 	struct ban_entry_st *e;
 	ban_entry_st t;
 	time_t now = time(NULL);
-	time_t expiration = now + GETCONFIG(s)->min_reauth_time;
+	time_t expiration = now + GETRCONFIG(s)->ban_time;
 	int ret = 0;
 	char str_ip[MAX_IP_STR];
 	const char *p_str_ip = NULL;
 	unsigned int print_msg;
 
-	if (db == NULL || GETCONFIG(s)->max_ban_score == 0 || ip == NULL ||
+	if (db == NULL || GETRCONFIG(s)->max_ban_score == 0 || ip == NULL ||
 	    (ip_size != 4 && ip_size != 16))
 		return 0;
 
@@ -168,7 +168,7 @@ static int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip,
 		 *     (to avoid prematurely lifting an active ban)
 		 */
 		if ((now > e->expires && IS_BANNED(s, e)) ||
-		    (now > e->last_reset + GETCONFIG(s)->ban_reset_time &&
+		    (now > e->last_reset + GETRCONFIG(s)->ban_reset_time &&
 		     !IS_BANNED(s, e))) {
 			e->score = 0;
 			e->last_reset = now;
@@ -178,7 +178,7 @@ static int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip,
 	/* if the user is already banned, don't increase the expiration time
 	 * on further attempts, or the user will never be unbanned if he
 	 * periodically polls the server */
-	if (e->score < GETCONFIG(s)->max_ban_score) {
+	if (e->score < GETRCONFIG(s)->max_ban_score) {
 		e->expires = expiration;
 		print_msg = 1;
 	} else
@@ -193,7 +193,7 @@ static int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip,
 	else
 		p_str_ip = inet_ntop(AF_INET6, ip, str_ip, sizeof(str_ip));
 
-	if (GETCONFIG(s)->max_ban_score > 0 && IS_BANNED(s, e)) {
+	if (GETRCONFIG(s)->max_ban_score > 0 && IS_BANNED(s, e)) {
 		if (print_msg && p_str_ip) {
 			char date[256];
 			struct tm tm;
@@ -230,7 +230,7 @@ int add_str_ip_to_ban_list(main_server_st *s, const char *ip,
 	ban_entry_st t;
 	int ret = 0;
 
-	if (db == NULL || GETCONFIG(s)->max_ban_score == 0 || ip == NULL ||
+	if (db == NULL || GETRCONFIG(s)->max_ban_score == 0 || ip == NULL ||
 	    ip[0] == 0)
 		return 0;
 
@@ -293,7 +293,7 @@ unsigned int check_if_banned(main_server_st *s, struct sockaddr_storage *addr,
 	unsigned int in_size;
 	char txt[MAX_IP_STR];
 
-	if (db == NULL || GETCONFIG(s)->max_ban_score == 0)
+	if (db == NULL || GETRCONFIG(s)->max_ban_score == 0)
 		return 0;
 
 	(void)(txt);
@@ -322,7 +322,7 @@ unsigned int check_if_banned(main_server_st *s, struct sockaddr_storage *addr,
 
 	/* add its current connection points */
 	add_ip_to_ban_list(s, t.ip.ip, t.ip.size,
-			   GETCONFIG(s)->ban_points_connect);
+			   GETRCONFIG(s)->ban_points_connect);
 
 	now = time(NULL);
 	e = htable_get(db, rehash(&t, NULL), ban_entry_cmp, &t);
@@ -330,7 +330,7 @@ unsigned int check_if_banned(main_server_st *s, struct sockaddr_storage *addr,
 		if (now > e->expires)
 			return 0;
 
-		if (e->score >= GETCONFIG(s)->max_ban_score) {
+		if (e->score >= GETRCONFIG(s)->max_ban_score) {
 			mslog(s, NULL, LOG_INFO,
 			      "rejected connection from banned IP: %s",
 			      human_addr2((struct sockaddr *)addr, addr_size,
@@ -354,7 +354,7 @@ void cleanup_banned_entries(main_server_st *s)
 	t = htable_first(db, &iter);
 	while (t != NULL) {
 		if (now >= t->expires &&
-		    now > t->last_reset + GETCONFIG(s)->ban_reset_time) {
+		    now > t->last_reset + GETRCONFIG(s)->ban_reset_time) {
 			htable_delval(db, &iter);
 			talloc_free(t);
 		}
@@ -402,11 +402,17 @@ int if_address_init(main_server_st *s)
 			continue;
 		}
 		family = ifa->ifa_addr->sa_family;
-		if (family == AF_INET || family == AF_INET6) {
+		if (family == AF_INET) {
 			memcpy(&local_if_addresses[count].if_addr,
-			       ifa->ifa_addr, sizeof(struct sockaddr));
+			       ifa->ifa_addr, sizeof(struct sockaddr_in));
 			memcpy(&local_if_addresses[count].if_netmask,
-			       ifa->ifa_netmask, sizeof(struct sockaddr));
+			       ifa->ifa_netmask, sizeof(struct sockaddr_in));
+			count++;
+		} else if (family == AF_INET6) {
+			memcpy(&local_if_addresses[count].if_addr,
+			       ifa->ifa_addr, sizeof(struct sockaddr_in6));
+			memcpy(&local_if_addresses[count].if_netmask,
+			       ifa->ifa_netmask, sizeof(struct sockaddr_in6));
 			count++;
 		}
 	}
@@ -466,7 +472,7 @@ static bool if_address_test_local(main_server_st *s,
 	for (index = 0; index < s->if_addresses_count; index++) {
 		if_address_st *ifa = &s->if_addresses[index];
 
-		if (ifa->if_addr.sa_family != addr->ss_family)
+		if (ifa->if_addr.ss_family != addr->ss_family)
 			continue;
 
 		switch (addr->ss_family) {

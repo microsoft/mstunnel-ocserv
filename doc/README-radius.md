@@ -106,6 +106,11 @@ ATTRIBUTE	Framed-Route		22	string
 # format "OU=group1;group2" or by a single group name
 # in the attribute. It is possible to specify multiple
 # groups in separate class attributes.
+# The separator used in the OU= format defaults to ';' and can
+# be changed via the group-separator option (accepted values:
+# 'semicolon', 'comma'). For example, to use comma-separated
+# groups as sent by Freeradius:
+#   auth = "radius[config=...,group-separator=comma]"
 # Note that this works only when groupconfig is set to
 # true, and if the groups sent by the server are made known
 # to ocserv, via the select-group config variable.

@@ -39,11 +39,8 @@ DEBUG="-d 3"
 fi
 
 function finish {
-  set +e
   echo " * Cleaning up..."
-  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
-  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
-  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  cleanup_client_server
   test -n "${OUTFILE}" && rm -f ${OUTFILE} >/dev/null 2>&1
 }
 trap finish EXIT

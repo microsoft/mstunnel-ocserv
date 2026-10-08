@@ -30,8 +30,8 @@ eval "${GETPORT}"
 
 echo "Testing ocserv and user route application... "
 
-TMPFILE1=${srcdir}/test-user-config.tmp
-TMPFILE2=${srcdir}/test-user-config-2.tmp
+TMPFILE1=test-user-config.$$.tmp
+TMPFILE2=test-user-config-2.$$.tmp
 
 rm -f ${TMPFILE1}
 rm -f ${TMPFILE2}
@@ -151,8 +151,26 @@ fi
 
 echo ok
 
+echo -n "Checking if user-specific 'tunnel-all-dns: true' has been sent... "
+CONTENTS=`cat ${TMPFILE1}|grep X-CSTP-Tunnel-All-DNS|grep true`
+if test -z "$CONTENTS";then
+	cat ${TMPFILE1}|grep X-CSTP-Tunnel-All-DNS
+	fail $PID "Expected 'X-CSTP-Tunnel-All-DNS: true' but it was missing or incorrect"
+fi
+
+echo ok
+
 rm -f ${TMPFILE1}
 rm -f ${TMPFILE2}
+
+
+sed -i 's/tunnel-all-dns = false/tunnel-all-dns = true/g' ${CONFIG}
+if ! grep 'tunnel-all-dns = true' ${CONFIG} >/dev/null;then
+	fail $PID "Configuration update failed: 'tunnel-all-dns = true' not found in ${CONFIG}"
+fi
+echo Reloading ocserv...
+kill -HUP $PID
+sleep 4
 
 echo -n "Re-connecting to check the ipv4-network... "
 $OPENCONNECT -v localhost:$PORT --sslkey "${srcdir}/certs/user-key.pem" -c "${srcdir}/certs/user-cert-testipnet.pem" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s /bin/true </dev/null >${TMPFILE1} 2>&1 & kpid3=$!
@@ -178,6 +196,15 @@ cat ${TMPFILE1}|grep X-CSTP-Split-DNS|grep example.com >/dev/null
 if test $? != 0;then
 	cat ${TMPFILE1}|grep X-CSTP-Split-DNS
 	fail $PID "Temporary file contents are not correct; X-CSTP-Split-DNS did not contain main config value"
+fi
+
+echo ok
+
+echo -n "Checking if user-specific 'tunnel-all-dns: false' has been sent... "
+CONTENTS=`cat ${TMPFILE1}|grep X-CSTP-Tunnel-All-DNS|grep false`
+if test -z "$CONTENTS";then
+	cat ${TMPFILE1}|grep X-CSTP-Tunnel-All-DNS
+	fail $PID "Expected 'X-CSTP-Tunnel-All-DNS: false' but it was missing or incorrect"
 fi
 
 echo ok

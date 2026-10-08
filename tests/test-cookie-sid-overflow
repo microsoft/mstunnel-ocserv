@@ -1,0 +1,131 @@
+#!/bin/bash
+#
+# Copyright (C) 2026 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with ocserv; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+# Regression test for issue #719: heap buffer overflow via oversized
+# webvpncontext= and webvpn= cookie values.
+#
+# Both cookies are decoded into fixed-size buffers (SID_SIZE = 32 bytes).
+# A pre-decode bounds check must reject values whose decoded size exceeds the
+# buffer before any decoding takes place.  Without the check the decoder
+# writes attacker-controlled data past the end of the buffer, corrupting
+# worker_st and crashing the worker (connection reset: HTTP status "000").
+#
+# Attack surface: remote, unauthenticated, via Cookie header.
+#
+# Scenario 1 – webvpncontext= (vulnerable before fix):
+#   nlen = BASE64_DECODE_LENGTH(tmplen) can be >> SID_SIZE=32.  Without a
+#   pre-check the decoder writes up to nlen bytes into ws->sid (32 bytes),
+#   overwriting the rest of worker_st.  The worker segfaults before it can
+#   send an HTTP response.
+#
+# Scenario 2 – webvpn= (existing guard):
+#   The webvpn= branch already performs the pre-check and decodes into the
+#   large ws->buffer scratch area.  This scenario verifies the guard holds.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+
+. "$(dirname "$0")"/common.sh
+
+eval "${GETPORT}"
+
+if ! which curl >/dev/null 2>&1; then
+	echo "curl not found, skipping test"
+	exit 77
+fi
+
+CURL_OUT="test-cookie-sid-overflow.$$.curl"
+SRVLOG="test-cookie-sid-overflow.$$.log"
+
+finish() {
+	test -n "${PID}" && kill "${PID}" >/dev/null 2>&1
+	rm -f "${CURL_OUT}" "${SRVLOG}" "${CONFIG}"
+	test -n "${SOCKDIR}" && rm -rf "${SOCKDIR}"
+}
+trap finish EXIT
+
+echo "Testing oversized cookie bounds checking (issue #719)..."
+
+update_config test-user-cert.config
+
+# Launch with output captured so we can grep for worker crash messages.
+# The main process logs "Child NNN died with sigsegv" when a worker crashes,
+# which lets us detect crashes that happen after the HTTP response is sent
+# (those would not be visible via curl's connection-reset path alone).
+LD_PRELOAD=libsocket_wrapper.so:libuid_wrapper.so UID_WRAPPER=1 UID_WRAPPER_ROOT=1 \
+	"${SERV}" -d 1 -f -c "${CONFIG}" >"${SRVLOG}" 2>&1 &
+PID=$!
+wait_server $PID
+
+# 750 null bytes → 1000-char base64 string, decoding to ~750 bytes.
+# This is far above SID_SIZE=32 (+8 slack), so the pre-decode bounds check
+# must reject it before any write to ws->sid or ws->cookie occurs.
+OVERSIZED=$(dd if=/dev/zero bs=750 count=1 2>/dev/null | base64 | tr -d '\n')
+
+# curl_get: unauthenticated GET; extra options via "$@".
+# Prints the HTTP status code; response body goes to CURL_OUT.
+curl_get() {
+	LD_PRELOAD=libsocket_wrapper.so \
+	curl --silent --insecure --max-time 10 \
+	     --user-agent "AnyConnect Linux_64 4.10" \
+	     --write-out "%{http_code}" \
+	     "$@" -o "${CURL_OUT}"
+}
+
+# check_no_crash: verify neither the connection was reset (pre-response crash)
+# nor the server log records a worker SIGSEGV (post-response crash).
+# A brief sleep lets the main process write the SIGCHLD log entry before we
+# grep, since the worker may die concurrently with curl returning.
+check_no_crash() {
+	local desc="$1" http_code="$2"
+	if [ "${http_code}" = "000" ]; then
+		cat "${SRVLOG}"
+		fail "${PID}" "Worker crashed on ${desc} (connection reset before response)"
+	fi
+	sleep 1
+	if grep -q "died with sig\|sigsegv\|SIGSEGV" "${SRVLOG}"; then
+		cat "${SRVLOG}"
+		fail "${PID}" "Worker crashed on ${desc} (SIGSEGV after response)"
+	fi
+	echo " * ok (HTTP ${http_code}, no worker crash)"
+}
+
+# --- 1. webvpncontext= (the vulnerable path before the fix) ---------------
+# Without the fix: oc_base64_decode() writes ~750 bytes into ws->sid (32 bytes),
+# corrupts worker_st, and the worker segfaults before sending any response →
+# curl sees a connection reset (HTTP "000").
+# With the fix: the pre-check (nlen > SID_SIZE+8 → return) rejects the
+# oversized value and the server returns a normal HTTP status.
+echo -n " * Oversized webvpncontext= cookie... "
+http_code=$(curl_get -H "Cookie: webvpncontext=${OVERSIZED}" \
+	"https://${ADDRESS}:${PORT}/")
+check_no_crash "oversized webvpncontext= cookie" "${http_code}"
+
+# --- 2. webvpn= (existing guard, should already be safe) ------------------
+# The webvpn= branch performs the pre-check and decodes into ws->buffer (16 KB)
+# rather than directly into ws->cookie.  Verify the guard is intact.
+echo -n " * Oversized webvpn= cookie... "
+http_code=$(curl_get -H "Cookie: webvpn=${OVERSIZED}" \
+	"https://${ADDRESS}:${PORT}/")
+check_no_crash "oversized webvpn= cookie" "${http_code}"
+
+echo "All cookie overflow tests passed."
+exit 0

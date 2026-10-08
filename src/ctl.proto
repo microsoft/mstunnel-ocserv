@@ -9,7 +9,7 @@ message status_rep
 	required uint32 pid = 2;
 	repeated uint32 sec_mod_pids = 3;
 	required uint32 active_clients = 4;
-	required uint32 start_time = 5;
+	required int64 start_time = 5;
 	required uint32 stored_tls_sessions = 7;
 	required uint32 banned_ips = 8;
 	required uint32 secmod_client_entries = 9;
@@ -22,7 +22,7 @@ message status_rep
 	required uint64 kbytes_out = 15;
 	required uint32 min_mtu = 16;
 	required uint32 max_mtu = 17;
-	required uint32 last_reset = 18;
+	required int64 last_reset = 18;
 	required uint32 avg_auth_time = 19;
 	required uint32 avg_session_mins = 20;
 	required uint32 max_auth_time = 21;
@@ -53,7 +53,7 @@ message user_info_rep
 	optional string local_ip = 7;
 	optional string remote_ip6 = 8;
 	optional string local_ip6 = 9;
-	required uint32 conn_time = 10;
+	required uint64 conn_time = 10;
 	optional string hostname = 11;
 	optional string user_agent = 12;
 	required uint32 status = 13; /* PS_ */
@@ -80,6 +80,7 @@ message user_info_rep
 
 	required bytes safe_id = 32; /* a value derived from the cookie */
 	required string vhost = 33;
+	required int64 session_start_time = 34;
 }
 
 message user_list_rep
@@ -105,11 +106,17 @@ message id_req
 	required sint32 id = 1;
 }
 
+/* Used by 'terminate session' to transport the safe session ID */
+message safe_id_req
+{
+	required bytes safe_id = 1;
+}
+
 message ban_info_rep
 {
 	required bytes ip = 1;
 	required uint32 score = 2;
-	optional uint32 expires = 3;
+	optional int64 expires = 3;
 }
 
 message ban_list_rep

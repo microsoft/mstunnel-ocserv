@@ -1,0 +1,158 @@
+#!/bin/bash
+#
+# Copyright (C) 2026 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Regression test for issue #638: cstp_send() must not loop forever when
+# the peer stops draining the TCP socket (e.g. a mobile client roaming
+# between networks and the TCP connection going silently dead).
+#
+# The config sets no-udp=true so all VPN data travels over TLS/CSTP,
+# ensuring that cstp_send() is on the critical path.
+#
+# Method:
+#   1. Connect an openconnect client (TLS-only, no DTLS).
+#   2. Freeze openconnect with SIGSTOP so it can no longer drain its TCP
+#      receive buffer.
+#   3. Flood large ICMP packets from the server namespace toward the client
+#      VPN IP.  Each packet enters the TUN, is read by the worker, and
+#      handed to cstp_send(); with a frozen receiver gnutls_record_send()
+#      returns GNUTLS_E_AGAIN.
+#   4. Assert that the worker disconnects the session within
+#      DEFAULT_SOCKET_TIMEOUT + margin rather than looping forever.
+
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+OCCTL_SOCKET=./occtl-cstp-hang-$$.socket
+PATH=${PATH}:/usr/sbin
+IP=$(command -v ip)
+
+. "$(dirname "$0")"/common.sh
+
+eval "${GETPORT}"
+
+if test "$(id -u)" != "0"; then
+	echo "This test must be run as root"
+	exit 77
+fi
+
+if test -z "${IP}"; then
+	echo "no ip tool found"
+	exit 77
+fi
+
+echo "Testing that cstp_send() does not hang when the peer freezes (issue #638)..."
+
+function finish {
+	echo " * Cleaning up..."
+	# Resume openconnect before killing it so cleanup_client_server works cleanly
+	test -f "${CLIPID}" && kill -CONT "$(cat "${CLIPID}")" >/dev/null 2>&1
+	cleanup_client_server
+}
+trap finish EXIT
+
+. "$(dirname "$0")"/random-net.sh
+. "$(dirname "$0")"/ns.sh
+
+update_config cstp-send-hang.config
+if test "$VERBOSE" = 1; then
+	DEBUG="-d 3"
+fi
+
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+
+sleep 3
+
+echo " * Connecting to ${ADDRESS}:${PORT} (TLS only, no DTLS)..."
+echo "test" | ${CMDNS1} ${OPENCONNECT} \
+	${ADDRESS}:${PORT} \
+	-u test \
+	--passwd-on-stdin \
+	--servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= \
+	-s "${srcdir}/scripts/vpnc-script" \
+	--pid-file="${CLIPID}" \
+	-b
+
+if test $? != 0; then
+	fail $PID "Could not connect to server"
+fi
+
+sleep 2
+
+if test ! -f "${CLIPID}"; then
+	fail $PID "openconnect did not write pid file"
+fi
+
+echo " * Verifying VPN is up..."
+${CMDNS1} ping -c 3 ${VPNADDR}
+if test $? != 0; then
+	fail $PID "VPN ping failed — connection not established"
+fi
+
+# Obtain the IP address assigned to the client inside the VPN.
+# cstp_send() is exercised when the worker sends packets destined for
+# this address out through the TUN.
+OCCTL_JSON=$(${OCCTL} -s "${OCCTL_SOCKET}" -j show user test 2>/dev/null)
+if test "$VERBOSE" = 1; then
+	echo " * occtl JSON: ${OCCTL_JSON}"
+fi
+VPN_CLI_IP=$(echo "${OCCTL_JSON}" | jq -r '.[0].IPv4' 2>/dev/null)
+
+if test -z "${VPN_CLI_IP}" || test "${VPN_CLI_IP}" = "null"; then
+	fail $PID "Could not determine client VPN IP from occtl (JSON: ${OCCTL_JSON})"
+fi
+echo " * Client VPN IP: ${VPN_CLI_IP}"
+
+OC_PID=$(cat "${CLIPID}")
+
+echo " * Freezing openconnect (simulating silent network loss)..."
+kill -STOP "${OC_PID}"
+
+# Flood large ICMP packets from the server namespace toward the client VPN IP.
+# Each packet travels: server routing → TUN → worker → cstp_send() → TLS/TCP.
+# Because openconnect is frozen the TCP receive buffer fills and
+# gnutls_record_send() starts returning GNUTLS_E_AGAIN.
+echo " * Flooding server→client to trigger GNUTLS_E_AGAIN in cstp_send()..."
+${CMDNS2} ping -f -s 1400 -c 100000 ${VPN_CLI_IP} >/dev/null 2>&1 &
+FLOODPID=$!
+
+# Wait up to DEFAULT_SOCKET_TIMEOUT (10 s) + 10 s margin for the worker to
+# hit the poll() deadline and disconnect.  On unfixed code the worker loops
+# forever and the user remains visible in occtl at the deadline.
+echo " * Waiting for worker to time out and disconnect..."
+DEADLINE=$(($(date +%s) + 20))
+WORKER_GONE=false
+while test "$(date +%s)" -lt "${DEADLINE}"; do
+	sleep 2
+	if ! ${OCCTL} -s "${OCCTL_SOCKET}" show user test >/dev/null 2>&1; then
+		WORKER_GONE=true
+		break
+	fi
+done
+
+kill "${FLOODPID}" 2>/dev/null
+wait "${FLOODPID}" 2>/dev/null
+
+if test "${WORKER_GONE}" != "true"; then
+	fail $PID "Worker did not disconnect frozen client within timeout (issue #638)"
+fi
+
+echo " * Worker disconnected frozen client as expected."
+exit 0

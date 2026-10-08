@@ -75,7 +75,15 @@ unique-id-global="1234567890123456789012345678901234567890">mac-intel</device-id
 </config-auth>
 _EOF
 
-LD_PRELOAD=libsocket_wrapper.so curl -A 'AnyConnect Darwin_i386 4.8.03036' -H @$HEAD -k -d@$POST $TARGET >$OUTFILE
+LD_PRELOAD=libsocket_wrapper.so curl -i -A 'AnyConnect Darwin_i386 4.8.03036' -H @$HEAD -k -d@$POST $TARGET >$OUTFILE
+
+grep "Content-Type: text/xml; charset=utf-8" $OUTFILE >/dev/null
+if test $? != 0;then
+	echo "Auth form does not declare UTF-8 charset"
+	echo "========================================="
+	cat $OUTFILE
+	exit 1
+fi
 
 grep "value=\"Do not tunnel access LAN subnet\">Do not tunnel access LAN subnet" $OUTFILE >/dev/null
 if test $? = 0;then
@@ -89,6 +97,82 @@ grep "value=\"group3\">Do not tunnel access LAN subnet" $OUTFILE >/dev/null
 if test $? != 0;then
 	echo "Unknown state ($NR)"
 	echo "==================="
+	cat $OUTFILE
+	exit 1
+fi
+
+# A client-proposed group must be selected first without suppressing the
+# remaining server-advertised groups.
+grep "value=\"group1\">group1" $OUTFILE >/dev/null
+if test $? != 0;then
+	echo "Selected group suppressed the rest of the group list"
+	echo "==================================================="
+	cat $OUTFILE
+	exit 1
+fi
+
+cat >$POST <<_EOF
+<?xml version: "1.0" encoding="UTF-8"?>
+<config-auth client="vpn" type="init" aggregate-auth-version="2">
+<group-select>Маршрут по умолчанию без BY</group-select>
+</config-auth>
+_EOF
+
+LD_PRELOAD=libsocket_wrapper.so curl -A 'AnyConnect Darwin_i386 5.1.15.287' -H @$HEAD -k -d@$POST $TARGET >$OUTFILE
+
+grep "value=\"Маршрут по умолчанию без BY\">Маршрут по умолчанию без BY" $OUTFILE >/dev/null
+if test $? = 0;then
+	echo "Localized friendly name was not translated"
+	echo "=========================================="
+	cat $OUTFILE
+	exit 1
+fi
+
+grep "value=\"group5\">Маршрут по умолчанию без BY" $OUTFILE >/dev/null
+if test $? != 0;then
+	echo "Localized friendly name was not offered"
+	echo "======================================="
+	cat $OUTFILE
+	exit 1
+fi
+
+grep "value=\"group1\">group1" $OUTFILE >/dev/null
+if test $? != 0;then
+	echo "Localized selected group suppressed the rest of the group list"
+	echo "============================================================="
+	cat $OUTFILE
+	exit 1
+fi
+
+cat >$POST <<_EOF
+<?xml version: "1.0" encoding="UTF-8"?>
+<config-auth client="vpn" type="init" aggregate-auth-version="2">
+<group-select>NotExistGroup</group-select>
+</config-auth>
+_EOF
+
+LD_PRELOAD=libsocket_wrapper.so curl -A 'AnyConnect Darwin_i386 4.8.03036' -H @$HEAD -k -d@$POST $TARGET >$OUTFILE
+
+grep "value=\"NotExistGroup\">NotExistGroup" $OUTFILE >/dev/null
+if test $? = 0;then
+	echo "Unknown group was offered back to the client"
+	echo "============================================"
+	cat $OUTFILE
+	exit 1
+fi
+
+grep "value=\"group1\">group1" $OUTFILE >/dev/null
+if test $? != 0;then
+	echo "Default group was not offered"
+	echo "============================="
+	cat $OUTFILE
+	exit 1
+fi
+
+grep "value=\"group3\">Do not tunnel access LAN subnet" $OUTFILE >/dev/null
+if test $? != 0;then
+	echo "Configured group list was not offered"
+	echo "====================================="
 	cat $OUTFILE
 	exit 1
 fi

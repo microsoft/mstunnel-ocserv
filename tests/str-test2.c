@@ -29,7 +29,7 @@ int main(void)
 {
 	char str[64];
 
-	strcpy(str, STR1 "     ");
+	strlcpy(str, STR1 "     ", sizeof(str));
 
 	trim_trailing_whitespace(str);
 
@@ -38,7 +38,7 @@ int main(void)
 		exit(1);
 	}
 
-	strcpy(str, STR1 " ");
+	strlcpy(str, STR1 " ", sizeof(str));
 
 	trim_trailing_whitespace(str);
 
@@ -47,7 +47,7 @@ int main(void)
 		exit(1);
 	}
 
-	strcpy(str, STR1);
+	strlcpy(str, STR1, sizeof(str));
 
 	trim_trailing_whitespace(str);
 
@@ -56,7 +56,7 @@ int main(void)
 		exit(1);
 	}
 
-	strcpy(str, "  " STR1);
+	strlcpy(str, "  " STR1, sizeof(str));
 
 	trim_trailing_whitespace(str);
 
@@ -65,7 +65,7 @@ int main(void)
 		exit(1);
 	}
 
-	strcpy(str, "  ");
+	strlcpy(str, "  ", sizeof(str));
 
 	trim_trailing_whitespace(str);
 

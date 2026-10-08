@@ -111,15 +111,15 @@ int handle_sec_mod_commands(sec_mod_instance_st *sec_mod_instance)
 	}
 
 	if (ret < 5 || cmd <= MIN_SECM_CMD || cmd >= MAX_SECM_CMD ||
-	    (int)length < 0) {
+	    length > MAX_MSG_SIZE) {
 		mslog(s, NULL, LOG_ERR,
-		      "main received invalid message from sec-mod of %d bytes (cmd: %u)\n",
-		      (int)length, (unsigned int)cmd);
+		      "main received invalid message from sec-mod of %u bytes (cmd: %u)",
+		      (unsigned int)length, (unsigned int)cmd);
 		return ERR_BAD_COMMAND;
 	}
 
 	mslog(s, NULL, LOG_DEBUG,
-	      "main received message '%s' from sec-mod of %u bytes\n",
+	      "main received message '%s' from sec-mod of %u bytes",
 	      cmd_request_to_str(cmd), (unsigned int)length);
 
 	raw = talloc_size(pool, length);
@@ -226,21 +226,26 @@ static void append_routes(sec_mod_instance_st *sec_mod_instance, proc_st *proc,
 	vhost_cfg_st *vhost = proc->vhost;
 
 	/* if we have known_iroutes, we must append them to the routes list */
-	if (vhost->perm_config.config->known_iroutes_size > 0 ||
-	    vhost->perm_config.config->append_routes) {
+	if (vhost->config->n_known_iroutes > 0 ||
+	    vhost->config->append_routes) {
+		main_server_st *s = sec_mod_instance->server;
 		char **old_routes = gc->routes;
 		unsigned int old_routes_size = gc->n_routes;
 		unsigned int i, j, append;
 		unsigned int to_append = 0;
 
-		to_append = vhost->perm_config.config->known_iroutes_size;
-		if (vhost->perm_config.config->append_routes)
-			to_append +=
-				vhost->perm_config.config->network.routes_size;
+		to_append = vhost->config->n_known_iroutes;
+		if (vhost->config->append_routes)
+			to_append += vhost->config->network->n_routes;
 
+		gc->routes =
+			talloc_array(proc, char *, old_routes_size + to_append);
+		if (gc->routes == NULL) {
+			gc->routes = old_routes;
+			mslog(s, proc, LOG_ERR, "memory error");
+			return;
+		}
 		gc->n_routes = 0;
-		gc->routes = talloc_size(
-			proc, sizeof(char *) * (old_routes_size + to_append));
 
 		for (i = 0; i < old_routes_size; i++) {
 			gc->routes[i] = talloc_strdup(proc, old_routes[i]);
@@ -251,13 +256,11 @@ static void append_routes(sec_mod_instance_st *sec_mod_instance, proc_st *proc,
 
 		if (gc->routes) {
 			/* Append any iroutes that are known and don't match the client's */
-			for (i = 0;
-			     i < vhost->perm_config.config->known_iroutes_size;
-			     i++) {
+			for (i = 0; i < vhost->config->n_known_iroutes; i++) {
 				append = 1;
 				for (j = 0; j < gc->n_iroutes; j++) {
 					if (strcmp(gc->iroutes[j],
-						   vhost->perm_config.config
+						   vhost->config
 							   ->known_iroutes[i]) ==
 					    0) {
 						append = 0;
@@ -268,8 +271,7 @@ static void append_routes(sec_mod_instance_st *sec_mod_instance, proc_st *proc,
 				if (append) {
 					gc->routes[gc->n_routes] = talloc_strdup(
 						proc,
-						vhost->perm_config.config
-							->known_iroutes[i]);
+						vhost->config->known_iroutes[i]);
 					if (gc->routes[gc->n_routes] == NULL)
 						break;
 					gc->n_routes++;
@@ -277,16 +279,15 @@ static void append_routes(sec_mod_instance_st *sec_mod_instance, proc_st *proc,
 			}
 		}
 
-		if (vhost->perm_config.config->append_routes) {
+		if (vhost->config->append_routes) {
 			/* Append all global routes */
 			if (gc->routes) {
-				for (i = 0; i < vhost->perm_config.config
-							->network.routes_size;
+				for (i = 0;
+				     i < vhost->config->network->n_routes;
 				     i++) {
 					gc->routes[gc->n_routes] = talloc_strdup(
-						proc,
-						vhost->perm_config.config
-							->network.routes[i]);
+						proc, vhost->config->network
+							      ->routes[i]);
 					if (gc->routes[gc->n_routes] == NULL)
 						break;
 					gc->n_routes++;
@@ -294,20 +295,22 @@ static void append_routes(sec_mod_instance_st *sec_mod_instance, proc_st *proc,
 			}
 
 			/* Append no-routes */
-			if (vhost->perm_config.config->network.no_routes_size ==
-			    0)
+			if (vhost->config->network->n_no_routes == 0)
 				return;
 
 			old_routes = gc->no_routes;
 			old_routes_size = gc->n_no_routes;
 
+			gc->no_routes = talloc_array(
+				proc, char *,
+				old_routes_size +
+					vhost->config->network->n_no_routes);
+			if (gc->no_routes == NULL) {
+				gc->no_routes = old_routes;
+				mslog(s, proc, LOG_ERR, "memory error");
+				return;
+			}
 			gc->n_no_routes = 0;
-			gc->no_routes = talloc_size(
-				proc,
-				sizeof(char *) *
-					(old_routes_size +
-					 vhost->perm_config.config->network
-						 .no_routes_size));
 
 			for (i = 0; i < old_routes_size; i++) {
 				gc->no_routes[i] =
@@ -317,13 +320,11 @@ static void append_routes(sec_mod_instance_st *sec_mod_instance, proc_st *proc,
 				gc->n_no_routes++;
 			}
 
-			for (i = 0;
-			     i <
-			     vhost->perm_config.config->network.no_routes_size;
+			for (i = 0; i < vhost->config->network->n_no_routes;
 			     i++) {
 				gc->no_routes[gc->n_no_routes] = talloc_strdup(
-					proc, vhost->perm_config.config->network
-						      .no_routes[i]);
+					proc,
+					vhost->config->network->no_routes[i]);
 				if (gc->no_routes[gc->n_no_routes] == NULL)
 					break;
 				gc->n_no_routes++;
@@ -338,167 +339,155 @@ static void apply_default_config(sec_mod_instance_st *sec_mod_instance,
 	vhost_cfg_st *vhost = proc->vhost;
 
 	if (!gc->has_no_udp) {
-		gc->no_udp = (vhost->perm_config.udp_port != 0) ? 0 : 1;
+		gc->no_udp = vhost->config->no_udp;
 		gc->has_no_udp = 1;
 	}
 
 	if (gc->routes == NULL) {
-		gc->routes = vhost->perm_config.config->network.routes;
-		gc->n_routes = vhost->perm_config.config->network.routes_size;
+		gc->routes = vhost->config->network->routes;
+		gc->n_routes = vhost->config->network->n_routes;
 	}
 
 	append_routes(sec_mod_instance, proc, gc);
 
 	if (gc->no_routes == NULL) {
-		gc->no_routes = vhost->perm_config.config->network.no_routes;
-		gc->n_no_routes =
-			vhost->perm_config.config->network.no_routes_size;
+		gc->no_routes = vhost->config->network->no_routes;
+		gc->n_no_routes = vhost->config->network->n_no_routes;
 	}
 
 	if (gc->dns == NULL) {
-		gc->dns = vhost->perm_config.config->network.dns;
-		gc->n_dns = vhost->perm_config.config->network.dns_size;
+		gc->dns = vhost->config->network->dns;
+		gc->n_dns = vhost->config->network->n_dns;
 	}
 
 	if (gc->nbns == NULL) {
-		gc->nbns = vhost->perm_config.config->network.nbns;
-		gc->n_nbns = vhost->perm_config.config->network.nbns_size;
+		gc->nbns = vhost->config->network->nbns;
+		gc->n_nbns = vhost->config->network->n_nbns;
 	}
 
 	if (gc->split_dns == NULL) {
-		gc->split_dns = vhost->perm_config.config->split_dns;
-		gc->n_split_dns = vhost->perm_config.config->split_dns_size;
+		gc->split_dns = vhost->config->split_dns;
+		gc->n_split_dns = vhost->config->n_split_dns;
 	}
 
 	if (!gc->has_interim_update_secs) {
-		gc->interim_update_secs =
-			vhost->perm_config.config->stats_report_time;
+		gc->interim_update_secs = vhost->config->stats_report_time;
 		gc->has_interim_update_secs = 1;
 	}
 
 	if (!gc->has_session_timeout_secs) {
-		gc->session_timeout_secs =
-			vhost->perm_config.config->session_timeout;
+		gc->session_timeout_secs = vhost->config->session_timeout;
 		gc->has_session_timeout_secs = 1;
 	}
 
 	if (!gc->has_deny_roaming) {
-		gc->deny_roaming = vhost->perm_config.config->deny_roaming;
+		gc->deny_roaming = vhost->config->deny_roaming;
 		gc->has_deny_roaming = 1;
 	}
 
 	if (!gc->ipv4_net) {
-		gc->ipv4_net = vhost->perm_config.config->network.ipv4_network;
+		gc->ipv4_net = vhost->config->network->ipv4_network;
 	}
 
 	if (!gc->ipv4_netmask) {
-		gc->ipv4_netmask =
-			vhost->perm_config.config->network.ipv4_netmask;
+		gc->ipv4_netmask = vhost->config->network->ipv4_netmask;
 	}
 
 	if (!gc->ipv6_net) {
-		gc->ipv6_net = vhost->perm_config.config->network.ipv6_network;
+		gc->ipv6_net = vhost->config->network->ipv6_network;
 	}
 
 	if (!gc->has_ipv6_prefix) {
-		gc->ipv6_prefix =
-			vhost->perm_config.config->network.ipv6_prefix;
+		gc->ipv6_prefix = vhost->config->network->ipv6_prefix;
 		gc->has_ipv6_prefix = 1;
 	}
 
 	if (!gc->has_ipv6_subnet_prefix) {
 		gc->ipv6_subnet_prefix =
-			vhost->perm_config.config->network.ipv6_subnet_prefix;
+			vhost->config->network->ipv6_subnet_prefix;
 		gc->has_ipv6_subnet_prefix = 1;
-	}
-
-	if (!gc->cgroup) {
-		gc->cgroup = vhost->perm_config.config->cgroup;
 	}
 
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	if (!gc->xml_config_file) {
-		gc->xml_config_file =
-			vhost->perm_config.config->xml_config_file;
+		gc->xml_config_file = vhost->config->xml_config_file;
 	}
 #endif
 
 	if (!gc->has_client_bypass_protocol) {
 		gc->client_bypass_protocol =
-			vhost->perm_config.config->client_bypass_protocol;
+			vhost->config->client_bypass_protocol;
 		gc->has_client_bypass_protocol = 1;
 	}
 
 	if (!gc->has_rx_per_sec) {
-		gc->rx_per_sec = vhost->perm_config.config->rx_per_sec;
+		gc->rx_per_sec = vhost->config->rx_per_sec;
 		gc->has_rx_per_sec = 1;
 	}
 
 	if (!gc->has_tx_per_sec) {
-		gc->tx_per_sec = vhost->perm_config.config->tx_per_sec;
+		gc->tx_per_sec = vhost->config->tx_per_sec;
 		gc->has_tx_per_sec = 1;
 	}
 
 	if (!gc->has_net_priority) {
-		gc->net_priority = vhost->perm_config.config->net_priority;
+		gc->net_priority = vhost->config->net_priority;
 		gc->has_net_priority = 1;
 	}
 
 	if (!gc->has_keepalive) {
-		gc->keepalive = vhost->perm_config.config->keepalive;
+		gc->keepalive = vhost->config->keepalive;
 		gc->has_keepalive = 1;
 	}
 
 	if (!gc->has_dpd) {
-		gc->dpd = vhost->perm_config.config->dpd;
+		gc->dpd = vhost->config->dpd;
 		gc->has_dpd = 1;
 	}
 
 	if (!gc->has_mobile_dpd) {
-		gc->mobile_dpd = vhost->perm_config.config->mobile_dpd;
+		gc->mobile_dpd = vhost->config->mobile_dpd;
 		gc->has_mobile_dpd = 1;
 	}
 
 	if (!gc->has_max_same_clients) {
-		gc->max_same_clients =
-			vhost->perm_config.config->max_same_clients;
+		gc->max_same_clients = vhost->config->max_same_clients;
 		gc->has_max_same_clients = 1;
 	}
 
 	if (!gc->has_tunnel_all_dns) {
-		gc->tunnel_all_dns = vhost->perm_config.config->tunnel_all_dns;
+		gc->tunnel_all_dns = vhost->config->tunnel_all_dns;
 		gc->has_tunnel_all_dns = 1;
 	}
 
 	if (!gc->has_restrict_user_to_routes) {
 		gc->restrict_user_to_routes =
-			vhost->perm_config.config->restrict_user_to_routes;
+			vhost->config->restrict_user_to_routes;
 		gc->has_restrict_user_to_routes = 1;
 	}
 
 	if (!gc->has_mtu) {
-		gc->mtu = vhost->perm_config.config->network.mtu;
+		gc->mtu = vhost->config->network->mtu;
 		gc->has_mtu = 1;
 	}
 
 	if (!gc->has_idle_timeout) {
-		gc->idle_timeout = vhost->perm_config.config->idle_timeout;
+		gc->idle_timeout = vhost->config->idle_timeout;
 		gc->has_idle_timeout = 1;
 	}
 
 	if (!gc->has_mobile_idle_timeout) {
-		gc->mobile_idle_timeout =
-			vhost->perm_config.config->mobile_idle_timeout;
+		gc->mobile_idle_timeout = vhost->config->mobile_idle_timeout;
 		gc->has_mobile_idle_timeout = 1;
 	}
 
-	if (gc->n_fw_ports == 0 && vhost->perm_config.config->n_fw_ports > 0) {
-		gc->n_fw_ports = vhost->perm_config.config->n_fw_ports;
-		gc->fw_ports = vhost->perm_config.config->fw_ports;
+	if (gc->n_fw_ports == 0 && vhost->config->n_fw_ports > 0) {
+		gc->n_fw_ports = vhost->config->n_fw_ports;
+		gc->fw_ports = vhost->config->fw_ports;
 	}
 
 	/* since we keep pointers on s->config, increase its usage count */
-	proc->config_usage_count = vhost->perm_config.config->usage_count;
+	proc->config_usage_count = vhost->usage_count;
 	(*proc->config_usage_count)++;
 }
 
@@ -561,6 +550,8 @@ int session_open(sec_mod_instance_st *sec_mod_instance, struct proc_st *proc,
 		update_auth_failures(s, 1);
 		return -1;
 	}
+
+	proc->session_start_time = (time_t)msg->session_start_time;
 
 	if (msg->username == NULL) {
 		mslog(s, proc, LOG_INFO,
@@ -690,8 +681,8 @@ static void update_main_stats(main_server_st *s, struct proc_st *proc)
 	time_t now = time(NULL), stime;
 	vhost_cfg_st *vhost = proc->vhost;
 
-	if (vhost->perm_config.stats_reset_time != 0 &&
-	    now - s->stats.last_reset > vhost->perm_config.stats_reset_time) {
+	if (vhost->static_config.stats_reset_time != 0 &&
+	    now - s->stats.last_reset > vhost->static_config.stats_reset_time) {
 		mslog(s, NULL, LOG_INFO, "resetting stats counters");
 		reset_stats(s, now);
 	}
@@ -861,14 +852,14 @@ void run_sec_mod(sec_mod_instance_st *sec_mod_instance,
 
 	snprintf(sec_mod_instance->socket_file,
 		 sizeof(sec_mod_instance->socket_file), "%s.%d",
-		 secmod_socket_file_name(GETPCONFIG(s)), instance_index);
+		 secmod_socket_file_name(GETSCONFIG(s)), instance_index);
 	mslog(s, NULL, LOG_DEBUG, "created sec-mod socket file (%s)",
 	      sec_mod_instance->socket_file);
 
-	if (GETPCONFIG(s)->chroot_dir != NULL) {
+	if (GETSCONFIG(s)->chroot_dir != NULL) {
 		ret = snprintf(sec_mod_instance->full_socket_file,
 			       sizeof(sec_mod_instance->full_socket_file),
-			       "%s/%s", GETPCONFIG(s)->chroot_dir,
+			       "%s/%s", GETSCONFIG(s)->chroot_dir,
 			       sec_mod_instance->socket_file);
 		if (ret != strlen(sec_mod_instance->full_socket_file)) {
 			mslog(s, NULL, LOG_ERR,

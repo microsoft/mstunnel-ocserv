@@ -46,13 +46,16 @@
 struct plain_ctx_st {
 	char username[MAX_USERNAME_SIZE];
 	char cpass[MAX_CPASS_SIZE]; /* crypt() passwd */
+	char dummy_salt[MAX_CPASS_SIZE]; /* salt from any passwd entry, for timing
+					    normalisation when user is unknown */
 
 	char *groupnames[MAX_GROUPS];
 	unsigned int groupnames_size;
 
 	const char *pass_msg;
 	unsigned int retries;
-	unsigned int failed; /* non-zero if the username is wrong */
+	unsigned int
+		unknown_user; /* non-zero if the username is not in the passwd file */
 
 	const struct plain_cfg_st *config;
 };
@@ -149,7 +152,7 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 		return 0;
 	}
 
-	pctx->failed = 1;
+	pctx->unknown_user = 1;
 
 	fp = fopen(pctx->config->passwd, "r");
 	if (fp == NULL) {
@@ -174,7 +177,6 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 			ll--;
 			line[ll] = 0;
 		}
-#ifdef HAVE_STRSEP
 		sp = line;
 		p = strsep(&sp, ":");
 
@@ -188,33 +190,22 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 				if (p != NULL) {
 					strlcpy(pctx->cpass, p,
 						sizeof(pctx->cpass));
-					pctx->failed = 0;
+					pctx->unknown_user = 0;
 					ret = 0;
 					goto exit;
 				}
 			}
-		}
-
-#else
-		p = strtok_r(line, ":", &sp);
-
-		if (p != NULL && strcmp(pctx->username, p) == 0) {
-			p = strtok_r(NULL, ":", &sp);
+		} else if (p != NULL && pctx->dummy_salt[0] == 0) {
+			/* capture salt from any entry for timing normalisation
+			 * when the target user is not found */
+			p = strsep(&sp, ":");
 			if (p != NULL) {
-				break_group_list(pctx, p, pctx->groupnames,
-						 &pctx->groupnames_size);
-
-				p = strtok_r(NULL, ":", &sp);
-				if (p != NULL) {
-					strlcpy(pctx->cpass, p,
-						sizeof(pctx->cpass));
-					pctx->failed = 0;
-					ret = 0;
-					goto exit;
-				}
+				p = strsep(&sp, ":");
+				if (p != NULL && p[0] == '$')
+					strlcpy(pctx->dummy_salt, p,
+						sizeof(pctx->dummy_salt));
 			}
 		}
-#endif
 	}
 
 	/* always succeed */
@@ -244,7 +235,7 @@ static int plain_auth_init(void **ctx, void *pool, void *vctx,
 	pctx->pass_msg = NULL; /* use default */
 	pctx->config = vctx;
 
-	/* this doesn't fail on password mismatch but sets p->failed */
+	/* this doesn't fail on unknown user but sets pctx->unknown_user */
 	ret = read_auth_pass(pctx);
 	if (ret < 0) {
 		talloc_free(pctx);
@@ -253,7 +244,7 @@ static int plain_auth_init(void **ctx, void *pool, void *vctx,
 
 	*ctx = pctx;
 
-	if (pctx->cpass[0] == 0 && pctx->failed == 0) {
+	if (pctx->cpass[0] == 0 && pctx->unknown_user == 0) {
 		/* if there is no password set, nor an OTP file; don't ask for password */
 		if (pctx->config->otp_file == NULL)
 			return 0;
@@ -310,25 +301,33 @@ static int plain_auth_pass(void *ctx, const char *pass, unsigned int pass_len)
 {
 	struct plain_ctx_st *pctx = ctx;
 	const char *p;
+	int wrong_pass = 0;
+	/* Always call crypt() to normalize timing regardless of whether the
+	 * user exists, preventing username enumeration via response time. Use
+	 * a salt extracted from the passwd file when the user was not found. */
+	const char *salt;
 
-	if (pctx->cpass[0] != 0) {
-		p = crypt(pass, pctx->cpass);
-		if (p == NULL) {
-			pctx->failed = 1;
-		} else if (strcmp(p, pctx->cpass) != 0)
-			pctx->failed = 1;
-	}
+	if (pctx->cpass[0] != 0)
+		salt = pctx->cpass;
+	else if (pctx->dummy_salt[0] != 0)
+		salt = pctx->dummy_salt;
+	else
+		salt = "$5$fakesalt$";
 
-	if (pctx->failed) {
+	p = crypt(pass, salt);
+	if (pctx->unknown_user || p == NULL ||
+	    (pctx->cpass[0] != 0 && strcmp(p, pctx->cpass) != 0))
+		wrong_pass = 1;
+
+	if (wrong_pass) {
 		if (pctx->retries++ < MAX_PASSWORD_TRIES - 1) {
 			pctx->pass_msg = pass_msg_failed;
 			return ERR_AUTH_CONTINUE;
-		} else {
-			oc_syslog(LOG_NOTICE,
-				  "plain-auth: error authenticating user '%s'",
-				  pctx->username);
-			return ERR_AUTH_FAIL;
 		}
+		oc_syslog(LOG_NOTICE,
+			  "plain-auth: error authenticating user '%s'",
+			  pctx->username);
+		return ERR_AUTH_FAIL;
 	}
 
 	if (pctx->cpass[0] == 0 && pctx->config->otp_file == NULL) {
@@ -363,9 +362,6 @@ static int plain_auth_pass(void *ctx, const char *pass, unsigned int pass_len)
 	}
 #endif
 
-	if (pctx->failed)
-		return ERR_AUTH_FAIL;
-
 	return 0;
 }
 
@@ -383,6 +379,10 @@ static int plain_auth_msg(void *ctx, void *pool, passwd_msg_st *pst)
 
 static void plain_auth_deinit(void *ctx)
 {
+	struct plain_ctx_st *pctx = ctx;
+
+	safe_memset(pctx->cpass, 0, sizeof(pctx->cpass));
+	safe_memset(pctx->dummy_salt, 0, sizeof(pctx->dummy_salt));
 	talloc_free(ctx);
 }
 
@@ -444,18 +444,11 @@ static void plain_group_list(void *pool, void *additional, char ***groupname,
 			line[ll] = 0;
 		}
 
-#ifdef HAVE_STRSEP
 		sp = line;
 		p = strsep(&sp, ":");
 
 		if (p != NULL) {
 			p = strsep(&sp, ":");
-#else
-		p = strtok_r(line, ":", &sp);
-
-		if (p != NULL) {
-			p = strtok_r(NULL, ":", &sp);
-#endif
 			if (p != NULL) {
 				break_group_list(pool, p, tgroup, &tgroup_size);
 
@@ -475,7 +468,7 @@ static void plain_group_list(void *pool, void *additional, char ***groupname,
 	}
 
 	*groupname_size = 0;
-	*groupname = talloc_size(pool, sizeof(char *) * MAX_GROUPS);
+	*groupname = talloc_array(pool, char *, MAX_GROUPS);
 	if (*groupname == NULL) {
 		goto exit;
 	}

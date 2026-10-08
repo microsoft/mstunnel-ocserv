@@ -1,0 +1,148 @@
+#!/bin/bash
+#
+# Copyright (C) 2025 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# Tests rx-data-per-sec / tx-data-per-sec bandwidth throttling.
+#
+# Strategy: the config limits both directions to 100 KB/s (100,000 bytes/s
+# = ~0.8 Mbits/s).  On a loopback/namespace link iperf3 achieves hundreds
+# of Mbits/s without throttling, so even a generous 5x upper bound
+# (4 Mbits/s) gives a clear signal that the throttle is active.
+# We test both upload (exercises rx-data-per-sec) and download
+# (exercises tx-data-per-sec) directions.
+
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+PATH=${PATH}:/usr/sbin
+IP=$(command -v ip)
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+
+if test -z "${IP}"; then
+	echo "no IP tool is present"
+	exit 77
+fi
+
+if test "$(id -u)" != "0"; then
+	echo "This test must be run as root"
+	exit 77
+fi
+
+if ! iperf3 --version >/dev/null 2>&1; then
+	echo "iperf3 is not available"
+	exit 77
+fi
+
+if ! python3 -c "" 2>/dev/null; then
+	echo "python3 is not available"
+	exit 77
+fi
+
+echo "Testing bandwidth throttling..."
+
+function finish {
+	echo " * Cleaning up..."
+	cleanup_client_server
+}
+trap finish EXIT
+
+OCCTL_SOCKET=./occtl-bandwidth-$$.socket
+USERNAME=test
+
+# Rate limit as configured in bandwidth.config (bytes/sec)
+RATE_BYTES=100000
+# Upper bound: 5x the limit in bits/sec
+MAX_BITS=$(( RATE_BYTES * 8 * 5 ))
+
+. `dirname $0`/random-net.sh
+. `dirname $0`/ns.sh
+
+update_config bandwidth.config
+if test "$VERBOSE" = 1; then
+	DEBUG="-d 3"
+fi
+
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} &
+PID=$!
+
+sleep 4
+
+echo " * Getting cookie from ${ADDRESS}:${PORT}..."
+( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} \
+	--servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= \
+	--cookieonly )
+if test $? != 0; then
+	echo "Could not get cookie from server"
+	exit 1
+fi
+
+echo " * Connecting to ${ADDRESS}:${PORT}..."
+( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} \
+	--servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= \
+	-s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} \
+	--passwd-on-stdin -b )
+if test $? != 0; then
+	echo "Could not connect to server"
+	exit 1
+fi
+
+set -e
+echo " * Pinging remote address"
+${CMDNS1} ping -c 3 ${VPNADDR}
+
+# --- Upload test (client -> server, exercises rx-data-per-sec) ---
+
+${CMDNS2} iperf3 -s -D -1
+sleep 2
+
+echo " * Testing upload throttle (rx-data-per-sec)..."
+TX_BITS=$(${CMDNS1} iperf3 -t 5 -J -c ${VPNADDR} | \
+	python3 -c "import sys,json; d=json.load(sys.stdin); \
+		print(int(d['end']['sum_sent']['bits_per_second']))")
+echo "   upload: ${TX_BITS} bits/s (limit ~$(( RATE_BYTES * 8 )) bits/s, max allowed ${MAX_BITS} bits/s)"
+
+if test "${TX_BITS}" -gt "${MAX_BITS}"; then
+	echo "FAIL: upload ${TX_BITS} bits/s exceeds 5x throttle limit ${MAX_BITS} bits/s"
+	exit 1
+fi
+
+# --- Download test (server -> client, exercises tx-data-per-sec) ---
+
+set +e; eval "${GETPORT}"; set -e
+${CMDNS2} iperf3 -s -D -1 -p ${PORT}
+sleep 2
+
+echo " * Testing download throttle (tx-data-per-sec)..."
+RX_BITS=$(${CMDNS1} iperf3 -t 5 -R -J -c ${VPNADDR} -p ${PORT} | \
+	python3 -c "import sys,json; d=json.load(sys.stdin); \
+		print(int(d['end']['sum_received']['bits_per_second']))")
+echo "   download: ${RX_BITS} bits/s (limit ~$(( RATE_BYTES * 8 )) bits/s, max allowed ${MAX_BITS} bits/s)"
+
+if test "${RX_BITS}" -gt "${MAX_BITS}"; then
+	echo "FAIL: download ${RX_BITS} bits/s exceeds 5x throttle limit ${MAX_BITS} bits/s"
+	exit 1
+fi
+
+echo "Bandwidth throttling is working correctly"
+exit 0

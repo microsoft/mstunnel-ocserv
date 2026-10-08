@@ -24,7 +24,7 @@ srcdir=${srcdir:-.}
 PIDFILE=ocserv-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
 PATH=${PATH}:/usr/sbin
-IP=$(which ip)
+IP=$(command -v ip)
 OUTFILE=json.$$.tmp
 
 . `dirname $0`/common.sh
@@ -44,13 +44,8 @@ fi
 echo "Testing ocserv connection via haproxy... "
 
 function finish {
-  set +e
   echo " * Cleaning up..."
-  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
-  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
-  test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
-  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
-  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  cleanup_client_server
   rm -f ${OUTFILE} 2>&1
 }
 trap finish EXIT

@@ -25,6 +25,13 @@ OCCTL_SOCKET=./occtl-ban-$$.socket
 PIDFILE=ocserv-pid.$$.tmp
 OUTFILE=ban.$$.tmp
 
+function finish {
+  echo " * Cleaning up..."
+  cleanup_client_server
+  test -n "${OUTFILE}" && rm -f ${OUTFILE} >/dev/null 2>&1
+}
+trap finish EXIT
+
 . `dirname $0`/common.sh
 . `dirname $0`/random-net.sh
 . `dirname $0`/ns.sh
@@ -35,16 +42,6 @@ update_config test-ban.config
 if test "$VERBOSE" = 1;then
 DEBUG="-d 3"
 fi
-
-function finish {
-  set +e
-  echo " * Cleaning up..."
-  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
-  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
-  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
-  test -n "${OUTFILE}" && rm -f ${OUTFILE} >/dev/null 2>&1
-}
-trap finish EXIT
 
 echo "Testing whether ban operates as expected... "
 
@@ -58,6 +55,25 @@ echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT}
 echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=
 echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=
 echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=
+
+# For the JSON validity test, multiple IP addresses must be present in the ban list.
+# Connect from a different IP address to add another IP to the list.
+echo "notest" | ${CMDNS2} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=
+
+BAN_POINTS_CNT=$(${OCCTL} -s ${OCCTL_SOCKET} --json show ip ban points | jq '. | length')
+if [ $? -ne 0 ]; then
+	fail $PID "Failed to retrieve IP ban points: invalid JSON format"
+fi
+if [ "${BAN_POINTS_CNT}" -ne 2 ]; then
+	fail $PID "Unexpected IP ban points count (expected 2, got ${BAN_POINTS_CNT})"
+fi
+BAN_CNT=$(${OCCTL} -s ${OCCTL_SOCKET} --json show ip bans | jq '. | length')
+if [ $? -ne 0 ]; then
+	fail $PID "Failed to retrieve IP bans: invalid JSON format"
+fi
+if [ "${BAN_CNT}" -ne 1 ]; then
+	fail $PID "Unexpected IP bans count (expected 1, got ${BAN_CNT})"
+fi
 
 echo ""
 echo "Connecting with correct password... "

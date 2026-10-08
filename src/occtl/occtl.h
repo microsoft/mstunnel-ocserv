@@ -1,6 +1,7 @@
 #ifndef OCCTL_H
 #define OCCTL_H
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <time.h>
 #include "common.h"
@@ -35,10 +36,12 @@ int print_fwport_entries(FILE *out, cmd_params_st *params, const char *name,
 			 FwPortSt **val, unsigned int vsize,
 			 unsigned int have_more);
 void print_start_block(FILE *out, cmd_params_st *params);
+void print_end_block_simple(FILE *out, cmd_params_st *params);
 void print_end_block(FILE *out, cmd_params_st *params, unsigned int have_more);
 void print_array_block(FILE *out, cmd_params_st *params);
 void print_end_array_block(FILE *out, cmd_params_st *params);
 void print_separator(FILE *out, cmd_params_st *params);
+void print_value_separator(FILE *out, cmd_params_st *params, bool need_comma);
 void print_single_value(FILE *out, cmd_params_st *params, const char *name,
 			const char *value, unsigned int have_more);
 void print_single_value_int(FILE *out, cmd_params_st *params, const char *name,
@@ -120,6 +123,12 @@ int handle_unban_ip_cmd(CONN_TYPE *conn, const char *arg,
 			cmd_params_st *params);
 int handle_disconnect_id_cmd(CONN_TYPE *conn, const char *arg,
 			     cmd_params_st *params);
+int handle_terminate_user_cmd(CONN_TYPE *conn, const char *arg,
+			      cmd_params_st *params);
+int handle_terminate_id_cmd(CONN_TYPE *conn, const char *arg,
+			    cmd_params_st *params);
+int handle_terminate_session_cmd(CONN_TYPE *conn, const char *arg,
+				 cmd_params_st *params);
 int handle_reload_cmd(CONN_TYPE *conn, const char *arg, cmd_params_st *params);
 int handle_stop_cmd(CONN_TYPE *conn, const char *arg, cmd_params_st *params);
 int handle_events_cmd(struct unix_ctx *ctx, const char *arg,

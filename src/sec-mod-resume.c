@@ -129,7 +129,7 @@ int handle_resume_store_req(sec_mod_st *sec,
 	if (req->session_data.len > MAX_SESSION_DATA_SIZE)
 		return -1;
 
-	max = MAX(2 * GETCONFIG(sec)->max_clients,
+	max = MAX(2 * GETRCONFIG(sec)->max_clients,
 		  DEFAULT_MAX_CACHED_TLS_SESSIONS);
 	if (sec->tls_db.entries >= max) {
 		seclog(sec, LOG_INFO,
@@ -138,7 +138,8 @@ int handle_resume_store_req(sec_mod_st *sec,
 		return -1;
 	}
 
-	if (req->cli_addr.len == 0) {
+	if (req->cli_addr.len == 0 ||
+	    req->cli_addr.len > sizeof(struct sockaddr_storage)) {
 		seclog(sec, LOG_INFO, "invalid address length");
 		return -1;
 	}
@@ -193,7 +194,7 @@ void expire_tls_sessions(sec_mod_st *sec)
 
 		exp = gnutls_db_check_entry_time(&d);
 
-		if (now - exp > TLS_SESSION_EXPIRATION_TIME(GETCONFIG(sec))) {
+		if (now - exp > TLS_SESSION_EXPIRATION_TIME(GETRCONFIG(sec))) {
 			cache->session_id_size = 0;
 
 			htable_delval(sec->tls_db.ht, &iter);

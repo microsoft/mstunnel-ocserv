@@ -55,6 +55,37 @@ echo "Connecting with correct password... "
 ( echo -e "testuser123\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -v $ADDRESS:$PORT --authgroup group2 -u testuser --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly ) ||#>/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
+
+echo ""
+echo "Verify that vhost2 credentials are rejected on vhost1..."
+( echo -e "vhost2user123\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -v vhost1.example.com:${PORT} --resolve vhost1.example.com:${ADDRESS} --authgroup group2 -u vhost2user --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) &&
+        fail $PID "Unauthorized user from vhost2 was able to authenticate to vhost1"
+
+echo ""
+echo "Verify that valid vhost1 credentials are accepted..."
+( echo -e "vhost1user123\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -v vhost1.example.com:${PORT} --resolve vhost1.example.com:${ADDRESS} --authgroup group2 -u vhost1user --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
+        fail $PID "Valid user was unable to authenticate to vhost1"
+
+echo ""
+echo "Verify that vhost1 credentials are rejected on vhost2..."
+( echo -e "vhost1user123\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -v vhost2.example.com:${PORT} --resolve vhost2.example.com:${ADDRESS} --authgroup group2 -u vhost1user --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) &&
+        fail $PID "Unauthorized user from vhost1 was able to authenticate to vhost2"
+
+echo ""
+echo "Verify that valid vhost2 credentials are accepted..."
+( echo -e "vhost2user123\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -v vhost2.example.com:${PORT} --resolve vhost2.example.com:${ADDRESS} --authgroup group2 -u vhost2user --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
+        fail $PID "Valid user was unable to authenticate to vhost2"
+
+echo ""
+echo "Verify invalid credentials are rejected on vhost3 (minimal PAM options)..."
+( echo -e "testtest\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -v vhost3.example.com:${PORT} --resolve vhost3.example.com:${ADDRESS} --authgroup group2 -u testuser --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) &&
+        fail $PID "vhost3 (minimal PAM) accepted invalid credentials"
+
+echo ""
+echo "Verify valid credentials are accepted on vhost3 (minimal PAM options)..."
+( echo -e "testuser123\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -v vhost3.example.com:${PORT} --resolve vhost3.example.com:${ADDRESS} --authgroup group2 -u testuser --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
+        fail $PID "vhost3 (minimal PAM) rejected valid credentials"
+
 cleanup
 
 exit 0

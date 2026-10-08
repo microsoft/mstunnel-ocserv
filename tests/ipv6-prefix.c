@@ -23,8 +23,6 @@
 #include "../src/ip-util.h"
 #include "../src/ip-util.c"
 
-int syslog_open;
-
 static char *my_ipv6_prefix_to_mask(char str[MAX_IP_STR], unsigned int prefix)
 {
 	struct in6_addr in;

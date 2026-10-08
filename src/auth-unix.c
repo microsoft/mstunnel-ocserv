@@ -94,7 +94,7 @@ void unix_group_list(void *pool, unsigned int gid_min, char ***groupname,
 	setgrent();
 
 	*groupname_size = 0;
-	*groupname = talloc_size(pool, sizeof(char *) * MAX_GROUPS);
+	*groupname = talloc_array(pool, char *, MAX_GROUPS);
 	if (*groupname == NULL) {
 		goto exit;
 	}

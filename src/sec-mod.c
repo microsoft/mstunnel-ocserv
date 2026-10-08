@@ -49,9 +49,9 @@
 #include <gnutls/abstract.h>
 #include "log.h"
 
-#define MAINTAINANCE_TIME 310
+#define MAINTENANCE_TIME 310
 
-static int need_maintainance;
+static int need_maintenance;
 static int need_reload;
 static int need_exit;
 
@@ -115,7 +115,7 @@ static int pin_callback(void *user, int attempt, const char *token_url,
 	return 0;
 }
 
-static int load_pins(struct perm_cfg_st *config, struct pin_st *s)
+static int load_pins(struct static_cfg_st *config, struct pin_st *s)
 {
 	int fd, ret;
 
@@ -209,7 +209,7 @@ static int process_worker_packet(void *pool, int cfd, pid_t pid,
 #endif
 	PROTOBUF_ALLOCATOR(pa, pool);
 
-	seclog(sec, LOG_DEBUG, "cmd [size=%d] %s\n", (int)buffer_size,
+	seclog(sec, LOG_DEBUG, "cmd [size=%d] %s", (int)buffer_size,
 	       cmd_request_to_str(cmd));
 	data.data = buffer;
 	data.size = buffer_size;
@@ -219,7 +219,7 @@ static int process_worker_packet(void *pool, int cfd, pid_t pid,
 	case CMD_SEC_GET_PK:
 		pkm = sec_get_pk_msg__unpack(&pa, data.size, data.data);
 		if (pkm == NULL) {
-			seclog(sec, LOG_INFO, "error unpacking sec get pk\n");
+			seclog(sec, LOG_INFO, "error unpacking sec get pk");
 			return -1;
 		}
 
@@ -245,8 +245,7 @@ static int process_worker_packet(void *pool, int cfd, pid_t pid,
 		sec_get_pk_msg__free_unpacked(pkm, &pa);
 
 		if (ret < 0) {
-			seclog(sec, LOG_INFO, "error sending reply: %s",
-			       gnutls_strerror(ret));
+			seclog(sec, LOG_INFO, "error sending reply");
 			return -1;
 		}
 
@@ -256,7 +255,7 @@ static int process_worker_packet(void *pool, int cfd, pid_t pid,
 	case CMD_SEC_SIGN_HASH:
 		op = sec_op_msg__unpack(&pa, data.size, data.data);
 		if (op == NULL) {
-			seclog(sec, LOG_INFO, "error unpacking sec op\n");
+			seclog(sec, LOG_INFO, "error unpacking sec op");
 			return -1;
 		}
 
@@ -298,7 +297,7 @@ static int process_worker_packet(void *pool, int cfd, pid_t pid,
 	case CMD_SEC_DECRYPT:
 		op = sec_op_msg__unpack(&pa, data.size, data.data);
 		if (op == NULL) {
-			seclog(sec, LOG_INFO, "error unpacking sec op\n");
+			seclog(sec, LOG_INFO, "error unpacking sec op");
 			return -1;
 		}
 
@@ -357,7 +356,7 @@ static int process_worker_packet(void *pool, int cfd, pid_t pid,
 		auth_init =
 			sec_auth_init_msg__unpack(&pa, data.size, data.data);
 		if (auth_init == NULL) {
-			seclog(sec, LOG_INFO, "error unpacking auth init\n");
+			seclog(sec, LOG_INFO, "error unpacking auth init");
 			return -1;
 		}
 
@@ -371,7 +370,7 @@ static int process_worker_packet(void *pool, int cfd, pid_t pid,
 		auth_cont =
 			sec_auth_cont_msg__unpack(&pa, data.size, data.data);
 		if (auth_cont == NULL) {
-			seclog(sec, LOG_INFO, "error unpacking auth cont\n");
+			seclog(sec, LOG_INFO, "error unpacking auth cont");
 			return -1;
 		}
 
@@ -421,7 +420,7 @@ static int process_worker_packet(void *pool, int cfd, pid_t pid,
 
 		if (ret < 0) {
 			seclog(sec, LOG_DEBUG,
-			       "could not delete resumption data.");
+			       "could not delete resumption data");
 		}
 	}
 
@@ -445,7 +444,7 @@ static int process_worker_packet(void *pool, int cfd, pid_t pid,
 			msg.reply =
 				SESSION_RESUME_REPLY_MSG__RESUME__REP__FAILED;
 			seclog(sec, LOG_DEBUG,
-			       "could not fetch resumption data.");
+			       "could not fetch resumption data");
 		} else {
 			msg.reply = SESSION_RESUME_REPLY_MSG__RESUME__REP__OK;
 		}
@@ -457,7 +456,7 @@ static int process_worker_packet(void *pool, int cfd, pid_t pid,
 			(pack_func)session_resume_reply_msg__pack);
 
 		if (ret < 0) {
-			seclog(sec, LOG_ERR, "could not send reply cmd %d.",
+			seclog(sec, LOG_ERR, "could not send reply cmd %d",
 			       (unsigned int)cmd);
 			return ERR_BAD_COMMAND;
 		}
@@ -483,7 +482,7 @@ static int process_packet_from_main(void *pool, int fd, sec_mod_st *sec,
 
 	PROTOBUF_ALLOCATOR(pa, pool);
 
-	seclog(sec, LOG_DEBUG, "cmd [size=%d] %s\n", (int)buffer_size,
+	seclog(sec, LOG_DEBUG, "cmd [size=%d] %s", (int)buffer_size,
 	       cmd_request_to_str(cmd));
 	data.data = buffer;
 	data.size = buffer_size;
@@ -496,7 +495,7 @@ static int process_packet_from_main(void *pool, int fd, sec_mod_st *sec,
 			       NULL);
 		if (ret < 0) {
 			seclog(sec, LOG_ERR,
-			       "could not send reload reply to main!\n");
+			       "could not send reload reply to main!");
 			return ERR_BAD_COMMAND;
 		}
 		break;
@@ -510,7 +509,7 @@ static int process_packet_from_main(void *pool, int fd, sec_mod_st *sec,
 		msg = ban_ip_reply_msg__unpack(&pa, data.size, data.data);
 		if (msg == NULL) {
 			seclog(sec, LOG_INFO,
-			       "error unpacking auth ban ip reply\n");
+			       "error unpacking auth ban ip reply");
 			return ERR_BAD_COMMAND;
 		}
 
@@ -524,7 +523,7 @@ static int process_packet_from_main(void *pool, int fd, sec_mod_st *sec,
 
 		msg = secm_session_open_msg__unpack(&pa, data.size, data.data);
 		if (msg == NULL) {
-			seclog(sec, LOG_INFO, "error unpacking session open\n");
+			seclog(sec, LOG_INFO, "error unpacking session open");
 			return ERR_BAD_COMMAND;
 		}
 
@@ -538,8 +537,7 @@ static int process_packet_from_main(void *pool, int fd, sec_mod_st *sec,
 
 		msg = secm_session_close_msg__unpack(&pa, data.size, data.data);
 		if (msg == NULL) {
-			seclog(sec, LOG_INFO,
-			       "error unpacking session close\n");
+			seclog(sec, LOG_INFO, "error unpacking session close");
 			return ERR_BAD_COMMAND;
 		}
 
@@ -547,6 +545,74 @@ static int process_packet_from_main(void *pool, int fd, sec_mod_st *sec,
 		secm_session_close_msg__free_unpacked(msg, &pa);
 
 		return ret;
+	}
+	case CMD_SECM_TERMINATE_USER_SESSIONS: {
+		SecmTerminateUserSessionsMsg *msg;
+		SecmTerminateSessionReplyMsg reply =
+			SECM_TERMINATE_SESSION_REPLY_MSG__INIT;
+
+		msg = secm_terminate_user_sessions_msg__unpack(&pa, data.size,
+							       data.data);
+		if (msg == NULL) {
+			seclog(sec, LOG_INFO,
+			       "error unpacking terminate user sessions");
+			return ERR_BAD_COMMAND;
+		}
+
+		if (msg->username != NULL)
+			reply.result =
+				terminate_user_sessions(sec, msg->username);
+
+		ret = send_msg(
+			pool, fd, CMD_SECM_TERMINATE_USER_SESSIONS_REPLY,
+			&reply,
+			(pack_size_func)
+				secm_terminate_session_reply_msg__get_packed_size,
+			(pack_func)secm_terminate_session_reply_msg__pack);
+
+		secm_terminate_user_sessions_msg__free_unpacked(msg, &pa);
+
+		if (ret < 0) {
+			seclog(sec, LOG_ERR,
+			       "could not send terminate session reply!");
+			return ERR_BAD_COMMAND;
+		}
+
+		return 0;
+	}
+	case CMD_SECM_TERMINATE_SESSION: {
+		SecmTerminateSessionMsg *msg;
+		SecmTerminateSessionReplyMsg reply =
+			SECM_TERMINATE_SESSION_REPLY_MSG__INIT;
+
+		msg = secm_terminate_session_msg__unpack(&pa, data.size,
+							 data.data);
+		if (msg == NULL) {
+			seclog(sec, LOG_INFO,
+			       "error unpacking terminate session");
+			return ERR_BAD_COMMAND;
+		}
+
+		if (msg->safe_id.data != NULL && msg->safe_id.len > 0)
+			reply.result = terminate_session_by_sid(
+				sec, (const char *)msg->safe_id.data,
+				msg->safe_id.len);
+
+		ret = send_msg(
+			pool, fd, CMD_SECM_TERMINATE_SESSION_REPLY, &reply,
+			(pack_size_func)
+				secm_terminate_session_reply_msg__get_packed_size,
+			(pack_func)secm_terminate_session_reply_msg__pack);
+
+		secm_terminate_session_msg__free_unpacked(msg, &pa);
+
+		if (ret < 0) {
+			seclog(sec, LOG_ERR,
+			       "could not send terminate session reply!");
+			return ERR_BAD_COMMAND;
+		}
+
+		return 0;
 	}
 	default:
 		seclog(sec, LOG_WARNING, "unknown type 0x%.2x", cmd);
@@ -558,7 +624,13 @@ static int process_packet_from_main(void *pool, int fd, sec_mod_st *sec,
 
 static void handle_alarm(int signo)
 {
-	need_maintainance = 1;
+	need_maintenance = 1;
+}
+
+static unsigned int maintenance_time(sec_mod_st *sec)
+{
+	unsigned int t = GETRCONFIG(sec)->sec_mod_db_cleanup_time;
+	return (t > 0) ? t : MAINTENANCE_TIME;
 }
 
 static void handle_sigterm(int signo)
@@ -572,8 +644,8 @@ static void send_stats_to_main(sec_mod_st *sec)
 	time_t now = time(NULL);
 	SecmStatsMsg msg = SECM_STATS_MSG__INIT;
 
-	if (GETPCONFIG(sec)->stats_reset_time != 0 &&
-	    now - sec->last_stats_reset > GETPCONFIG(sec)->stats_reset_time) {
+	if (GETSCONFIG(sec)->stats_reset_time != 0 &&
+	    now - sec->last_stats_reset > GETSCONFIG(sec)->stats_reset_time) {
 		sec->auth_failures = 0;
 		sec->avg_auth_time = 0;
 		sec->max_auth_time = 0;
@@ -645,15 +717,15 @@ static void check_other_work(sec_mod_st *sec)
 		reload_server(sec);
 	}
 
-	if (need_maintainance) {
+	if (need_maintenance) {
 		seclog(sec, LOG_DEBUG, "performing maintenance");
 		cleanup_client_entries(sec);
 		expire_tls_sessions(sec);
 		send_stats_to_main(sec);
 		seclog(sec, LOG_DEBUG, "active sessions %d",
 		       sec_mod_client_db_elems(sec));
-		alarm(MAINTAINANCE_TIME);
-		need_maintainance = 0;
+		alarm(maintenance_time(sec));
+		need_maintenance = 0;
 	}
 }
 
@@ -678,7 +750,7 @@ static int serve_request_main(sec_mod_st *sec, int fd, uint8_t *buffer,
 	seclog(sec, LOG_DEBUG, "received request %s", cmd_request_to_str(cmd));
 	if (cmd <= MIN_SECM_CMD || cmd >= MAX_SECM_CMD) {
 		seclog(sec, LOG_ERR,
-		       "received invalid message from main of %u bytes (cmd: %u)\n",
+		       "received invalid message from main of %u bytes (cmd: %u)",
 		       (unsigned int)length, (unsigned int)cmd);
 		return ERR_BAD_COMMAND;
 	}
@@ -755,18 +827,18 @@ leave:
 	return ret;
 }
 
-#define CHECK_LOOP_ERR(x)                                          \
-	{                                                          \
-		if (force != 0) {                                  \
-			GNUTLS_FATAL_ERR(x);                       \
-		} else {                                           \
-			if (ret < 0) {                             \
-				seclog(sec, LOG_ERR,               \
-				       "could not reload key %s",  \
-				       vhost->perm_config.key[i]); \
-				continue;                          \
-			}                                          \
-		}                                                  \
+#define CHECK_LOOP_ERR(x)                                            \
+	{                                                            \
+		if (force != 0) {                                    \
+			GNUTLS_FATAL_ERR(x);                         \
+		} else {                                             \
+			if (ret < 0) {                               \
+				seclog(sec, LOG_ERR,                 \
+				       "could not reload key %s",    \
+				       vhost->static_config.key[i]); \
+				continue;                            \
+			}                                            \
+		}                                                    \
 	}
 
 static void read_private_key(sec_mod_st *sec, vhost_cfg_st *vhost,
@@ -783,20 +855,20 @@ static void read_private_key(sec_mod_st *sec, vhost_cfg_st *vhost,
 		CHECK_LOOP_ERR(ret);
 
 		/* load the private key */
-		if (gnutls_url_is_supported(vhost->perm_config.key[i]) != 0) {
+		if (gnutls_url_is_supported(vhost->static_config.key[i]) != 0) {
 			gnutls_privkey_set_pin_function(p, pin_callback,
 							&vhost->pins);
 			ret = gnutls_privkey_import_url(
-				p, vhost->perm_config.key[i], 0);
+				p, vhost->static_config.key[i], 0);
 			CHECK_LOOP_ERR(ret);
 		} else {
 			gnutls_datum_t data;
 
-			ret = gnutls_load_file(vhost->perm_config.key[i],
+			ret = gnutls_load_file(vhost->static_config.key[i],
 					       &data);
 			if (ret < 0) {
 				seclog(sec, LOG_ERR, "error loading file '%s'",
-				       vhost->perm_config.key[i]);
+				       vhost->static_config.key[i]);
 				CHECK_LOOP_ERR(ret);
 			}
 
@@ -821,7 +893,7 @@ static void read_private_key(sec_mod_st *sec, vhost_cfg_st *vhost,
 		}
 		vhost->key[i] = p;
 	}
-	seclog(sec, LOG_DEBUG, "%sloaded %d keys\n", PREFIX_VHOST(vhost),
+	seclog(sec, LOG_DEBUG, "%sloaded %d keys", PREFIX_VHOST(vhost),
 	       vhost->key_size);
 }
 
@@ -836,10 +908,10 @@ static int load_keys(sec_mod_st *sec, unsigned int force)
 		if (force == 0) {
 			reload_file = 0;
 
-			for (i = 0; i < vhost->perm_config.key_size; i++) {
-				if (need_file_reload(vhost->perm_config.key[i],
-						     vhost->cert_last_access) !=
-				    0) {
+			for (i = 0; i < vhost->static_config.key_size; i++) {
+				if (need_file_reload(
+					    vhost->static_config.key[i],
+					    vhost->cert_last_access) != 0) {
 					reload_file = 1;
 					break;
 				}
@@ -851,7 +923,7 @@ static int load_keys(sec_mod_st *sec, unsigned int force)
 
 		vhost->cert_last_access = time(NULL);
 
-		ret = load_pins(GETPCONFIG(sec), &vhost->pins);
+		ret = load_pins(GETSCONFIG(sec), &vhost->pins);
 		if (ret < 0) {
 			seclog(sec, LOG_ERR, "error loading PIN files");
 			exit(EXIT_FAILURE);
@@ -860,10 +932,10 @@ static int load_keys(sec_mod_st *sec, unsigned int force)
 		/* Reminder: the number of private keys or their filenames cannot be changed on reload
 		 */
 		if (vhost->key == NULL) {
-			vhost->key_size = vhost->perm_config.key_size;
+			vhost->key_size = vhost->static_config.key_size;
 			vhost->key = talloc_zero_size(
 				sec, sizeof(*vhost->key) *
-					     vhost->perm_config.key_size);
+					     vhost->static_config.key_size);
 			if (vhost->key == NULL) {
 				seclog(sec, LOG_ERR,
 				       "error in memory allocation");
@@ -1006,7 +1078,7 @@ void sec_mod_server(void *main_pool, void *config_pool,
 		exit(EXIT_FAILURE);
 	}
 
-	ret = chown(SOCKET_FILE, GETPCONFIG(sec)->uid, GETPCONFIG(sec)->gid);
+	ret = chown(SOCKET_FILE, GETSCONFIG(sec)->uid, GETSCONFIG(sec)->gid);
 	if (ret == -1) {
 		e = errno;
 		seclog(sec, LOG_INFO, "could not chown socket '%s': %s",
@@ -1028,7 +1100,7 @@ void sec_mod_server(void *main_pool, void *config_pool,
 	}
 
 	sigprocmask(SIG_BLOCK, &blockset, &sig_default_set);
-	alarm(MAINTAINANCE_TIME);
+	alarm(maintenance_time(sec));
 	seclog(sec, LOG_INFO, "sec-mod initialized (socket: %s)", SOCKET_FILE);
 
 	for (;;) {
@@ -1116,9 +1188,9 @@ void sec_mod_server(void *main_pool, void *config_pool,
 			/* do not allow unauthorized processes to issue commands
 			 */
 			ret = check_upeer_id("sec-mod",
-					     GETPCONFIG(sec)->log_level, cfd,
-					     GETPCONFIG(sec)->uid,
-					     GETPCONFIG(sec)->gid, &uid, &pid);
+					     GETSCONFIG(sec)->log_level, cfd,
+					     GETSCONFIG(sec)->uid,
+					     GETSCONFIG(sec)->gid, &uid, &pid);
 			if (ret < 0) {
 				seclog(sec, LOG_INFO,
 				       "rejected unauthorized connection");

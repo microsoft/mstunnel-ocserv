@@ -91,28 +91,28 @@ fi
 echo ok
 
 echo -n "Connecting to certificate host to obtain cookie (with certificate)... "
-connect "cert.example.com" "-u test --sslkey ./certs/user-key.pem -c ./certs/user-cert.pem" "" "sha1:8e253ef2a87dd9188fe444702f2fe349d30af816"
+connect "cert.example.com" "-u test --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert.pem" "" "sha1:8e253ef2a87dd9188fe444702f2fe349d30af816"
 if test $? != 0;then
 	fail $PID "Failed to connect with certificate!"
 fi
 echo ok
 
 echo -n "Connecting to certificate host to obtain cookie (with incorrect certificate)... "
-connect "cert.example.com" "-u test --sslkey ./certs/user-key.pem -c ./certs/user-cert-wrong.pem" "" "sha1:8e253ef2a87dd9188fe444702f2fe349d30af816"
+connect "cert.example.com" "-u test --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert-wrong.pem" "" "sha1:8e253ef2a87dd9188fe444702f2fe349d30af816"
 if test $? = 0;then
 	fail $PID "Should not have connected with wrong certificate!"
 fi
 echo ok
 
 echo -n "Connecting to pass2 host to obtain cookie (with certificate)... "
-connect "pass2.example.com" "-u vhost --sslkey ./certs/user-key.pem -c ./certs/user-cert.pem" "" "sha1:8e253ef2a87dd9188fe444702f2fe349d30af816"
+connect "pass2.example.com" "-u vhost --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert.pem" "" "sha1:8e253ef2a87dd9188fe444702f2fe349d30af816"
 if test $? = 0;then
 	fail $PID "Connected to wrong host with certificate!"
 fi
 echo ok
 
 echo -n "Connecting to default host to obtain cookie (with certificate)... "
-connect "default.example.com" "-u test --sslkey ./certs/user-key.pem -c ./certs/user-cert.pem" "" "pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8="
+connect "default.example.com" "-u test --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert.pem" "" "pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8="
 if test $? = 0;then
 	fail $PID "Connected to wrong host with certificate!"
 fi
@@ -144,7 +144,7 @@ fi
 echo ok
 
 echo -n "Sanity check to cert host..."
-connect "cert.example.com" "-u test --sslkey ./certs/user-key.pem -c ./certs/user-cert.pem" "" "sha1:8e253ef2a87dd9188fe444702f2fe349d30af816"
+connect "cert.example.com" "-u test --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert.pem" "" "sha1:8e253ef2a87dd9188fe444702f2fe349d30af816"
 if test $? != 0;then
 	fail $PID "Failed to connect with certificate!"
 fi

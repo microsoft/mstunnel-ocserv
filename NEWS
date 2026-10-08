@@ -1,9 +1,111 @@
-* Version 1.4.1 (unreased)
-- 
+* Version 1.5.0 (released 2026-06-07)
+- [SECURITY] Fixed unauthenticated heap buffer overflow in the unprivileged
+  worker process via an oversized webvpncontext= cookie value (#719)
+- [SECURITY] Fixed unsigned integer underflow in DTLS MTU negotiation (#717):
+  a client advertising an out-of-range X-CSTP-Base-MTU or X-CSTP-MTU value
+  could potentially cause a buffer overflow in the unprivileged worker process.
+  Requires an authenticated client.
+- Added `syslog-facility` option to log to specified syslog facility (#691)
+- Fixed worker hang when a client disappears silently (#638)
+- Removed the 'cgroup' configuration option (used for cgroups v1).
+  Administrators should use systemd resource controls instead; see
+  systemd.resource-control(5).
+- Fixed cached group-select values incorrectly suppressing the group list
+  on reconnect (#742)
+- Added 'service' sub-option to the 'auth = pam[...]' directive to allow
+  configurable PAM service names, enabling per-vhost PAM stacks (#718)
+- ocserv-fw-nftables: dropped runtime dependency on ipcalc/ipcalc-ng (#709)
+- Fixed sudden disconnects after authentication for AnyConnect clients (#706)
+- Distinguish disconnect reasons in AnyConnect BYE packets (#732)
+- Vhosts now inherit configuration options from the default vhost if
+  they are not overridden (#705)
+- Improved PAM handling by raising the provided stack memory to the default
+  for the system, and better detect overflow (#657)
+- `tunnel-all-dns` now works correctly when set in per-user/group config (#708)
+- radius: fixed Framed-IPv6-Prefix routes being silently dropped (#710)
+- Added per-worker memory limit (RLIMIT_DATA) as defense-in-depth against
+  memory-exhaustion attacks; controlled by the new `limit-worker-memory`
+  option (enabled by default)
+- Limited HTTP header size to 16 KB to complement the existing 256 KB
+  body limit
+- Fixed HTTP request desynchronization: pipelined requests in the same
+  TLS record are now rejected instead of being processed out of order (#716)
+- Fixes packet loss when sending large volumes of traffic through the VPN (#423)
+- Fix build issue on FreeBSD (#704)
+- Build against Nettle 4 (#697)
+- Removed unnecessary for openconnect client handlers to reduce attack surface:
+  * /cert.pem
+  * /cert.cer
+  * /ca.pem
+  * /ca.cer
+- Fix incorrect local address when using PROXY protocol with IPv6 (#711).
+- Fix calculation of avg_auth_time across sec-mod instances (#736)
+- The bundled llhttp was updated to 9.4.1.
+
+
+* Version 1.4.2 (released 2026-04-16)
+- Hardened IPC message validation between worker, main, and sec-mod
+  processes: added missing upper-bound checks on message lengths and
+  buffer sizes, and NULL guards on optional protobuf fields (defense-in-depth).
+- Limited HTTP request body size to 256 KB to prevent unauthenticated
+  clients from exhausting worker process memory.
+- Fixed proxy protocol v2 client certificate CN never being
+  extracted.
+- Added VIRTUAL HOSTS and CONFIGURATION sections to ocserv(8) man page;
+  documented options scope.
+- Setting a global-only option inside a [vhost:] section is now a hard
+  configuration error (previously it was ignored). Options are
+  annotated with their scope in doc/sample.config; see ocserv(8) for a
+  description of the configuration scope.
+- radius: added group-separator option to auth configuration, allowing
+  the separator used in OU= Class attributes to be set to 'semicolon'
+  (default) or 'comma', to support Freeradius deployments (#428)
+- The bundled llhttp was updated to 9.3.1.
+- occtl: Added 'terminate user', 'terminate id', and 'terminate session'
+  commands that disconnect users and invalidate their session cookies,
+  preventing automatic reconnection (#689)
+- Replaced autoconf/automake build system with meson (#699)
+- Added nftables-based ocserv-fw; requires ipcalc-ng/ipcalc (#397)
+- No longer need to duplicate global options in virtual hosts (#698)
+- Timestamps in IPC messages extended to 64-bit for future date support
+- Fixed a bug where a correct password was rejected after a wrong password
+  attempt in the same session (#323)
+- Aligned the default values for 'dpd' and 'mobile-dpd' options with
+  the values present in the default configuration (#680)
+- Aligned default values for 'keepalive', 'rekey-time', 'cookie-timeout',
+  'auth-timeout', 'ban-reset-time', 'max-ban-score', and
+  'switch-to-tcp-timeout' with the values documented in sample.config
+- The `no-udp` option can now be used to disable DTLS for specific vhosts.
+  Previously it was only available in per-user or per-group config.
+
+
+* Version 1.4.1 (released 2026-02-28)
+- [SECURITY] Fixed authentication bypass (medium severity) when combined
+  password with certificate authentication with cert-user-oid set to SAN(rfc822name):
+  a client presenting a valid CA-signed certificate without the expected
+  RFC822 SAN field could authenticate using password credentials alone,
+  bypassing the intended certificate-to-username binding. Requires the
+  attacker to possess both a valid CA-signed certificate and valid user
+  credentials (#694)
+- The bundled inih was updated to r62.
+- The bundled protobuf-c was updated to 1.5.2.
+- Fixed a bug where session timeout could be bypassed by reconnecting
+  (e.g., closing/opening laptop lid) (#599)
+- occtl: 'show user' command now includes a 'Session started at:' field,
+  indicating when the VPN session was established
+- occtl: Fix column misalignment in ban command outputs
+- occtl: Fix 'show ip bans' may produce invalid JSON (#683)
+- Handle dotted client hostnames (e.g., .local) by stripping the domain suffix
+- Renamed `min-reauth-time` configuration option to `ban-time` to better reflect
+  its purpose (#676). This option defines the duration (in seconds) for which
+  an IP address is banned after exceeding the maximum allowed `max-ban-score`.
+  Default is 300 seconds (5 minutes).
+- Fixed ocserv-worker process title
+- Fixed ignored udp-port in vhost (#612)
 
 
 * Version 1.4.0 (released 2026-01-04)
-- The bundled llhtp was updated to 9.3.0.
+- The bundled llhttp was updated to 9.3.0.
 - The bundled protobuf-c was updated to 1.5.1.
 - Fixed issues with PAM authentication when combined with pam_sssd (#618)
 - Enhanced the seccomp filters to address issue in testing (#627)

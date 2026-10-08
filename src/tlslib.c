@@ -31,6 +31,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <poll.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
@@ -102,18 +103,17 @@ ssize_t cstp_send(worker_st *ws, const void *data, size_t data_size)
 
 	if (ws->session != NULL) {
 		while (left > 0) {
-			ret = gnutls_record_send(ws->session, p, data_size);
+			ret = gnutls_record_send(ws->session, p, left);
 			if (ret < 0) {
+				struct pollfd pfd = { ws->conn_fd, POLLOUT, 0 };
 				if (ret != GNUTLS_E_AGAIN &&
-				    ret != GNUTLS_E_INTERRUPTED) {
+				    ret != GNUTLS_E_INTERRUPTED)
 					return ret;
-				} else {
-					/* do not cause mayhem */
-					ms_sleep(20);
-				}
-			}
-
-			if (ret > 0) {
+				/* wait for writability; peer gone if timeout */
+				if (poll(&pfd, 1,
+					 DEFAULT_SOCKET_TIMEOUT * 1000) <= 0)
+					return GNUTLS_E_PUSH_ERROR;
+			} else if (ret > 0) {
 				left -= ret;
 				p += ret;
 			}
@@ -228,7 +228,6 @@ static ssize_t _cstp_recv_packet(worker_st *ws, void *data, size_t data_size)
 ssize_t cstp_recv_packet(worker_st *ws, gnutls_datum_t *data, void **p)
 {
 	int ret;
-#ifdef ZERO_COPY
 	gnutls_packet_t packet = NULL;
 
 	if (ws->session != NULL) {
@@ -243,11 +242,6 @@ ssize_t cstp_recv_packet(worker_st *ws, gnutls_datum_t *data, void **p)
 		data->size = ret;
 	}
 
-#else
-	ret = _cstp_recv_packet(ws, ws->buffer, ws->buffer_size);
-	data->data = ws->buffer;
-	data->size = ret;
-#endif
 	return ret;
 }
 
@@ -296,7 +290,7 @@ unsigned int tls_has_session_cert(struct worker_st *ws)
 	if (ws->cert_auth_ok)
 		return 1;
 
-	if (WSCONFIG(ws)->cisco_client_compat == 0) {
+	if (WSRCONFIG(ws)->cisco_client_compat == 0) {
 		return 0;
 	}
 
@@ -349,7 +343,6 @@ void cstp_fatal_close(worker_st *ws, gnutls_alert_description_t a)
 ssize_t dtls_recv_packet(struct dtls_st *dtls, gnutls_datum_t *data, void **p)
 {
 	int ret;
-#ifdef ZERO_COPY
 	gnutls_packet_t packet = NULL;
 
 	ret = gnutls_record_recv_packet(dtls->dtls_session, &packet);
@@ -359,12 +352,6 @@ ssize_t dtls_recv_packet(struct dtls_st *dtls, gnutls_datum_t *data, void **p)
 	} else {
 		data->size = 0;
 	}
-#else
-	ret = gnutls_record_recv(dtls->dtls_session, ws->buffer,
-				 ws->buffer_size);
-	data->data = ws->buffer;
-	data->size = ret;
-#endif
 
 	return ret;
 }
@@ -378,20 +365,17 @@ ssize_t dtls_send(struct dtls_st *dtls, const void *data, size_t data_size)
 	if (dtls->dtls_session == NULL) {
 		return GNUTLS_E_INVALID_SESSION;
 	}
-	
-	while (left > 0) {
-		ret = gnutls_record_send(dtls->dtls_session, p, data_size);
-		if (ret < 0) {
-			if (ret != GNUTLS_E_AGAIN &&
-			    ret != GNUTLS_E_INTERRUPTED) {
-				return ret;
-			} else {
-				/* do not cause mayhem */
-				ms_sleep(20);
-			}
-		}
 
-		if (ret > 0) {
+	while (left > 0) {
+		ret = gnutls_record_send(dtls->dtls_session, p, left);
+		if (ret < 0) {
+			struct pollfd pfd = { dtls->dtls_tptr.fd, POLLOUT, 0 };
+			if (ret != GNUTLS_E_AGAIN &&
+			    ret != GNUTLS_E_INTERRUPTED)
+				return ret;
+			if (poll(&pfd, 1, DEFAULT_SOCKET_TIMEOUT * 1000) <= 0)
+				return GNUTLS_E_PUSH_ERROR;
+		} else if (ret > 0) {
 			left -= ret;
 			p += ret;
 		}
@@ -553,8 +537,8 @@ static int verify_certificate_cb(gnutls_session_t session)
 	/* notify gnutls to continue handshake normally */
 	return 0;
 no_cert:
-	if (WSCONFIG(ws)->cisco_client_compat != 0 ||
-	    WSCONFIG(ws)->cert_req != GNUTLS_CERT_REQUIRE)
+	if (WSRCONFIG(ws)->cisco_client_compat != 0 ||
+	    WSRCONFIG(ws)->cert_req != GNUTLS_CERT_REQUIRE)
 		return 0;
 fail:
 	return GNUTLS_E_CERTIFICATE_ERROR;
@@ -674,11 +658,11 @@ static void set_dh_params(main_server_st *s, struct vhost_cfg_st *vhost)
 	gnutls_datum_t data;
 	int ret;
 
-	if (vhost->perm_config.dh_params_file != NULL) {
+	if (vhost->static_config.dh_params_file != NULL) {
 		ret = gnutls_dh_params_init(&vhost->creds.dh_params);
 		GNUTLS_FATAL_ERR(ret);
 
-		ret = gnutls_load_file(vhost->perm_config.dh_params_file,
+		ret = gnutls_load_file(vhost->static_config.dh_params_file,
 				       &data);
 		GNUTLS_FATAL_ERR(ret);
 
@@ -865,29 +849,29 @@ static int load_cert_files(main_server_st *s, struct vhost_cfg_st *vhost)
 	struct key_cb_data *cdata;
 	unsigned int flags;
 
-	for (i = 0; i < vhost->perm_config.key_size; i++) {
+	for (i = 0; i < vhost->static_config.key_size; i++) {
 		/* load the certificate */
 
-		if (gnutls_url_is_supported(vhost->perm_config.cert[i]) != 0) {
+		if (gnutls_url_is_supported(vhost->static_config.cert[i]) !=
+		    0) {
 			oc_syslog(
 				LOG_ERR,
 				"Loading a certificate from '%s' is unsupported",
-				vhost->perm_config.cert[i]);
+				vhost->static_config.cert[i]);
 			return -1;
 		} else {
-			ret = gnutls_load_file(vhost->perm_config.cert[i],
+			ret = gnutls_load_file(vhost->static_config.cert[i],
 					       &data);
 			if (ret < 0) {
 				oc_syslog(LOG_ERR,
 					  "error loading file[%d] '%s'", i,
-					  vhost->perm_config.cert[i]);
+					  vhost->static_config.cert[i]);
 				return -1;
 			}
 
 			pcert_list_size = 8;
-			pcert_list = talloc_size(vhost->pool,
-						 sizeof(pcert_list[0]) *
-							 pcert_list_size);
+			pcert_list = talloc_array(vhost->pool, gnutls_pcert_st,
+						  pcert_list_size);
 			if (pcert_list == NULL) {
 				oc_syslog(LOG_ERR, "error allocating memory");
 				return -1;
@@ -928,7 +912,7 @@ static int load_cert_files(main_server_st *s, struct vhost_cfg_st *vhost)
 		/* when called here configuration may not be populated, so avoid using it */
 		cdata->sa.sun_family = AF_UNIX;
 		strlcpy(cdata->sa.sun_path,
-			secmod_socket_file_name(&vhost->perm_config),
+			secmod_socket_file_name(&vhost->static_config),
 			sizeof(cdata->sa.sun_path));
 		cdata->sa_len = SUN_LEN(&cdata->sa);
 
@@ -998,19 +982,19 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost,
 	unsigned int need_reload = 0;
 
 	if (vhost->params_last_access != 0) {
-		for (i = 0; i < vhost->perm_config.key_size; i++) {
-			if (need_file_reload(vhost->perm_config.cert[i],
+		for (i = 0; i < vhost->static_config.key_size; i++) {
+			if (need_file_reload(vhost->static_config.cert[i],
 					     vhost->params_last_access) != 0) {
 				need_reload = 1;
 				break;
 			}
 		}
 
-		if (need_file_reload(vhost->perm_config.ca,
+		if (need_file_reload(vhost->static_config.ca,
 				     vhost->params_last_access) ||
-		    need_file_reload(vhost->perm_config.config->ocsp_response,
+		    need_file_reload(vhost->config->ocsp_response,
 				     vhost->params_last_access) ||
-		    need_file_reload(vhost->perm_config.dh_params_file,
+		    need_file_reload(vhost->static_config.dh_params_file,
 				     vhost->params_last_access)) {
 			need_reload = 1;
 		}
@@ -1022,7 +1006,7 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost,
 			oc_syslog(LOG_INFO, "reloading server certificates");
 	}
 
-	if (vhost->perm_config.log_level >= OCLOG_TLS) {
+	if (vhost->static_config.log_level >= OCLOG_TLS) {
 		gnutls_global_set_log_function(tls_log_func);
 		gnutls_global_set_log_level(9);
 	}
@@ -1039,8 +1023,8 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost,
 
 	set_dh_params(s, vhost);
 
-	if (vhost->perm_config.key_size == 0 ||
-	    vhost->perm_config.cert_size == 0) {
+	if (vhost->static_config.key_size == 0 ||
+	    vhost->static_config.cert_size == 0) {
 		oc_syslog(LOG_ERR,
 			  "no certificate or key files were specified");
 		exit(EXIT_FAILURE);
@@ -1061,15 +1045,15 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost,
 		exit(EXIT_FAILURE);
 	}
 
-	if (vhost->perm_config.config->cert_req != GNUTLS_CERT_IGNORE) {
-		if (vhost->perm_config.ca != NULL) {
+	if (vhost->config->cert_req != GNUTLS_CERT_IGNORE) {
+		if (vhost->static_config.ca != NULL) {
 			ret = gnutls_certificate_set_x509_trust_file(
-				vhost->creds.xcred, vhost->perm_config.ca,
+				vhost->creds.xcred, vhost->static_config.ca,
 				GNUTLS_X509_FMT_PEM);
 			if (ret < 0) {
 				oc_syslog(LOG_ERR,
 					  "error setting the CA (%s) file",
-					  vhost->perm_config.ca);
+					  vhost->static_config.ca);
 				exit(EXIT_FAILURE);
 			}
 
@@ -1114,8 +1098,8 @@ static void tls_reload_ocsp(main_server_st *s, struct vhost_cfg_st *vhost)
 	gnutls_free(vhost->creds.ocsp_response.data);
 	vhost->creds.ocsp_response.data = NULL;
 
-	if (vhost->perm_config.config->ocsp_response != NULL) {
-		ret = gnutls_load_file(vhost->perm_config.config->ocsp_response,
+	if (vhost->config->ocsp_response != NULL) {
+		ret = gnutls_load_file(vhost->config->ocsp_response,
 				       &vhost->creds.ocsp_response);
 		if (ret < 0)
 			return;
@@ -1140,8 +1124,7 @@ void tls_load_prio(main_server_st *s, struct vhost_cfg_st *vhost)
 		gnutls_priority_deinit(vhost->creds.cprio);
 
 	ret = gnutls_priority_init(&vhost->creds.cprio,
-				   vhost->perm_config.config->priorities,
-				   &perr);
+				   vhost->config->priorities, &perr);
 	if (ret == GNUTLS_E_PARSING_ERROR)
 		oc_syslog(LOG_ERR, "error in TLS priority string: %s", perr);
 	GNUTLS_FATAL_ERR(ret);
@@ -1159,27 +1142,26 @@ void tls_reload_crl(main_server_st *s, struct vhost_cfg_st *vhost,
 	if (force)
 		vhost->crl_last_access = 0;
 
-	if (vhost->perm_config.config->cert_req != GNUTLS_CERT_IGNORE &&
-	    vhost->perm_config.config->crl != NULL) {
-		if (need_file_reload(vhost->perm_config.config->crl,
+	if (vhost->config->cert_req != GNUTLS_CERT_IGNORE &&
+	    vhost->config->crl != NULL) {
+		if (need_file_reload(vhost->config->crl,
 				     vhost->crl_last_access) == 0) {
 			oc_syslog(LOG_DEBUG, "skipping already loaded CRL: %s",
-				  vhost->perm_config.config->crl);
+				  vhost->config->crl);
 			return;
 		}
 
 		vhost->crl_last_access = time(NULL);
 
 		ret = gnutls_certificate_set_x509_crl_file(
-			vhost->creds.xcred, vhost->perm_config.config->crl,
-			crl_type);
+			vhost->creds.xcred, vhost->config->crl, crl_type);
 		if (ret == GNUTLS_E_BASE64_DECODING_ERROR &&
 		    crl_type == GNUTLS_X509_FMT_PEM) {
 			crl_type = GNUTLS_X509_FMT_DER;
 			saved_ret = ret;
 			ret = gnutls_certificate_set_x509_crl_file(
-				vhost->creds.xcred,
-				vhost->perm_config.config->crl, crl_type);
+				vhost->creds.xcred, vhost->config->crl,
+				crl_type);
 			if (ret < 0)
 				ret = saved_ret;
 		}
@@ -1187,12 +1169,10 @@ void tls_reload_crl(main_server_st *s, struct vhost_cfg_st *vhost,
 			/* ignore the CRL file when empty */
 			oc_syslog(LOG_ERR,
 				  "error reading the CRL (%s) file: %s",
-				  vhost->perm_config.config->crl,
-				  gnutls_strerror(ret));
+				  vhost->config->crl, gnutls_strerror(ret));
 			exit(EXIT_FAILURE);
 		}
-		oc_syslog(LOG_INFO, "loaded CRL: %s",
-			  vhost->perm_config.config->crl);
+		oc_syslog(LOG_INFO, "loaded CRL: %s", vhost->config->crl);
 	}
 }
 #endif /* UNDER_TEST */

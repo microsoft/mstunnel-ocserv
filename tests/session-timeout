@@ -33,12 +33,8 @@ OUTFILE=ban.$$.tmp
 eval "${GETPORT}"
 
 function finish {
-  set +e
   echo " * Cleaning up..."
-  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
-  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
-  test -n "${CPIDFILE}" && rm -f ${CPIDFILE} >/dev/null 2>&1
-  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  CLIPID=${CPIDFILE} cleanup_client_server
   test -n "${OUTFILE}" && rm -f ${OUTFILE} >/dev/null 2>&1
 }
 trap finish EXIT
@@ -58,10 +54,10 @@ if [ -z "$COOKIE" ];then
 fi
 
 #echo "Cookie: $COOKIE"
-sleep 1
+sleep 10
 echo ""
 echo "Connecting with cookie... "
-${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u test -C "$COOKIE" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --background --pid-file "${CPIDFILE}"
+${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u test -C "$COOKIE" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --background --pid-file "${CPIDFILE}" --verbose >${OUTFILE}
 
 sleep 4
 
@@ -69,12 +65,33 @@ if [ ! -f "${CPIDFILE}" ];then
 	fail $PID "It was not possible to establish session!"
 fi
 
+TIME_LEFT=$(awk '/X-CSTP-Session-Timeout-Remaining/ {print $2}' ${OUTFILE})
+if [ -z "${TIME_LEFT}" ];then
+	fail $PID "No session timeout advertised by server!"
+fi
+
+# session-timeout is 25 seconds, and we have already waited 10s before reconnecting.
+# So the remaining time should be no more than 15 seconds (25 - 10 = 15).
+# If it is greater than this, it indicates the timeout was reset
+# back to 25 seconds on the new connection (ref: issue #599)
+
+if [ "${TIME_LEFT}" -gt 20 ];then
+	fail $PID "Session timeout was reset to ${TIME_LEFT}s after reconnection!"
+fi
+
 echo "ping remote address"
 
 set -e
 ${CMDNS1} ping -c 3 ${VPNADDR}
-${CMDNS2} ${OCCTL} -s ${OCCTL_SOCKET} show user test
+UPTIME=$(${CMDNS2} ${OCCTL} -s ${OCCTL_SOCKET} -j show user test | jq 'now - .[].raw_session_started_at | floor')
 set +e
+
+if [ -z "${UPTIME}" ];then
+	fail $PID "Failed to retrieve session start time from occtl show user!"
+fi
+if [ "${UPTIME}" -lt 10 -o "${UPTIME}" -gt 60 ];then
+	fail $PID "Session uptime ${UPTIME}s is outside the expected range (10–60 seconds)!"
+fi
 
 # We wait more than the configured time as session timeout is enforced every
 # a couple of seconds.

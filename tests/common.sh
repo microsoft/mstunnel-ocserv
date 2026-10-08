@@ -23,7 +23,7 @@
 
 builddir=${builddir:-.}
 
-OPENCONNECT=${OPENCONNECT:-$(which openconnect)}
+OPENCONNECT=${OPENCONNECT:-$(command -v openconnect)}
 
 if test -z "${OPENCONNECT}" || ! test -x ${OPENCONNECT};then
 	echo "You need openconnect to run this test"
@@ -50,7 +50,7 @@ fi
 
 # NO_NEED_ROOT implies NEED_SOCKET_WRAPPER
 if test "${NEED_SOCKET_WRAPPER}" = 1 || test "${NO_NEED_ROOT}" = 1;then
-	SOCKDIR="${srcdir}/tmp/sockwrap.$$.tmp"
+	SOCKDIR="sockwrap.$$.tmp"
 	mkdir -p $SOCKDIR
 	export SOCKET_WRAPPER_DIR=$SOCKDIR
 	export SOCKET_WRAPPER_DEFAULT_IFACE=2
@@ -93,7 +93,8 @@ update_config() {
 	       -e 's|@ROUTE2@|'${ROUTE2}'|g' "$file.$$.tmp" \
 	       -e 's|@MATCH_CIPHERS@|'${MATCH_CIPHERS}'|g' "$file.$$.tmp" \
 	       -e 's|@OCCTL_SOCKET@|'${OCCTL_SOCKET}'|g' "$file.$$.tmp" \
-	       -e 's|@LISTEN_NS@|'${LISTEN_NS}'|g' "$file.$$.tmp"
+	       -e 's|@LISTEN_NS@|'${LISTEN_NS}'|g' "$file.$$.tmp" \
+	       -e 's|@RADIUSCLIENT_DIR@|'${RADIUSCLIENT_DIR}'|g' "$file.$$.tmp"
 	CONFIG="$file.$$.tmp"
 }
 
@@ -143,13 +144,16 @@ launch_pam_server() {
 	export PAM_WRAPPER_SERVICE_DIR="${builddir}/pam.$$.tmp/"
 	mkdir -p "${PAM_WRAPPER_SERVICE_DIR}"
 	test -f "${srcdir}/${TEST_PAMDIR}/users.oath.templ" && cp "${srcdir}/${TEST_PAMDIR}/users.oath.templ" "${PAM_WRAPPER_SERVICE_DIR}/users.oath"
-	test -f "${srcdir}/${TEST_PAMDIR}/passdb.templ" && cp "${srcdir}/${TEST_PAMDIR}/passdb.templ" "${PAM_WRAPPER_SERVICE_DIR}/passdb"
-	if test -f "${builddir}/${TEST_PAMDIR}/ocserv";then
-		cp "${builddir}/${TEST_PAMDIR}/ocserv" "${PAM_WRAPPER_SERVICE_DIR}/"
-	else
-		cp "${builddir}/data/pam/ocserv" "${PAM_WRAPPER_SERVICE_DIR}/"
-	fi
-	sed -i -e 's|%PAM_WRAPPER_SERVICE_DIR%|'${PAM_WRAPPER_SERVICE_DIR}'|g' "${PAM_WRAPPER_SERVICE_DIR}/ocserv"
+
+	for f in "${srcdir}/${TEST_PAMDIR}"/passdb*.templ; do
+		test -f "${f}" && cp "${f}" "${PAM_WRAPPER_SERVICE_DIR}/$(basename "${f%.templ}")"
+	done
+
+	cp "${builddir}/data/pam/ocserv" "${PAM_WRAPPER_SERVICE_DIR}/"
+	for f in "${builddir}/${TEST_PAMDIR}"/ocserv*; do
+		test -f "${f}" && cp -f "${f}" "${PAM_WRAPPER_SERVICE_DIR}/"
+	done
+	sed -i -e 's|%PAM_WRAPPER_SERVICE_DIR%|'${PAM_WRAPPER_SERVICE_DIR}'|g' "${PAM_WRAPPER_SERVICE_DIR}"/ocserv*
 
 	cp "${builddir}/data/pam/nss-passwd" "${PAM_WRAPPER_SERVICE_DIR}/"
 	cp "${builddir}/data/pam/nss-group" "${PAM_WRAPPER_SERVICE_DIR}/"
@@ -225,19 +229,43 @@ cleanup() {
 	return $ret
 }
 
+# cleanup_client_server: kill the VPN client BEFORE the server so that the
+# worker process detects the peer disconnect and exits cleanly (calling
+# __gcov_dump() in coverage builds) instead of being force-killed by
+# terminate_server() after its 5-second SIGKILL deadline.
+#
+# Usage from a finish() trap:
+#   cleanup_client_server
+# followed by any test-specific file removals.
+#
+# Expects the caller to have set:
+#   CLIPID  - file holding the openconnect client PID  (may be unset/absent)
+#   PID     - ocserv main process PID
+#   PIDFILE - file holding the ocserv PID              (may be unset/absent)
+cleanup_client_server() {
+	set +e
+	test -n "${CLIPID}" && test -f "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+	test -n "${CLIPID}" && rm -f "${CLIPID}" >/dev/null 2>&1
+	sleep 2
+	test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+	test -n "${PID}" && wait ${PID} 2>/dev/null
+	test -n "${PIDFILE}" && rm -f "${PIDFILE}" >/dev/null 2>&1
+	test -n "${CONFIG}" && rm -f "${CONFIG}" >/dev/null 2>&1
+}
+
 # Check for a utility to list ports.  Both ss and netstat will list
 # ports for normal users, and have similar semantics, so put the
 # command in the caller's PFCMD, or exit, indicating an unsupported
 # test.  Prefer ss from iproute2 over the older netstat.
 have_port_finder() {
-	for file in $(which ss 2> /dev/null) /*bin/ss /usr/*bin/ss /usr/local/*bin/ss;do
+	for file in $(command -v ss) /*bin/ss /usr/*bin/ss /usr/local/*bin/ss;do
 		if test -x "$file";then
 			PFCMD="$file";return 0
 		fi
 	done
 
 	if test -z "$PFCMD";then
-	for file in $(which netstat 2> /dev/null) /bin/netstat /usr/bin/netstat /usr/local/bin/netstat;do
+	for file in $(command -v netstat) /bin/netstat /usr/bin/netstat /usr/local/bin/netstat;do
 		if test -x "$file";then
 			PFCMD="$file";return 0
 		fi
@@ -254,6 +282,34 @@ check_if_port_in_use() {
 	local PORT="$1"
 	local PFCMD; have_port_finder
 	$PFCMD -an|grep "[\:\.]$PORT" >/dev/null 2>&1
+}
+
+# wait_ns_port PROTO PORT [MAX_SECS]
+# Poll inside CMDNS2 until the given port is listening, or exit on timeout.
+# PROTO is 't' for TCP or 'u' for UDP.  Requires CMDNS2 to be set (ns.sh).
+wait_ns_port() {
+	local proto="$1" port="$2" max="${3:-30}" elapsed=0
+	while [ "${elapsed}" -lt "${max}" ]; do
+		${CMDNS2} ss -${proto}lnp 2>/dev/null | grep -q ":${port}" && return 0
+		sleep 1
+		elapsed=$((elapsed + 1))
+	done
+	echo "Timeout: port ${port} not ready after ${max}s" >&2
+	exit 1
+}
+
+# wait_file_contents FILE PATTERN [MAX_SECS]
+# Poll until FILE contains PATTERN (ERE), or exit on timeout.
+# Polls every second; safe to call before the file exists.
+wait_file_contents() {
+	local file="$1" pattern="$2" max="${3:-60}" elapsed=0
+	while [ "${elapsed}" -lt "${max}" ]; do
+		grep -qE "${pattern}" "${file}" 2>/dev/null && return 0
+		sleep 1
+		elapsed=$((elapsed + 1))
+	done
+	echo "Timeout: '${pattern}' not found in ${file} after ${max}s" >&2
+	exit 1
 }
 
 # Find a port number not currently in use.

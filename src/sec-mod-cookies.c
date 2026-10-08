@@ -59,13 +59,13 @@ void handle_secm_list_cookies_reply(void *pool, int fd, sec_mod_st *sec)
 
 	seclog(sec, LOG_DEBUG, "sending list cookies reply to main");
 
-	msg.cookies = talloc_size(pool, sizeof(CookieIntMsg *) * db->elems);
+	msg.cookies = talloc_array(pool, CookieIntMsg *, db->elems);
 	if (msg.cookies == NULL) {
 		send_empty_reply(pool, fd, sec);
 		return;
 	}
 
-	cookies = talloc_size(pool, sizeof(CookieIntMsg) * db->elems);
+	cookies = talloc_array(pool, CookieIntMsg, db->elems);
 	if (cookies == NULL) {
 		send_empty_reply(pool, fd, sec);
 		return;

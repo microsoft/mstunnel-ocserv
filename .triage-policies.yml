@@ -1,6 +1,24 @@
 resource_rules:
   issues:
     rules:
+      - name: Close stale unassigned issues
+        conditions:
+          state: opened
+          date:
+            attribute: updated_at
+            condition: older_than
+            interval_type: months
+            interval: 6
+          forbidden_labels:
+            - security
+          ruby: resource[:assignees].empty? && resource[:merge_requests_count].to_i == 0
+        actions:
+          status: close
+          labels:
+            - wontfix
+          comment: |
+            {{author}} This issue has been open for over 6 months with no assignee and no linked merge request. We are closing it automatically. If you are still interested in addressing it, please re-open and either assign it to yourself or link a merge request. If this is a security issue, please re-open it and notify a maintainer so it can be marked as such. This is an automated message.
+
       - name: Close old needinfo policy
         conditions:
           date:

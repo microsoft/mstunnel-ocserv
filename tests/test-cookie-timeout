@@ -27,7 +27,7 @@ eval "${GETPORT}"
 
 echo "Testing whether cookies will expire as expected... "
 
-PIDFILE="${srcdir}/ct$$.pid.tmp"
+PIDFILE="ct$$.pid.tmp"
 
 update_config test-cookie-timeout.config
 launch_server -d 1 -f -c ${CONFIG} & PID=$!

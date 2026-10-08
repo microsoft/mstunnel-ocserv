@@ -6,3 +6,4 @@ dns = 8.8.8.8
 hostname = xxxx
 split-dns = example5.com
 split-dns = example6.com
+tunnel-all-dns = true

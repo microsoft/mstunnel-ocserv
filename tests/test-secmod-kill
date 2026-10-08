@@ -1,0 +1,115 @@
+#!/bin/sh
+#
+# Copyright (C) 2026 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Regression test for https://gitlab.com/openconnect/ocserv/-/work_items/615:
+# when sec-mod dies unexpectedly, ocserv must exit with a non-zero exit code.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+PIDFILE=ocserv-pid.$$.tmp
+
+. "$(dirname "$0")/common.sh"
+
+eval "${GETPORT}"
+
+echo "Testing that ocserv exits with a non-zero code when sec-mod is killed..."
+
+update_config test1.config
+launch_simple_sr_server -d 1 -p "${PIDFILE}" -f -c "${CONFIG}"
+BGPID=$!
+
+sleep 3
+
+echo "Background job PID (shell): ${BGPID}"
+
+if ! test -f "${PIDFILE}"; then
+	echo "Server did not start (no PID file after 3s)"
+	kill "${BGPID}" 2>/dev/null
+	wait "${BGPID}" 2>/dev/null
+	rm -f "${CONFIG}"
+	exit 1
+fi
+
+PID=$(cat "${PIDFILE}")
+echo "PID from file: ${PID}"
+
+if test -z "${PID}"; then
+	echo "PID file is empty"
+	kill "${BGPID}" 2>/dev/null
+	wait "${BGPID}" 2>/dev/null
+	rm -f "${PIDFILE}" "${CONFIG}"
+	exit 1
+fi
+
+if test "${PID}" != "${BGPID}"; then
+	echo "Note: PIDFILE PID (${PID}) differs from background job PID (${BGPID})"
+fi
+
+echo "Server started with PID ${PID}"
+
+# Locate the sec-mod child.  Try pgrep -P first (procps), then fall back
+# to a /proc scan for portability (BusyBox, Alpine, etc.).
+echo "Looking for children of PID ${PID}:"
+
+SECMOD_PID=$(pgrep -P "${PID}" 2>/dev/null | head -1)
+echo "  pgrep -P ${PID}: '${SECMOD_PID}'"
+
+if test -z "${SECMOD_PID}"; then
+	echo "  pgrep failed or unavailable; scanning /proc..."
+	for f in /proc/[0-9]*/status; do
+		ppid=$(sed -n 's/^PPid:[[:space:]]*//p' "$f" 2>/dev/null)
+		if test "$ppid" = "$PID"; then
+			SECMOD_PID="${f%/status}"
+			SECMOD_PID="${SECMOD_PID##*/proc/}"
+			echo "  found child via /proc: ${SECMOD_PID}"
+			break
+		fi
+	done
+fi
+
+if test -z "${SECMOD_PID}"; then
+	echo "Could not find sec-mod child of PID ${PID}"
+	echo "All processes (ps):"
+	ps -e -o pid= -o ppid= -o comm= 2>/dev/null || ps 2>/dev/null || true
+	kill "${BGPID}" 2>/dev/null
+	wait "${BGPID}" 2>/dev/null
+	rm -f "${PIDFILE}" "${CONFIG}"
+	exit 1
+fi
+
+echo "Killing sec-mod (PID ${SECMOD_PID})..."
+kill -9 "${SECMOD_PID}"
+
+# Main detects the death via ev_child, sets abnormal_exit, and calls
+# terminate_server.  Use BGPID (our direct child) so that wait is reliable.
+wait "${BGPID}"
+EXITCODE=$?
+
+echo "ocserv (PID ${BGPID}) exited with code ${EXITCODE}"
+
+rm -f "${PIDFILE}" "${CONFIG}"
+
+if test "${EXITCODE}" = "0"; then
+	echo "FAIL: ocserv exited with code 0, expected non-zero"
+	exit 1
+fi
+
+echo "OK: ocserv exited with code ${EXITCODE}"
+exit 0

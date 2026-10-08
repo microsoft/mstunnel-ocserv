@@ -24,11 +24,10 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
+#include "../src/common/common.h"
 #include "../src/common-config.h"
 #include "../src/config-ports.c"
 #include "../src/ipc.pb-c.h"
-
-int syslog_open;
 
 #define reset(x, y)             \
 	{                       \
@@ -36,10 +35,6 @@ int syslog_open;
 		x = NULL;       \
 		y = 0;          \
 	}
-
-void fw_port_st__init(FwPortSt *message)
-{
-}
 
 void check_vals(FwPortSt **fw_ports, size_t n_fw_ports)
 {
@@ -76,8 +71,9 @@ int main(void)
 	size_t n_fw_ports = 0;
 	void *pool = talloc_new(NULL);
 
-	strcpy(p,
-	       "icmp(), tcp(88), udp(90), sctp(70), tcp(443), udp(80), icmpv6()");
+	strlcpy(p,
+		"icmp(), tcp(88), udp(90), sctp(70), tcp(443), udp(80), icmpv6()",
+		sizeof(p));
 
 	ret = cfg_parse_ports(pool, &fw_ports, &n_fw_ports, p);
 	if (ret < 0) {
@@ -89,8 +85,9 @@ int main(void)
 
 	/* check spacing tolerance */
 	reset(fw_ports, n_fw_ports);
-	strcpy(p,
-	       "icmp (  ), tcp	 (  88 ), udp  (  90  ), sctp  (  70   )   ,   tcp   (  443   )    ,	 udp(80)	, icmpv6 ( )	");
+	strlcpy(p,
+		"icmp (  ), tcp	 (  88 ), udp  (  90  ), sctp  (  70   )   ,   tcp   (  443   )    ,	 udp(80)	, icmpv6 ( )	",
+		sizeof(p));
 
 	ret = cfg_parse_ports(pool, &fw_ports, &n_fw_ports, p);
 	if (ret < 0) {
@@ -102,7 +99,7 @@ int main(void)
 
 	/* test error 1 */
 	reset(fw_ports, n_fw_ports);
-	strcpy(p, "tcp(88), tcp(90),");
+	strlcpy(p, "tcp(88), tcp(90),", sizeof(p));
 	ret = cfg_parse_ports(pool, &fw_ports, &n_fw_ports, p);
 	if (ret >= 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
@@ -111,7 +108,7 @@ int main(void)
 
 	/* test error 2 */
 	reset(fw_ports, n_fw_ports);
-	strcpy(p, "tcp(88), tcp");
+	strlcpy(p, "tcp(88), tcp", sizeof(p));
 	ret = cfg_parse_ports(pool, &fw_ports, &n_fw_ports, p);
 	if (ret >= 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
@@ -119,8 +116,9 @@ int main(void)
 	}
 
 	reset(fw_ports, n_fw_ports);
-	strcpy(p,
-	       "!(icmp(), tcp(88), udp(90), sctp(70), tcp(443), udp(80), icmpv6())");
+	strlcpy(p,
+		"!(icmp(), tcp(88), udp(90), sctp(70), tcp(443), udp(80), icmpv6())",
+		sizeof(p));
 
 	ret = cfg_parse_ports(pool, &fw_ports, &n_fw_ports, p);
 	if (ret < 0) {

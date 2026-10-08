@@ -26,8 +26,6 @@
 #include "../src/html.h"
 #include "../src/html.c"
 
-int syslog_open;
-
 static char *strings[] = {
 
 	"Laguna+Beach", "_+-.~%2C", "Laguna%25%2B%40Beach"

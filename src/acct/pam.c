@@ -62,7 +62,7 @@ static int pam_acct_open_session(void *vctx, unsigned int auth_method,
 	pret = pam_start(PACKAGE, ai->username, &dc, &ph);
 	if (pret != PAM_SUCCESS) {
 		oc_syslog(LOG_NOTICE, "PAM-acct init: %s",
-			  pam_strerror(ph, pret));
+			  pam_strerror(NULL, pret));
 		goto fail1;
 	}
 

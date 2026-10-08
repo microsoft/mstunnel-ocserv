@@ -1,6 +1,6 @@
 # Using ocserv with OpenID Connect authentication
 
-OpenID Connect (OIDC) is an identity layer build on top of the OAuth 2.0 protocols. Authentication using OIDC utilizes the following flow:
+OpenID Connect (OIDC) is an identity layer built on top of the OAuth 2.0 protocol. Authentication using OIDC utilizes the following flow:
 
      +--------+                               +---------------+
      |        |--(A)- Authorization Request ->|   Resource    |
@@ -24,7 +24,7 @@ For as more detailed explanation see the OpenID Connect protocol (<https://openi
 
 ## Supported clients
 
-As of now only the microsoft intunes VPN client supports OIDC.
+Currently, only the Microsoft Intune VPN client supports OIDC.
 
 ## Deploying OIDC authentication
 
@@ -33,10 +33,10 @@ An administrator wanting to deploy OIDC as an authentication scheme must do the 
 1) Register an application identity with the OIDC provider
 2) Obtain the token endpoint and the OpenID Connect metadata document endpoint for their OIDC provider
 3) Determine what claims the OIDC provider supports
-4) Author a JSON document tell ocserv how to validate the token
+4) Author a JSON document to tell ocserv how to validate the token
 5) Add a line to the ocserv config file pointing to oidc config file: `auth = "oidc[config=<path to config file>]"`
 
-See your OIDC providers documentation to better understand what claims they support.
+See your OIDC provider's documentation to better understand what claims they support.
 
 ## OIDC JSON Config file
 
@@ -56,16 +56,16 @@ Example openid-configuration doc URIs are:
 1) <https://accounts.google.com/.well-known/openid-configuration>
 2) <https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration>
 
-Required claims controls what claims must be present in a token to permit access.
+The 'required_claims' field controls which claims must be present in a token to permit access.
 
-See your OpenID Connect provider for details on claims and OpenID Connect metadata document URL.
+Refer to your OpenID Connect provider's documentation for details on claims and the OpenID Connect metadata document URL.
 
 ## Sample token
 
-An OIDC token is returned as a base64url encoded blob.
+An OIDC token is returned as a base64url-encoded blob.
 `eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJFUzI1NiIsICJraWQiOiAiTXkgRmFrZSBLZXkifQ.eyJhdWQiOiAiU29tZUF1ZGllbmNlIiwgImlzcyI6ICJTb21lSXNzdWVyIiwgImlhdCI6IDE1ODE5ODAzMzcsICJuYmYiOiAxNTgxOTgwMzM3LCAiZXhwIjogMTU4MTk4Mzk5NywgInByZWZlcnJlZF91c2VybmFtZSI6ICJTb21lVXNlciJ9.dBGYHphmSHx_IQp09LpK9wkxAcIqnNRkX2Z59PPe0q7aU8yr2QZrq2fqtqRgk3fJ-LyRFaL5HyKHOHq3xebdXg`
 
-You can view the contents of the token using <https://jwt.ms>.
+You can view the contents of the token using tools like <https://jwt.ms>.
 ```
 {
   "typ": "JWT",

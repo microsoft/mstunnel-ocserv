@@ -98,6 +98,14 @@ static void radius_vhost_init(void **_vctx, void *pool, void *additional)
 		vctx->nas_identifier[0] = 0;
 	}
 
+	if (config->group_separator) {
+		strlcpy(vctx->group_separator, config->group_separator,
+			sizeof(vctx->group_separator));
+	} else {
+		strlcpy(vctx->group_separator, ";",
+			sizeof(vctx->group_separator));
+	}
+
 	if (rc_read_dictionary(vctx->rh, rc_conf_str(vctx->rh, "dictionary")) !=
 	    0) {
 		fprintf(stderr, "error reading the radius dictionary\n");
@@ -205,7 +213,7 @@ static void append_route(struct radius_ctx_st *pctx, const char *route,
 			 unsigned int len)
 {
 	unsigned int i;
-	char *p;
+	const char *p;
 
 	/* accept route/mask */
 	p = strchr(route, '/');
@@ -233,10 +241,11 @@ static void append_route(struct radius_ctx_st *pctx, const char *route,
 	}
 }
 
-/* Parses group of format "OU=group1;group2;group3" */
-static void parse_groupnames(struct radius_ctx_st *pctx, const char *full)
+/* Parses group of format "OU=group1<sep>group2<sep>group3" */
+static void parse_groupnames(struct radius_ctx_st *pctx, char *full)
 {
 	char *p, *p2;
+	const char *sep = pctx->vctx->group_separator;
 
 	if (pctx->groupnames_size >= MAX_GROUPS) {
 		oc_syslog(
@@ -252,13 +261,13 @@ static void parse_groupnames(struct radius_ctx_st *pctx, const char *full)
 		if (p == NULL)
 			return;
 
-		p2 = strsep(&p, ";");
+		p2 = strsep(&p, sep);
 		while (p2 != NULL) {
 			pctx->groupnames[pctx->groupnames_size++] = p2;
 
 			oc_syslog(LOG_DEBUG, "radius-auth: found group %s", p2);
 
-			p2 = strsep(&p, ";");
+			p2 = strsep(&p, sep);
 
 			if (pctx->groupnames_size == MAX_GROUPS) {
 				if (p2)
@@ -402,7 +411,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned int pass_len)
 
 	if (pctx->state != NULL) {
 		if (rc_avpair_add(pctx->vctx->rh, &send, PW_STATE, pctx->state,
-				  -1, 0) == NULL) {
+				  pctx->state_len, 0) == NULL) {
 			oc_syslog(
 				LOG_ERR,
 				"%s:%u: error in constructing radius message for user '%s'",
@@ -412,6 +421,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned int pass_len)
 		}
 		talloc_free(pctx->state);
 		pctx->state = NULL;
+		pctx->state_len = 0;
 	}
 
 	pctx->pass_msg[0] = 0;
@@ -478,8 +488,8 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned int pass_len)
 							"%s/%u", txt,
 							(unsigned int)(unsigned char)
 								vp->strvalue[1]);
-						append_route(pctx, vp->strvalue,
-							     vp->lvalue);
+						append_route(pctx, route,
+							     strlen(route));
 					}
 				}
 			} else if (vp->attribute ==
@@ -584,15 +594,18 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned int pass_len)
 			if (vp->attribute == PW_STATE &&
 			    vp->type == PW_TYPE_STRING) {
 				/* State */
-				if (vp->lvalue > 0)
-					pctx->state = talloc_strdup(
-						pctx, vp->strvalue);
+				if (vp->lvalue > 0) {
+					pctx->state = talloc_memdup(
+						pctx, vp->strvalue, vp->lvalue);
+					pctx->state_len =
+						pctx->state ? vp->lvalue : 0;
+				}
 
 				pctx->id++;
 				oc_syslog(
 					LOG_DEBUG,
-					"radius-auth: Access-Challenge response stage %u, State %s",
-					pctx->passwd_counter, vp->strvalue);
+					"radius-auth: Access-Challenge response stage %u, State length %u",
+					pctx->passwd_counter, vp->lvalue);
 				ret = ERR_AUTH_CONTINUE;
 			}
 			vp = vp->next;

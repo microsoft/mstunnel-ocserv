@@ -30,6 +30,10 @@ eval "${GETPORT}"
 
 echo "Testing local backend with oidc token auth... "
 
+# Generate the initial keys and tokens in this test process so parallel Meson
+# scheduling cannot start the server before its test data exists.
+./gen_oidc_test_data || exit $?
+
 update_config test-oidc-auth.config
 launch_sr_server -d 1 -p ${PIDFILE} -f -c ${CONFIG} & PID=$!
 wait_server $PID
@@ -51,7 +55,7 @@ sleep 5s
 
 # Generate new OIDC keys
 # First client should fail, triggering reload of keys
-`dirname $0`/gen_oidc_test_data
+./gen_oidc_test_data
 for token in data/success_*; do
     http_result=$(LD_PRELOAD=libsocket_wrapper.so curl --insecure https://$ADDRESS:$PORT --request POST --data config-auth.xml --header "Authorization:Bearer=`cat $token`" --output /dev/null --write-out "%{http_code}")
     if [ "$http_result" != "401" ]; then

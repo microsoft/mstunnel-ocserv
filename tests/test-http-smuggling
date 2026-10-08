@@ -1,0 +1,111 @@
+#!/bin/sh
+#
+# Copyright (C) 2026 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+# Verify that HTTP request-boundary confusion is not possible.
+# When two requests arrive in the same TLS read buffer, the parser must
+# stop at the first message_complete boundary (via llhttp_pause) and
+# dispatch only the first request.  The second request must not reach
+# any handler in that same keep-alive cycle.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+
+if ! which gnutls-cli > /dev/null 2>&1; then
+	echo "gnutls-cli not found, needed for this test"
+	exit 1
+fi
+
+echo "Testing HTTP request smuggling prevention..."
+
+update_config test-user-cert.config
+launch_simple_sr_server -d 1 -f -c ${CONFIG}
+PID=$!
+wait_server $PID
+
+TMPFILE=test-http-smuggling.$$.tmp
+
+# Send raw bytes over TLS via gnutls-cli and capture the full server
+# response.  Because stdin is a pipe (not a terminal) gnutls-cli delivers
+# all data to gnutls_record_send() in a single call, placing both requests
+# in the same TLS record — the exact scenario that triggers the bug.
+# tls_send takes a printf(1) format string with \r\n escape sequences and
+# sends the result over TLS via gnutls-cli.  The argument is intentionally
+# NOT passed through $() to avoid shell command substitution stripping
+# trailing newlines, which would drop the blank line that terminates HTTP
+# headers.
+#
+# The "sleep 1" keeps the pipe open after the request bytes are sent so
+# that gnutls-cli stays in its select loop long enough to receive the
+# server response before stdin EOF triggers a TLS close_notify.
+tls_send() {
+	{ printf '%b' "$1"; sleep 1; } | \
+		LD_PRELOAD=libsocket_wrapper.so timeout 5 \
+		gnutls-cli \
+		--insecure --x509cafile="${srcdir}/certs/ca.pem" \
+		$ADDRESS --port $PORT \
+		--sni-hostname localhost > "$TMPFILE" || true
+}
+
+# --- Positive: single GET must still return a response ------------------
+echo -n "Single GET /cert.pem returns a response ... "
+tls_send 'GET /cert.pem HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n'
+grep -q "^HTTP/1\." "$TMPFILE" ||
+	fail $PID "Single GET /cert.pem produced no HTTP response"
+echo "ok"
+
+# --- Negative: second pipelined request must not be dispatched ----------
+# Strategy: second URL is /cert.pem (→ 200).  Before the fix the second
+# request's URL overwrote the first and the server returned 200.  After
+# the fix the server detects pipelined data and closes the connection
+# immediately — neither request gets a response, but /cert.pem is never
+# served.
+echo -n "Pipelined GET: /cert.pem not served ... "
+tls_send 'GET /BOGUS_SENTINEL HTTP/1.1\r\nHost: localhost\r\nConnection: keep-alive\r\n\r\nGET /cert.pem HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n'
+if grep -q "^HTTP/1.1 200" "$TMPFILE"; then
+	fail $PID "Second pipelined request was dispatched: got 200 for /cert.pem"
+fi
+echo "ok"
+
+# --- Negative: GET with body bytes + pipelined GET ----------------------
+# The body bytes of the first GET must not bleed into the second request's
+# URL parsing.
+echo -n "GET with body + pipelined GET: first request dispatched ... "
+tls_send 'GET /BOGUS_SENTINEL HTTP/1.1\r\nHost: localhost\r\nContent-Length: 5\r\nConnection: keep-alive\r\n\r\nabcdeGET /cert.pem HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n'
+if grep -q "^HTTP/1.1 200" "$TMPFILE"; then
+	fail $PID "Pipelined request after GET body was dispatched: expected 404, got 200 for /cert.pem"
+fi
+echo "ok"
+
+# --- Negative: GET with Content-Length: 0 + pipelined GET ---------------
+echo -n "GET Content-Length:0 + pipelined GET: first request dispatched ... "
+tls_send 'GET /BOGUS_SENTINEL HTTP/1.1\r\nHost: localhost\r\nContent-Length: 0\r\nConnection: keep-alive\r\n\r\nGET /cert.pem HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n'
+if grep -q "^HTTP/1.1 200" "$TMPFILE"; then
+	fail $PID "Pipelined request after CL:0 GET was dispatched: expected 404, got 200 for /cert.pem"
+fi
+echo "ok"
+
+rm -f "$TMPFILE"
+cleanup
+exit 0

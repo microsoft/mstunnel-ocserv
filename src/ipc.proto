@@ -43,7 +43,7 @@ message group_cfg_st
 	optional string ipv4_netmask = 18;
 	optional string ipv6_net = 19;
 	optional uint32 ipv6_prefix = 20;
-	optional string cgroup = 21;
+
 	optional string xml_config_file = 22;
 	optional uint32 rx_per_sec = 23;
 	optional uint32 tx_per_sec = 24;
@@ -83,6 +83,7 @@ message auth_cookie_reply_msg
 	optional string ipv6_local = 10;
 
 	required bytes sid = 11;
+	required int64 session_start_time = 12;
 	required bytes secmod_addr = 13;
 
 	/* additional config */
@@ -136,7 +137,7 @@ message cli_stats_msg
 	required uint64 bytes_in = 1;
 	required uint64 bytes_out = 2;
 	optional bytes sid = 3;
-	required uint32 uptime = 4;
+	required int64 uptime = 4;
 	optional string remote_ip = 5;
 	optional string ipv4 = 6;
 	optional string ipv6 = 7;
@@ -171,7 +172,7 @@ message worker_startup_msg
 	required CONN_TYPE conn_type = 4;
 	required string remote_ip_str = 5;
 	required string our_ip_str = 6;
-	required uint64 session_start_time = 7;
+	required int64 session_start_time = 7;
 	required bytes remote_addr = 8;
 	required bytes our_addr = 9;
 	required bytes sec_auth_init_hmac = 10;
@@ -256,7 +257,7 @@ message sec_auth_init_msg
 	optional string device_platform = 12;
 	optional string device_type = 13;
 	optional string vhost = 14;
-	required uint64 session_start_time = 15;
+	required int64 session_start_time = 15;
 	required bytes hmac = 16;
 	required string orig_remote_ip = 17; /* if proxy proto is in use this is
 					the original IP that initiated the session */
@@ -319,7 +320,7 @@ message secm_session_open_msg
 message secm_session_close_msg
 {
 	required bytes sid = 1; /* cookie */
-	optional uint32 uptime = 3;
+	optional int64 uptime = 3;
 	optional uint64 bytes_in = 4;
 	optional uint64 bytes_out = 5;
 	optional string ipv4 = 6;
@@ -354,6 +355,7 @@ message secm_session_reply_msg
 	optional string user_agent = 12;
 	optional string device_platform = 13;
 	optional string device_type = 14;
+	required int64 session_start_time = 15;
 }
 
 /* internal struct */
@@ -367,7 +369,7 @@ message cookie_int_msg
 	optional string groupname = 6;
 	required string user_agent = 7;
 	required string remote_ip = 8;
-	required uint32 expires = 9;
+	required int64 expires = 9;
 	required uint32 status = 10; /* the authentication status (PS_*) */
 	required bool in_use = 11;
 	required string vhost = 12;
@@ -378,6 +380,26 @@ message cookie_int_msg
 message secm_list_cookies_reply_msg
 {
 	repeated cookie_int_msg cookies = 1;
+}
+
+/* SECM_TERMINATE_USER_SESSIONS: sent from main to sec-mod to invalidate all
+ * session cookies for a given username. */
+message secm_terminate_user_sessions_msg
+{
+	required string username = 1;
+}
+
+/* SECM_TERMINATE_SESSION: sent from main to sec-mod to invalidate a single
+ * session cookie by its safe_id. */
+message secm_terminate_session_msg
+{
+	required bytes safe_id = 1;
+}
+
+/* Reply for both terminate commands */
+message secm_terminate_session_reply_msg
+{
+	required bool result = 1 [default = false];
 }
 
 

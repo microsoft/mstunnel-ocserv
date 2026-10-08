@@ -1,2 +1,3 @@
 mobile-dpd = 880
 ipv4-network = 10.9.9.0/16
+tunnel-all-dns = false

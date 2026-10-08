@@ -65,23 +65,23 @@ void sec_auth_init(struct vhost_cfg_st *vhost)
 	unsigned int i;
 	void *pool = vhost;
 
-	for (i = 0; i < vhost->perm_config.auth_methods; i++) {
-		if (vhost->perm_config.auth[i].enabled &&
-		    vhost->perm_config.auth[i].amod &&
-		    vhost->perm_config.auth[i].amod->vhost_init &&
-		    vhost->perm_config.auth[i].auth_ctx == NULL) {
-			vhost->perm_config.auth[i].amod->vhost_init(
-				&vhost->perm_config.auth[i].auth_ctx, pool,
-				vhost->perm_config.auth[i].additional);
+	for (i = 0; i < vhost->static_config.auth_methods; i++) {
+		if (vhost->static_config.auth[i].enabled &&
+		    vhost->static_config.auth[i].amod &&
+		    vhost->static_config.auth[i].amod->vhost_init &&
+		    vhost->static_config.auth[i].auth_ctx == NULL) {
+			vhost->static_config.auth[i].amod->vhost_init(
+				&vhost->static_config.auth[i].auth_ctx, pool,
+				vhost->static_config.auth[i].additional);
 		}
 	}
 
-	if (vhost->perm_config.acct.amod &&
-	    vhost->perm_config.acct.amod->vhost_init &&
-	    vhost->perm_config.acct.acct_ctx == NULL)
-		vhost->perm_config.acct.amod->vhost_init(
-			&vhost->perm_config.acct.acct_ctx, pool,
-			vhost->perm_config.acct.additional);
+	if (vhost->static_config.acct.amod &&
+	    vhost->static_config.acct.amod->vhost_init &&
+	    vhost->static_config.acct.acct_ctx == NULL)
+		vhost->static_config.acct.amod->vhost_init(
+			&vhost->static_config.acct.acct_ctx, pool,
+			vhost->static_config.acct.additional);
 }
 
 /* returns a negative number if we have reached the score for this client.
@@ -94,7 +94,7 @@ static void sec_mod_add_score_to_ip(sec_mod_st *sec, client_entry_st *e,
 	BanIpMsg msg = BAN_IP_MSG__INIT;
 
 	/* no reporting if banning is disabled */
-	if (e->vhost->perm_config.config->max_ban_score == 0)
+	if (e->vhost->config->max_ban_score == 0)
 		return;
 
 	msg.ip = (char *)ip;
@@ -231,6 +231,18 @@ static int check_cert_user_group_status(sec_mod_st *sec, client_entry_st *e)
 	unsigned int found, i;
 
 	if (e->auth_type & AUTH_TYPE_CERTIFICATE) {
+		/* Defense in depth: if cert-user-oid is configured, the
+		 * certificate must contain the corresponding identifier.
+		 * The worker already enforces this, but sec-mod is the
+		 * should not rely on the worker having done so. */
+		if (e->vhost->config->cert_user_oid != NULL &&
+		    e->cert_user_name[0] == 0) {
+			seclog(sec, LOG_INFO,
+			       "cert-user-oid '%s' configured but no username found in certificate; rejecting",
+			       e->vhost->config->cert_user_oid);
+			return -1;
+		}
+
 		if (e->tls_auth_ok == 0) {
 			seclog(sec, LOG_INFO,
 			       "user %s " SESSION_STR
@@ -240,7 +252,7 @@ static int check_cert_user_group_status(sec_mod_st *sec, client_entry_st *e)
 		}
 
 		if (e->acct_info.username[0] == 0 &&
-		    e->vhost->perm_config.config->cert_user_oid != NULL) {
+		    e->vhost->config->cert_user_oid != NULL) {
 			if (e->cert_user_name[0] == 0) {
 				seclog(sec, LOG_INFO,
 				       "no username in the certificate; rejecting");
@@ -250,15 +262,13 @@ static int check_cert_user_group_status(sec_mod_st *sec, client_entry_st *e)
 			strlcpy(e->acct_info.username, e->cert_user_name,
 				sizeof(e->acct_info.username));
 			if (e->cert_group_names_size > 0 &&
-			    e->vhost->perm_config.config->cert_group_oid !=
-				    NULL &&
+			    e->vhost->config->cert_group_oid != NULL &&
 			    e->acct_info.groupname[0] == 0)
 				strlcpy(e->acct_info.groupname,
 					e->cert_group_names[0],
 					sizeof(e->acct_info.groupname));
 		} else {
-			if (e->vhost->perm_config.config->cert_user_oid !=
-				    NULL &&
+			if (e->vhost->config->cert_user_oid != NULL &&
 			    e->cert_user_name[0] &&
 			    strcmp(e->acct_info.username, e->cert_user_name) !=
 				    0) {
@@ -270,8 +280,7 @@ static int check_cert_user_group_status(sec_mod_st *sec, client_entry_st *e)
 				return -1;
 			}
 
-			if (e->vhost->perm_config.config->cert_group_oid !=
-			    NULL) {
+			if (e->vhost->config->cert_group_oid != NULL) {
 				found = 0;
 				for (i = 0; i < e->cert_group_names_size; i++) {
 					if (strcmp(e->acct_info.groupname,
@@ -318,7 +327,7 @@ static int check_group(sec_mod_st *sec, client_entry_st *e)
 	/* set group name using the certificate info */
 	if (e->auth_type & AUTH_TYPE_CERTIFICATE) {
 		if (e->acct_info.groupname[0] == 0 && req_group != NULL &&
-		    e->vhost->perm_config.config->cert_group_oid != NULL) {
+		    e->vhost->config->cert_group_oid != NULL) {
 			unsigned int i, found = 0;
 
 			for (i = 0; i < e->cert_group_names_size; i++) {
@@ -383,14 +392,13 @@ static int handle_sec_auth_res(int cfd, sec_mod_st *sec, client_entry_st *e,
 		    e->module->allows_retries && passwd_retries == 1) {
 			sec_mod_add_score_to_ip(
 				sec, e, e->acct_info.remote_ip,
-				e->vhost->perm_config.config
-					->ban_points_wrong_password);
+				e->vhost->config->ban_points_wrong_password);
 		}
 
 		ret = send_sec_auth_reply_msg(cfd, sec, e);
 		if (ret < 0) {
 			e->status = PS_AUTH_FAILED;
-			seclog(sec, LOG_ERR, "could not send reply auth cmd.");
+			seclog(sec, LOG_ERR, "could not send reply auth cmd");
 			return ret;
 		}
 		return 0; /* wait for another command */
@@ -402,7 +410,7 @@ static int handle_sec_auth_res(int cfd, sec_mod_st *sec, client_entry_st *e,
 		ret = check_group(sec, e);
 		if (ret < 0) {
 			e->status = PS_AUTH_FAILED;
-			seclog(sec, LOG_ERR, "could not accept group.");
+			seclog(sec, LOG_ERR, "could not accept group");
 			return ret;
 		}
 
@@ -424,7 +432,7 @@ static int handle_sec_auth_res(int cfd, sec_mod_st *sec, client_entry_st *e,
 		ret = send_sec_auth_reply(cfd, sec, e, AUTH__REP__OK);
 		if (ret < 0) {
 			e->status = PS_AUTH_FAILED;
-			seclog(sec, LOG_ERR, "could not send reply auth cmd.");
+			seclog(sec, LOG_ERR, "could not send reply auth cmd");
 			return ret;
 		}
 
@@ -434,18 +442,18 @@ static int handle_sec_auth_res(int cfd, sec_mod_st *sec, client_entry_st *e,
 
 		sec_mod_add_score_to_ip(
 			sec, e, e->acct_info.remote_ip,
-			e->vhost->perm_config.config->ban_points_wrong_password);
+			e->vhost->config->ban_points_wrong_password);
 
 		ret = send_sec_auth_reply(cfd, sec, e, AUTH__REP__FAILED);
 		if (ret < 0) {
-			seclog(sec, LOG_ERR, "could not send reply auth cmd.");
+			seclog(sec, LOG_ERR, "could not send reply auth cmd");
 			return ret;
 		}
 
 		if (result < 0) {
 			ret = result;
 		} else {
-			seclog(sec, LOG_ERR, "unexpected auth result: %d\n",
+			seclog(sec, LOG_ERR, "unexpected auth result: %d",
 			       result);
 			ret = ERR_BAD_COMMAND;
 		}
@@ -534,10 +542,10 @@ int handle_secm_session_open_cmd(sec_mod_st *sec, int fd,
 		strlcpy(e->acct_info.ipv6, req->ipv6,
 			sizeof(e->acct_info.ipv6));
 
-	if (e->vhost->perm_config.acct.amod != NULL &&
-	    e->vhost->perm_config.acct.amod->open_session != NULL &&
+	if (e->vhost->static_config.acct.amod != NULL &&
+	    e->vhost->static_config.acct.amod->open_session != NULL &&
 	    e->session_is_open == 0) {
-		ret = e->vhost->perm_config.acct.amod->open_session(
+		ret = e->vhost->static_config.acct.amod->open_session(
 			e->vhost_acct_ctx, e->auth_type, &e->acct_info,
 			req->sid.data, req->sid.len);
 		if (ret < 0) {
@@ -560,7 +568,7 @@ int handle_secm_session_open_cmd(sec_mod_st *sec, int fd,
 	rep.vhost = e->vhost->name;
 
 	/* Fixme: possibly we should allow for completely random seeds */
-	if (e->vhost->perm_config.config->predictable_ips != 0) {
+	if (e->vhost->config->predictable_ips != 0) {
 		rep.ipv4_seed = hash_any(e->acct_info.username,
 					 strlen(e->acct_info.username), 0);
 	} else {
@@ -572,6 +580,7 @@ int handle_secm_session_open_cmd(sec_mod_st *sec, int fd,
 
 	rep.sid.data = e->sid;
 	rep.sid.len = sizeof(e->sid);
+	rep.session_start_time = e->created;
 
 	rep.reply = AUTH__REP__OK;
 
@@ -582,8 +591,8 @@ int handle_secm_session_open_cmd(sec_mod_st *sec, int fd,
 
 	if (e->vhost->config_module &&
 	    e->vhost->config_module->get_sup_config) {
-		ret = e->vhost->config_module->get_sup_config(
-			e->vhost->perm_config.config, e, &rep, lpool);
+		ret = e->vhost->config_module->get_sup_config(e->vhost->config,
+							      e, &rep, lpool);
 		if (ret < 0) {
 			seclog(sec, LOG_ERR,
 			       "error reading additional configuration for '%s' " SESSION_STR,
@@ -606,8 +615,8 @@ int handle_secm_session_open_cmd(sec_mod_st *sec, int fd,
 	       PREFIX_VHOST(e->vhost), e->acct_info.username,
 	       e->acct_info.safe_id);
 	/* refresh cookie validity */
-	e->exptime = time(NULL) + e->vhost->perm_config.config->cookie_timeout +
-		     AUTH_SLACK_TIME;
+	e->exptime =
+		time(NULL) + e->vhost->config->cookie_timeout + AUTH_SLACK_TIME;
 	e->in_use++;
 
 	return 0;
@@ -746,8 +755,8 @@ int handle_sec_auth_stats_cmd(sec_mod_st *sec, const CliStatsMsg *req,
 	/* update PID */
 	e->acct_info.id = pid;
 
-	if (e->vhost->perm_config.acct.amod == NULL ||
-	    e->vhost->perm_config.acct.amod->session_stats == NULL)
+	if (e->vhost->static_config.acct.amod == NULL ||
+	    e->vhost->static_config.acct.amod->session_stats == NULL)
 		return 0;
 
 	stats_add_to(&totals, &e->stats, &e->saved_stats);
@@ -761,7 +770,7 @@ int handle_sec_auth_stats_cmd(sec_mod_st *sec, const CliStatsMsg *req,
 		strlcpy(e->acct_info.ipv6, req->ipv6,
 			sizeof(e->acct_info.ipv6));
 
-	e->vhost->perm_config.acct.amod->session_stats(
+	e->vhost->static_config.acct.amod->session_stats(
 		e->vhost_acct_ctx, e->auth_type, &e->acct_info, &totals);
 
 	return 0;
@@ -839,19 +848,20 @@ static int set_module(sec_mod_st *sec, vhost_cfg_st *vhost, client_entry_st *e,
 
 	/* Find the first configured authentication method which contains
 	 * the method asked by the worker, and use that. */
-	for (i = 0; i < vhost->perm_config.auth_methods; i++) {
-		if (vhost->perm_config.auth[i].enabled &&
-		    (vhost->perm_config.auth[i].type & auth_type) ==
+	for (i = 0; i < vhost->static_config.auth_methods; i++) {
+		if (vhost->static_config.auth[i].enabled &&
+		    (vhost->static_config.auth[i].type & auth_type) ==
 			    auth_type) {
-			e->module = vhost->perm_config.auth[i].amod;
-			e->auth_type = vhost->perm_config.auth[i].type;
-			e->vhost_auth_ctx = vhost->perm_config.auth[i].auth_ctx;
-			e->vhost_acct_ctx = vhost->perm_config.acct.acct_ctx;
+			e->module = vhost->static_config.auth[i].amod;
+			e->auth_type = vhost->static_config.auth[i].type;
+			e->vhost_auth_ctx =
+				vhost->static_config.auth[i].auth_ctx;
+			e->vhost_acct_ctx = vhost->static_config.acct.acct_ctx;
 
 			seclog(sec, LOG_INFO,
 			       "%susing '%s' authentication to authenticate user " SESSION_STR,
 			       PREFIX_VHOST(vhost),
-			       vhost->perm_config.auth[i].name,
+			       vhost->static_config.auth[i].name,
 			       e->acct_info.safe_id);
 			return 0;
 		}
@@ -882,8 +892,11 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req,
 	session_start_time =
 		(time_t)req->session_start_time; // avoid time_t size problem
 
+	if (req->orig_remote_ip == NULL) {
+		seclog(sec, LOG_NOTICE, "missing remote IP in auth init");
+		return -1;
+	}
 	hmac_components[0].data = req->orig_remote_ip;
-	// req->ip is required and protobuf doesn't permit null for required parameters
 	hmac_components[0].length = strlen(req->orig_remote_ip);
 	hmac_components[1].data = req->our_ip;
 	hmac_components[1].length = req->our_ip ? strlen(req->our_ip) : 0;
@@ -902,8 +915,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req,
 
 	vhost = find_vhost(sec->vconfig, req->vhost);
 
-	if ((now - session_start_time) >
-	    vhost->perm_config.config->auth_timeout) {
+	if ((now - session_start_time) > vhost->config->auth_timeout) {
 		seclog(sec, LOG_NOTICE,
 		       "hmac presented by client expired - possible replay");
 		return -1;
@@ -1028,10 +1040,10 @@ void sec_auth_user_deinit(sec_mod_st *sec, client_entry_st *e)
 	seclog(sec, LOG_DEBUG,
 	       "permanently closing session of user '%s' " SESSION_STR,
 	       e->acct_info.username, e->acct_info.safe_id);
-	if (vhost->perm_config.acct.amod != NULL &&
-	    vhost->perm_config.acct.amod->close_session != NULL &&
+	if (vhost->static_config.acct.amod != NULL &&
+	    vhost->static_config.acct.amod->close_session != NULL &&
 	    e->session_is_open != 0) {
-		vhost->perm_config.acct.amod->close_session(
+		vhost->static_config.acct.amod->close_session(
 			e->vhost_acct_ctx, e->auth_type, &e->acct_info,
 			&e->saved_stats, e->discon_reason);
 	}

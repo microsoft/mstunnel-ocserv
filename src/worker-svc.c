@@ -37,7 +37,7 @@ int get_svc_handler(worker_st *ws, unsigned int http_ver)
 {
 	int ret;
 
-	if (!WSCONFIG(ws)->cisco_svc_client_compat)
+	if (!WSRCONFIG(ws)->cisco_svc_client_compat)
 		oclog(ws, LOG_WARNING,
 		      "request to /svc but cisco-svc-client-compat = false");
 
@@ -68,6 +68,10 @@ int get_svc_handler(worker_st *ws, unsigned int http_ver)
 		goto fail;
 
 	ret = cstp_puts(ws, "X-Transcend-Version: 1\r\n");
+	if (ret < 0)
+		goto fail;
+
+	ret = add_owasp_headers(ws);
 	if (ret < 0)
 		goto fail;
 
@@ -209,7 +213,7 @@ int post_svc_handler(worker_st *ws, unsigned int http_ver)
 	int ret = -1;
 	char cookie[BASE64_ENCODE_RAW_LENGTH(sizeof(ws->cookie)) + 1];
 
-	if (!WSCONFIG(ws)->cisco_svc_client_compat)
+	if (!WSRCONFIG(ws)->cisco_svc_client_compat)
 		oclog(ws, LOG_WARNING,
 		      "request to /svc but cisco-svc-client-compat = false");
 

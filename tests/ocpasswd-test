@@ -64,6 +64,19 @@ if test $? = 0;then
 	exit 1
 fi
 
+echo "Unlocking user... "
+$OCPASSWD -c passwd.out -u test
+if test $? != 0;then
+	echo "Failed unlocking user test"
+	exit 1
+fi
+
+grep ':!\$' passwd.out >/dev/null 2>&1
+if test $? = 0;then
+	echo "Failed unlocking user test. The exclamation mark is still present"
+	exit 1
+fi
+
 echo "Deleting user... "
 $OCPASSWD -c passwd.out -d test
 if test $? != 0;then
@@ -74,6 +87,130 @@ fi
 grep "test" passwd.out  >/dev/null 2>&1
 if test $? = 0;then
 	echo "Failed deleting user test. User was found in file"
+	exit 1
+fi
+
+rm -f passwd.out
+
+echo "Creating user with default group... "
+echo pass|$OCPASSWD -c passwd.out alice
+if test $? != 0;then
+	echo "Failed creating user with default group"
+	exit 1
+fi
+
+grep 'alice:\*:' passwd.out >/dev/null 2>&1
+if test $? != 0;then
+	echo "Failed creating user with default group. '*' group not found"
+	exit 1
+fi
+
+rm -f passwd.out
+
+echo "Updating existing user password... "
+echo oldpass|$OCPASSWD -c passwd.out -g grp alice
+if test $? != 0;then
+	echo "Failed creating user alice"
+	exit 1
+fi
+OLDHASH=$(grep 'alice:' passwd.out)
+echo newpass|$OCPASSWD -c passwd.out -g grp alice
+if test $? != 0;then
+	echo "Failed updating user alice password"
+	exit 1
+fi
+NEWHASH=$(grep 'alice:' passwd.out)
+if test "$OLDHASH" = "$NEWHASH";then
+	echo "Failed updating user alice password. Hash did not change"
+	exit 1
+fi
+# File must contain exactly one entry for alice
+COUNT=$(grep -c 'alice:' passwd.out)
+if test "$COUNT" != "1";then
+	echo "Failed updating user: expected 1 entry, found $COUNT"
+	exit 1
+fi
+
+rm -f passwd.out
+
+echo "Multi-user file: lock and delete preserve other users... "
+echo pass1|$OCPASSWD -c passwd.out -g g1 alice
+echo pass2|$OCPASSWD -c passwd.out -g g2 bob
+echo pass3|$OCPASSWD -c passwd.out -g g3 carol
+
+# Lock alice; bob and carol must be untouched
+$OCPASSWD -c passwd.out -l alice
+if test $? != 0;then
+	echo "Failed locking alice in multi-user file"
+	exit 1
+fi
+grep '^bob:' passwd.out >/dev/null 2>&1
+if test $? != 0;then
+	echo "Failed: bob disappeared after locking alice"
+	exit 1
+fi
+grep '^carol:' passwd.out >/dev/null 2>&1
+if test $? != 0;then
+	echo "Failed: carol disappeared after locking alice"
+	exit 1
+fi
+
+# Delete bob; alice and carol must be untouched
+$OCPASSWD -c passwd.out -d bob
+if test $? != 0;then
+	echo "Failed deleting bob in multi-user file"
+	exit 1
+fi
+grep '^bob:' passwd.out >/dev/null 2>&1
+if test $? = 0;then
+	echo "Failed: bob still present after deletion"
+	exit 1
+fi
+grep '^alice:' passwd.out >/dev/null 2>&1
+if test $? != 0;then
+	echo "Failed: alice disappeared after deleting bob"
+	exit 1
+fi
+grep '^carol:' passwd.out >/dev/null 2>&1
+if test $? != 0;then
+	echo "Failed: carol disappeared after deleting bob"
+	exit 1
+fi
+
+rm -f passwd.out
+
+echo "Testing --help flag... "
+$OCPASSWD -h >/dev/null 2>&1
+if test $? != 0;then
+	echo "Failed: --help exited with non-zero status"
+	exit 1
+fi
+
+echo "Testing --version flag... "
+$OCPASSWD -v >/dev/null 2>&1
+if test $? != 0;then
+	echo "Failed: --version exited with non-zero status"
+	exit 1
+fi
+
+echo "Testing conflicting flags (-d and -l)... "
+$OCPASSWD -c passwd.out -d -l test >/dev/null 2>&1
+if test $? = 0;then
+	echo "Failed: conflicting flags should have exited with error"
+	exit 1
+fi
+
+echo "Testing missing username argument... "
+$OCPASSWD -c passwd.out >/dev/null 2>&1
+if test $? = 0;then
+	echo "Failed: missing username should have exited with error"
+	exit 1
+fi
+
+echo "Testing empty password rejection... "
+echo ""|$OCPASSWD -c passwd.out testuser >/dev/null 2>&1
+if test $? = 0;then
+	echo "Failed: empty password should have exited with error"
 	exit 1
 fi
 

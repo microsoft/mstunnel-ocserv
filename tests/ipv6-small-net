@@ -22,7 +22,7 @@ SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 PIDFILE=ocserv-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
-IP=$(which ip)
+IP=$(command -v ip)
 
 . `dirname $0`/common.sh
 
@@ -42,13 +42,8 @@ fi
 echo "Testing ocserv and ipv6 iface application... "
 
 function finish {
-  set +e
   echo " * Cleaning up..."
-  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
-  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
-  test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
-  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
-  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  cleanup_client_server
 }
 trap finish EXIT
 

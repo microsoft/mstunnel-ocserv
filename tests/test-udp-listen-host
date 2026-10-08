@@ -20,8 +20,8 @@
 
 OCCTL="${OCCTL:-../src/occtl/occtl}"
 OUTFILE=occtl-show-user.$$.tmp
-CLIPID="${srcdir:-.}/ci$$-1.pid.tmp"
-CLIPID2="${srcdir:-.}/ci$$-2.pid.tmp"
+CLIPID="ci$$-1.pid.tmp"
+CLIPID2="ci$$-2.pid.tmp"
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 PIDFILE=ocserv-pid.$$.tmp
