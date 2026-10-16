@@ -24,6 +24,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
+#include "../src/common/common.h"
 #include "../src/common-config.h"
 #include "../src/config-kkdcp.c"
 
@@ -36,7 +37,7 @@ int main(void)
 	char *port, *server, *path, *realm;
 	int socktype;
 
-	strcpy(p, "/KdcProxy KERBEROS.REALM udp@127.0.0.1:88");
+	strlcpy(p, "/KdcProxy KERBEROS.REALM udp@127.0.0.1:88", sizeof(p));
 
 	parse_kkdcp_string(p, &socktype, &port, &server, &path, &realm);
 	if (socktype != SOCK_DGRAM || strcmp(port, "88") != 0 ||
@@ -48,7 +49,7 @@ int main(void)
 		exit(2);
 	}
 
-	strcpy(p, "/KdcProxy KERBEROS.REALM tcp@[::1]:88");
+	strlcpy(p, "/KdcProxy KERBEROS.REALM tcp@[::1]:88", sizeof(p));
 
 	parse_kkdcp_string(p, &socktype, &port, &server, &path, &realm);
 	if (socktype != SOCK_STREAM || strcmp(port, "88") != 0 ||
@@ -60,8 +61,9 @@ int main(void)
 		exit(2);
 	}
 
-	strcpy(p,
-	       "/KdcProxy-xxx	 KERBEROS.REALM		udp@[fc74:cc44:8f86:0252:47d4:54bf:112b:970c]:8899");
+	strlcpy(p,
+		"/KdcProxy-xxx	 KERBEROS.REALM		udp@[fc74:cc44:8f86:0252:47d4:54bf:112b:970c]:8899",
+		sizeof(p));
 
 	parse_kkdcp_string(p, &socktype, &port, &server, &path, &realm);
 	if (socktype != SOCK_DGRAM || strcmp(port, "8899") != 0 ||

@@ -71,6 +71,14 @@ void *sec_mod_client_db_init(sec_mod_st *sec)
 void sec_mod_client_db_deinit(sec_mod_st *sec)
 {
 	struct htable *db = sec->client_db;
+	client_entry_st *t;
+	struct htable_iter iter;
+
+	t = htable_first(db, &iter);
+	while (t != NULL) {
+		sec_auth_user_deinit(sec, t);
+		t = htable_next(db, &iter);
+	}
 
 	htable_clear(db);
 	talloc_free(db);
@@ -131,8 +139,7 @@ client_entry_st *new_client_entry(sec_mod_st *sec, struct vhost_cfg_st *vhost,
 	calc_safe_id(e->sid, SID_SIZE, (char *)e->acct_info.safe_id,
 		     sizeof(e->acct_info.safe_id));
 	now = time(NULL);
-	e->exptime = now + vhost->perm_config.config->cookie_timeout +
-		     AUTH_SLACK_TIME;
+	e->exptime = now + vhost->config->cookie_timeout + AUTH_SLACK_TIME;
 	e->created = now;
 
 	if (htable_add(db, rehash(e, NULL), e) == 0) {
@@ -207,7 +214,7 @@ void expire_client_entry(sec_mod_st *sec, client_entry_st *e)
 	if (e->in_use > 0)
 		e->in_use--;
 	if (e->in_use == 0) {
-		if (e->vhost->perm_config.config->persistent_cookies == 0 &&
+		if (e->vhost->config->persistent_cookies == 0 &&
 		    (e->discon_reason == REASON_SERVER_DISCONNECT ||
 		     e->discon_reason == REASON_SESSION_TIMEOUT ||
 		     (e->session_is_open &&
@@ -224,14 +231,12 @@ void expire_client_entry(sec_mod_st *sec, client_entry_st *e)
 			 * explicitly disconnect with the intention to reconnect
 			 * seconds later. */
 			if (e->discon_reason == REASON_USER_DISCONNECT) {
-				if (!e->vhost->perm_config.config
-					     ->persistent_cookies ||
+				if (!e->vhost->config->persistent_cookies ||
 				    (now + AUTH_SLACK_TIME >= e->exptime))
 					e->exptime = now + AUTH_SLACK_TIME;
 			} else {
 				e->exptime = now +
-					     e->vhost->perm_config.config
-						     ->cookie_timeout +
+					     e->vhost->config->cookie_timeout +
 					     AUTH_SLACK_TIME;
 			}
 			seclog(sec, LOG_INFO,
@@ -239,4 +244,88 @@ void expire_client_entry(sec_mod_st *sec, client_entry_st *e)
 			       e->acct_info.username, e->acct_info.safe_id);
 		}
 	}
+}
+
+/* Terminate all sessions for a given username, invalidating their cookies.
+ * Returns 1 if at least one session was terminated, 0 otherwise.
+ */
+int terminate_user_sessions(sec_mod_st *sec, const char *username)
+{
+	struct htable *db = sec->client_db;
+	client_entry_st *t;
+	struct htable_iter iter;
+	int terminated = 0;
+
+	if (db == NULL)
+		return 0;
+
+	if (username == NULL || username[0] == 0) {
+		seclog(sec, LOG_INFO,
+		       "terminate session request without username");
+		return 0;
+	}
+
+	seclog(sec, LOG_DEBUG, "terminating sessions for user '%s'", username);
+
+	t = htable_first(db, &iter);
+	while (t != NULL) {
+		if (strcmp(t->acct_info.username, username) == 0) {
+			seclog(sec, LOG_INFO,
+			       "force terminating session of user '%s' " SESSION_STR,
+			       t->acct_info.username, t->acct_info.safe_id);
+			htable_delval(db, &iter);
+			clean_entry(sec, t);
+			terminated = 1;
+		}
+		t = htable_next(db, &iter);
+	}
+
+	return terminated;
+}
+
+/* Terminate a session by its safe_id prefix.
+ * Returns 1 if the session was terminated, 0 otherwise.
+ */
+int terminate_session_by_sid(sec_mod_st *sec, const char *safe_id,
+			     size_t safe_id_len)
+{
+	struct htable *db = sec->client_db;
+	client_entry_st *t;
+	struct htable_iter iter;
+	int terminated = 0;
+
+	if (db == NULL)
+		return 0;
+
+	if (safe_id == NULL || safe_id_len == 0) {
+		seclog(sec, LOG_INFO,
+		       "terminate session request without session ID");
+		return 0;
+	}
+
+	if (safe_id_len != SAFE_ID_SIZE - 1) {
+		seclog(sec, LOG_INFO,
+		       "terminate session request with invalid session ID length (%zu)",
+		       safe_id_len);
+		return 0;
+	}
+
+	seclog(sec, LOG_DEBUG, "terminating session with ID prefix '%.6s'",
+	       safe_id);
+
+	t = htable_first(db, &iter);
+	while (t != NULL) {
+		if (memcmp(t->acct_info.safe_id, safe_id, safe_id_len) == 0) {
+			seclog(sec, LOG_INFO,
+			       "force terminating session of user '%s' " SESSION_STR,
+			       t->acct_info.username, t->acct_info.safe_id);
+			htable_delval(db, &iter);
+			clean_entry(sec, t);
+			terminated = 1;
+			break; /* Session IDs should be unique */
+		}
+		t = htable_next(db, &iter);
+	}
+
+	return terminated;
 }

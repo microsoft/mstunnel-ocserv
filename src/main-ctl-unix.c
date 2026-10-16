@@ -38,6 +38,7 @@
 #include <ccan/container_of/container_of.h>
 
 #include <ctl.pb-c.h>
+#include <ipc.pb-c.h>
 #include <str.h>
 
 typedef struct method_ctx {
@@ -69,6 +70,12 @@ static void method_list_banned(method_ctx *ctx, int cfd, uint8_t *msg,
 			       unsigned int msg_size);
 static void method_list_cookies(method_ctx *ctx, int cfd, uint8_t *msg,
 				unsigned int msg_size);
+static void method_terminate_user(method_ctx *ctx, int cfd, uint8_t *msg,
+				  unsigned int msg_size);
+static void method_terminate_id(method_ctx *ctx, int cfd, uint8_t *msg,
+				unsigned int msg_size);
+static void method_terminate_session(method_ctx *ctx, int cfd, uint8_t *msg,
+				     unsigned int msg_size);
 
 typedef void (*method_func)(method_ctx *ctx, int cfd, uint8_t *msg,
 			    unsigned int msg_size);
@@ -97,12 +104,15 @@ static const ctl_method_st methods[] = {
 	ENTRY(CTL_CMD_UNBAN_IP, method_unban_ip),
 	ENTRY(CTL_CMD_DISCONNECT_NAME, method_disconnect_user_name),
 	ENTRY(CTL_CMD_DISCONNECT_ID, method_disconnect_user_id),
+	ENTRY(CTL_CMD_TERMINATE_USER, method_terminate_user),
+	ENTRY(CTL_CMD_TERMINATE_ID, method_terminate_id),
+	ENTRY(CTL_CMD_TERMINATE_SESSION, method_terminate_session),
 	{ NULL, 0, NULL }
 };
 
 void ctl_handler_deinit(main_server_st *s)
 {
-	if (GETCONFIG(s)->use_occtl == 0)
+	if (GETRCONFIG(s)->use_occtl == 0)
 		return;
 
 	if (s->ctl_fd >= 0) {
@@ -120,30 +130,30 @@ int ctl_handler_init(main_server_st *s)
 	struct sockaddr_un sa;
 	int sd, e;
 
-	if (GETCONFIG(s)->use_occtl == 0 ||
-	    GETPCONFIG(s)->occtl_socket_file == NULL) {
+	if (GETRCONFIG(s)->use_occtl == 0 ||
+	    GETSCONFIG(s)->occtl_socket_file == NULL) {
 		mslog(s, NULL, LOG_INFO, "not using control unix socket");
 		return 0;
 	}
 
 	mslog(s, NULL, LOG_DEBUG, "initializing control unix socket: %s",
-	      GETPCONFIG(s)->occtl_socket_file);
+	      GETSCONFIG(s)->occtl_socket_file);
 	memset(&sa, 0, sizeof(sa));
 	sa.sun_family = AF_UNIX;
-	strlcpy(sa.sun_path, GETPCONFIG(s)->occtl_socket_file,
+	strlcpy(sa.sun_path, GETSCONFIG(s)->occtl_socket_file,
 		sizeof(sa.sun_path));
-	ret = remove(GETPCONFIG(s)->occtl_socket_file);
+	ret = remove(GETSCONFIG(s)->occtl_socket_file);
 	if (ret != 0 && errno != ENOENT) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "could not delete socket: '%s': %s",
-		      GETPCONFIG(s)->occtl_socket_file, strerror(e));
+		      GETSCONFIG(s)->occtl_socket_file, strerror(e));
 	}
 
 	sd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sd == -1) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "could not create socket '%s': %s",
-		      GETPCONFIG(s)->occtl_socket_file, strerror(e));
+		      GETSCONFIG(s)->occtl_socket_file, strerror(e));
 		return -1;
 	}
 
@@ -152,24 +162,24 @@ int ctl_handler_init(main_server_st *s)
 	if (ret == -1) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "could not bind socket '%s': %s",
-		      GETPCONFIG(s)->occtl_socket_file, strerror(e));
+		      GETSCONFIG(s)->occtl_socket_file, strerror(e));
 		close(sd);
 		return -1;
 	}
 
-	ret = chown(GETPCONFIG(s)->occtl_socket_file, GETPCONFIG(s)->uid,
-		    GETPCONFIG(s)->gid);
+	ret = chown(GETSCONFIG(s)->occtl_socket_file, GETSCONFIG(s)->uid,
+		    GETSCONFIG(s)->gid);
 	if (ret == -1) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "could not chown socket '%s': %s",
-		      GETPCONFIG(s)->occtl_socket_file, strerror(e));
+		      GETSCONFIG(s)->occtl_socket_file, strerror(e));
 	}
 
 	ret = listen(sd, 1024);
 	if (ret == -1) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "could not listen to socket '%s': %s",
-		      GETPCONFIG(s)->occtl_socket_file, strerror(e));
+		      GETSCONFIG(s)->occtl_socket_file, strerror(e));
 		close(sd);
 		return -1;
 	}
@@ -217,7 +227,7 @@ static void method_status(method_ctx *ctx, int cfd, uint8_t *msg,
 		rep.max_auth_time =
 			MAX(rep.max_auth_time,
 			    ctx->s->sec_mod_instances[i].max_auth_time);
-		rep.avg_auth_time = ctx->s->sec_mod_instances[i].avg_auth_time;
+		rep.avg_auth_time += ctx->s->sec_mod_instances[i].avg_auth_time;
 	}
 	if (ctx->s->sec_mod_instance_count != 0) {
 		rep.avg_auth_time /= ctx->s->sec_mod_instance_count;
@@ -405,6 +415,7 @@ static int append_user_info(method_ctx *ctx, UserListRep *list,
 	rep->remote_ip6 = strtmp;
 
 	rep->conn_time = ctmp->conn_time;
+	rep->session_start_time = ctmp->session_start_time;
 	rep->hostname = ctmp->hostname;
 	rep->user_agent = ctmp->user_agent;
 
@@ -441,10 +452,8 @@ static int append_user_info(method_ctx *ctx, UserListRep *list,
 
 		rep->keepalive = ctmp->config->keepalive;
 		if (ctmp->vhost) {
-			rep->domains =
-				ctmp->vhost->perm_config.config->split_dns;
-			rep->n_domains =
-				ctmp->vhost->perm_config.config->split_dns_size;
+			rep->domains = ctmp->vhost->config->split_dns;
+			rep->n_domains = ctmp->vhost->config->n_split_dns;
 		}
 
 		rep->dns = ctmp->config->dns;
@@ -533,7 +542,7 @@ static int append_ban_info(method_ctx *ctx, BanListRep *list,
 	rep->ip.len = e->ip.size;
 	rep->score = e->score;
 
-	if (GETCONFIG(s)->max_ban_score > 0 && IS_BANNED(s, e) &&
+	if (GETRCONFIG(s)->max_ban_score > 0 && IS_BANNED(s, e) &&
 	    e->expires > now) {
 		rep->expires = e->expires;
 		rep->has_expires = 1;
@@ -869,6 +878,241 @@ static void method_disconnect_user_id(method_ctx *ctx, int cfd, uint8_t *msg,
 	}
 }
 
+/* Invalidate all session cookies for a given username in sec-mod */
+static int terminate_user_sessions_in_secmod(method_ctx *ctx,
+					     const char *username)
+{
+	SecmTerminateUserSessionsMsg req =
+		SECM_TERMINATE_USER_SESSIONS_MSG__INIT;
+	SecmTerminateSessionReplyMsg *reply = NULL;
+	int ret, result = 0;
+	unsigned int i;
+
+	PROTOBUF_ALLOCATOR(pa, ctx->pool);
+
+	req.username = (char *)username;
+
+	for (i = 0; i < ctx->s->sec_mod_instance_count; i++) {
+		ret = send_msg(
+			ctx->pool, ctx->s->sec_mod_instances[i].sec_mod_fd_sync,
+			CMD_SECM_TERMINATE_USER_SESSIONS, &req,
+			(pack_size_func)
+				secm_terminate_user_sessions_msg__get_packed_size,
+			(pack_func)secm_terminate_user_sessions_msg__pack);
+		if (ret < 0) {
+			mslog(ctx->s, NULL, LOG_ERR,
+			      "error sending terminate to sec-mod!");
+			continue;
+		}
+
+		ret = recv_msg(
+			ctx->pool, ctx->s->sec_mod_instances[i].sec_mod_fd_sync,
+			CMD_SECM_TERMINATE_USER_SESSIONS_REPLY, (void *)&reply,
+			(unpack_func)secm_terminate_session_reply_msg__unpack,
+			MAIN_SEC_MOD_TIMEOUT);
+		if (ret < 0) {
+			mslog(ctx->s, NULL, LOG_ERR,
+			      "error receiving terminate reply");
+			continue;
+		}
+
+		if (reply && reply->result)
+			result = 1;
+		if (reply)
+			secm_terminate_session_reply_msg__free_unpacked(reply,
+									&pa);
+		reply = NULL;
+		if (result == 1)
+			break;
+	}
+
+	return result;
+}
+
+/* Invalidate a single session cookie by safe_id in sec-mod */
+static int terminate_session_in_secmod(method_ctx *ctx, const char *safe_id,
+				       size_t safe_id_len)
+{
+	SecmTerminateSessionMsg req = SECM_TERMINATE_SESSION_MSG__INIT;
+	SecmTerminateSessionReplyMsg *reply = NULL;
+	int ret, result = 0;
+	unsigned int i;
+
+	PROTOBUF_ALLOCATOR(pa, ctx->pool);
+
+	req.safe_id.data = (uint8_t *)safe_id;
+	req.safe_id.len = safe_id_len;
+
+	for (i = 0; i < ctx->s->sec_mod_instance_count; i++) {
+		ret = send_msg(
+			ctx->pool, ctx->s->sec_mod_instances[i].sec_mod_fd_sync,
+			CMD_SECM_TERMINATE_SESSION, &req,
+			(pack_size_func)
+				secm_terminate_session_msg__get_packed_size,
+			(pack_func)secm_terminate_session_msg__pack);
+		if (ret < 0) {
+			mslog(ctx->s, NULL, LOG_ERR,
+			      "error sending terminate to sec-mod!");
+			continue;
+		}
+
+		ret = recv_msg(
+			ctx->pool, ctx->s->sec_mod_instances[i].sec_mod_fd_sync,
+			CMD_SECM_TERMINATE_SESSION_REPLY, (void *)&reply,
+			(unpack_func)secm_terminate_session_reply_msg__unpack,
+			MAIN_SEC_MOD_TIMEOUT);
+		if (ret < 0) {
+			mslog(ctx->s, NULL, LOG_ERR,
+			      "error receiving terminate reply");
+			continue;
+		}
+
+		if (reply && reply->result)
+			result = 1;
+		if (reply)
+			secm_terminate_session_reply_msg__free_unpacked(reply,
+									&pa);
+		reply = NULL;
+		if (result == 1)
+			break;
+	}
+
+	return result;
+}
+
+static void method_terminate_user(method_ctx *ctx, int cfd, uint8_t *msg,
+				  unsigned int msg_size)
+{
+	UsernameReq *req;
+	BoolMsg rep = BOOL_MSG__INIT;
+	struct proc_st *cpos;
+	struct proc_st *ctmp = NULL;
+	int ret;
+
+	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: terminate user");
+
+	req = username_req__unpack(NULL, msg_size, msg);
+	if (req == NULL) {
+		mslog(ctx->s, NULL, LOG_ERR,
+		      "error parsing terminate user request");
+		return;
+	}
+
+	/* First disconnect all active sessions for this user */
+	list_for_each_safe(&ctx->s->proc_list.head, ctmp, cpos, list)
+	{
+		if (strcmp(ctmp->username, req->username) == 0) {
+			disconnect_proc(ctx->s, ctmp);
+			rep.status = 1;
+		}
+	}
+
+	/* Then invalidate all session cookies in sec-mod */
+	if (terminate_user_sessions_in_secmod(ctx, req->username)) {
+		mslog(ctx->s, NULL, LOG_INFO,
+		      "terminated session cookies for user '%s'",
+		      req->username);
+		rep.status = 1;
+	}
+
+	username_req__free_unpacked(req, NULL);
+
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_TERMINATE_USER_REP, &rep,
+		       (pack_size_func)bool_msg__get_packed_size,
+		       (pack_func)bool_msg__pack);
+	if (ret < 0) {
+		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
+	}
+}
+
+static void method_terminate_id(method_ctx *ctx, int cfd, uint8_t *msg,
+				unsigned int msg_size)
+{
+	IdReq *req;
+	BoolMsg rep = BOOL_MSG__INIT;
+	struct proc_st *cpos;
+	struct proc_st *ctmp = NULL;
+	int ret;
+	char safe_id[SAFE_ID_SIZE];
+	int found = 0;
+
+	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: terminate id");
+
+	req = id_req__unpack(NULL, msg_size, msg);
+	if (req == NULL) {
+		mslog(ctx->s, NULL, LOG_ERR,
+		      "error parsing terminate id request");
+		return;
+	}
+
+	/* Find and disconnect the process, save sid for cookie invalidation */
+	list_for_each_safe(&ctx->s->proc_list.head, ctmp, cpos, list)
+	{
+		if (ctmp->pid == req->id) {
+			calc_safe_id(ctmp->sid, sizeof(ctmp->sid), safe_id,
+				     SAFE_ID_SIZE);
+			found = 1;
+			disconnect_proc(ctx->s, ctmp);
+			rep.status = 1;
+			break;
+		}
+	}
+
+	/* Invalidate session cookie for the specific connection */
+	if (found) {
+		if (terminate_session_in_secmod(ctx, safe_id,
+						SAFE_ID_SIZE - 1)) {
+			mslog(ctx->s, NULL, LOG_INFO,
+			      "terminated session cookie for ID %d", req->id);
+		}
+	}
+
+	id_req__free_unpacked(req, NULL);
+
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_TERMINATE_ID_REP, &rep,
+		       (pack_size_func)bool_msg__get_packed_size,
+		       (pack_func)bool_msg__pack);
+	if (ret < 0) {
+		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
+	}
+}
+
+static void method_terminate_session(method_ctx *ctx, int cfd, uint8_t *msg,
+				     unsigned int msg_size)
+{
+	SafeIdReq *req;
+	BoolMsg rep = BOOL_MSG__INIT;
+	int ret;
+
+	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: terminate session");
+
+	req = safe_id_req__unpack(NULL, msg_size, msg);
+	if (req == NULL) {
+		mslog(ctx->s, NULL, LOG_ERR,
+		      "error parsing terminate session request");
+		return;
+	}
+
+	/* Invalidate session cookie by safe_id */
+	if (req->safe_id.data != NULL && req->safe_id.len > 0 &&
+	    terminate_session_in_secmod(ctx, (const char *)req->safe_id.data,
+					req->safe_id.len)) {
+		mslog(ctx->s, NULL, LOG_INFO,
+		      "terminated session (session: %.6s)",
+		      (const char *)req->safe_id.data);
+		rep.status = 1;
+	}
+
+	safe_id_req__free_unpacked(req, NULL);
+
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_TERMINATE_SESSION_REP, &rep,
+		       (pack_size_func)bool_msg__get_packed_size,
+		       (pack_func)bool_msg__pack);
+	if (ret < 0) {
+		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
+	}
+}
+
 struct ctl_watcher_st {
 	int fd;
 	struct ev_io ctl_cmd_io;
@@ -942,7 +1186,7 @@ static void ctl_handle_commands(main_server_st *s)
 		goto fail;
 	}
 
-	ret = check_upeer_id("ctl", GETPCONFIG(s)->log_level, cfd, 0, 0, NULL,
+	ret = check_upeer_id("ctl", GETSCONFIG(s)->log_level, cfd, 0, 0, NULL,
 			     NULL);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_ERR, "ctl: unauthorized connection");
@@ -968,7 +1212,7 @@ fail:
 
 void ctl_handler_set_fds(main_server_st *s, ev_io *watcher)
 {
-	if (GETCONFIG(s)->use_occtl == 0)
+	if (GETRCONFIG(s)->use_occtl == 0)
 		return;
 
 	ev_io_set(watcher, s->ctl_fd, EV_READ);
@@ -976,7 +1220,7 @@ void ctl_handler_set_fds(main_server_st *s, ev_io *watcher)
 
 void ctl_handler_run_pending(main_server_st *s, ev_io *watcher)
 {
-	if (GETCONFIG(s)->use_occtl == 0)
+	if (GETRCONFIG(s)->use_occtl == 0)
 		return;
 
 	ctl_handle_commands(s);

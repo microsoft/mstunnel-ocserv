@@ -124,6 +124,16 @@ test-multi-class-ou	Cleartext-Password := "test-multi-class-ou"
 	Class = "OU=group3;group4",
 	Framed-MTU = 1500
 
+test-multi-class-ou-comma	Cleartext-Password := "test-multi-class-ou-comma"
+	Service-Type = Framed-User,
+	Framed-Protocol = PPP,
+	Framed-IP-Address = 192.168.95.192,
+	Framed-IP-Netmask = 255.255.255.0,
+	Framed-Routing = Broadcast-Listen,
+	Class = "OU=group1,group2",
+	Class = "OU=group3,group4",
+	Framed-MTU = 1500
+
 testtime	Cleartext-Password := "test"
 	Service-Type = Framed-User,
 	Framed-Protocol = PPP,
@@ -135,6 +145,14 @@ testtime	Cleartext-Password := "test"
 	Acct-Interim-Interval = 20,
 	RP-Upstream-Speed-Limit = 16,
 	RP-Downstream-Speed-Limit = 64
+
+test-ipv6prefix	Cleartext-Password := "test"
+	Service-Type = Framed-User,
+	Framed-Protocol = PPP,
+	Framed-IP-Address = 192.168.66.194,
+	Framed-IP-Netmask = 255.255.255.0,
+	Framed-IPv6-Prefix = fd00:abcd:ef00::/48,
+	Framed-MTU = 1500
 
 test1-otp            Cleartext-Password := "test1-otp-stage%{string:State}", Tmp-Integer-0 := 3
         Service-Type = Framed-User,

@@ -39,7 +39,7 @@ fi
 #user 'testuser' has cert and OTP only
 
 rm -f ${OTP_FILE}
-cp data/test-otp.oath ${OTP_FILE}
+cp ${srcdir}/data/test-otp.oath ${OTP_FILE}
 update_config test-otp.config
 launch_sr_server -d 1 -f -c ${CONFIG} & PID=$!
 wait_server $PID
@@ -57,6 +57,11 @@ echo ok
 echo -n "Connecting with correct password and OTP... "
 ( echo -e "test\n328482\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with OTP!"
+echo ok
+
+echo -n "Connecting with empty password and correct OTP (user has password set)... "
+( echo -e "\n328482\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) &&
+	fail $PID "Connected with empty password when a password is set!"
 echo ok
 
 echo -n "Connecting with empty password and wrong OTP... "

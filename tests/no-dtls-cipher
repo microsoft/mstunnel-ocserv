@@ -24,4 +24,4 @@ PKG_CONFIG="${PKG_CONFIG:-/usr/bin/pkg-config}"
 CIPHER_NAME="UNKNOWN"
 GNUTLS_NAME=""
 
-. cipher-common.sh
+. ${srcdir}/cipher-common.sh

@@ -43,9 +43,9 @@ _oclog(const worker_st *ws, int priority, const char *fmt, ...)
 	int syslog_prio;
 
 	if (ws->vhost)
-		log_prio = WSPCONFIG(ws)->log_level;
+		log_prio = WSSCONFIG(ws)->log_level;
 	else
-		log_prio = GETPCONFIG(ws)->log_level;
+		log_prio = GETSCONFIG(ws)->log_level;
 
 	if (!log_check_priority(priority, log_prio, &syslog_prio))
 		return;
@@ -84,9 +84,9 @@ void oclog_hex(const worker_st *ws, int priority, const char *prefix,
 	int log_prio;
 
 	if (ws->vhost)
-		log_prio = WSPCONFIG(ws)->log_level;
+		log_prio = WSSCONFIG(ws)->log_level;
 	else
-		log_prio = GETPCONFIG(ws)->log_level;
+		log_prio = GETSCONFIG(ws)->log_level;
 
 	if (!log_check_priority(priority, log_prio, NULL))
 		return;

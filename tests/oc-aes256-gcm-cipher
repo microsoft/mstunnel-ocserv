@@ -23,4 +23,4 @@
 CIPHER_NAME="OC-DTLS1_2-AES256-GCM"
 GNUTLS_NAME="(DTLS1.2)-(RSA)-(AES-256-GCM)"
 
-. cipher-common.sh
+. ${srcdir}/cipher-common.sh

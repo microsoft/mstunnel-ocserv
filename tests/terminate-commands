@@ -1,0 +1,203 @@
+#!/bin/bash
+#
+# Copyright (C) 2026 Ivan Verbin
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# This test validates that terminate commands invalidate cookies:
+# - terminate user <username>
+# - terminate id <id>
+# - terminate session <sid>
+
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+TMPFILE=ocfile.$$.tmp
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+OUTFILE=occtl-terminate.$$.tmp
+OCCTL_SOCKET=./occtl-$$.socket
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+
+if test "$(id -u)" != "0";then
+	echo "This test must be run as root"
+	exit 77
+fi
+
+function finish {
+  echo " * Cleaning up..."
+  cleanup_client_server
+  test -n "${TMPFILE}" && rm -f ${TMPFILE} >/dev/null 2>&1
+  test -n "${OUTFILE}" && rm -f ${OUTFILE} >/dev/null 2>&1
+}
+trap finish EXIT
+
+# server address
+. `dirname $0`/random-net.sh
+. `dirname $0`/ns.sh
+
+echo "Testing ocserv terminate commands via occtl... "
+
+# Run server
+update_config disconnect-user.config
+if test "$VERBOSE" = 1;then
+	DEBUG="-d 3"
+fi
+
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+
+sleep 3
+
+get_cookie() {
+	echo " * Getting cookie from ${ADDRESS}:${PORT}..."
+	( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --authenticate >${TMPFILE} )
+	if test $? != 0;then
+		fail $PID "Could not get cookie from server"
+	fi
+
+	unset COOKIE
+	eval $(cat ${TMPFILE})
+	if test -z "${COOKIE}";then
+		fail $PID "Cookie was not returned by server"
+	fi
+}
+
+connect_with_cookie() {
+	echo " * Connecting to ${ADDRESS}:${PORT}..."
+	rm -f ${CLIPID}
+	( ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script -C "${1}" --pid-file=${CLIPID} -b )
+	if test $? != 0;then
+		fail $PID "Could not connect to server"
+	fi
+
+	sleep 2
+	if test ! -f "${CLIPID}";then
+		fail $PID "Connection did not create pid file"
+	fi
+}
+
+assert_cookie_rejected() {
+	echo " * Re-connecting with old cookie (must fail)..."
+	rm -f ${CLIPID}
+	( ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script -C "${1}" --pid-file=${CLIPID} -b )
+	if test $? = 0;then
+		fail $PID "Succeeded using invalidated cookie to reconnect"
+	fi
+
+	sleep 2
+	if test -f "${CLIPID}";then
+		fail $PID "Reconnection unexpectedly left an active client process"
+	fi
+}
+
+# 1) terminate user <username>
+get_cookie
+COOKIE_USER="${COOKIE}"
+connect_with_cookie "${COOKIE_USER}"
+
+${OCCTL} -s ${OCCTL_SOCKET} terminate user test
+if test $? != 0;then
+	fail $PID "terminate user failed"
+fi
+
+kill "$(cat ${CLIPID})" 2>/dev/null || true
+rm -f "${CLIPID}"
+sleep 3
+# Restore NS1 routing in case vpnc-script failed to run during server-initiated disconnect
+reset_client_routes
+
+assert_cookie_rejected "${COOKIE_USER}"
+
+# 2) terminate id <id>
+get_cookie
+COOKIE_ID="${COOKIE}"
+connect_with_cookie "${COOKIE_ID}"
+
+ID=$(${OCCTL} -s ${OCCTL_SOCKET} --json show user test 2>${OUTFILE} | jq -r '.[0].ID // empty')
+if test -z "${ID}";then
+	fail $PID "Could not extract user ID from occtl output"
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} terminate id ${ID}
+if test $? != 0;then
+	fail $PID "terminate id failed"
+fi
+
+kill "$(cat ${CLIPID})" 2>/dev/null || true
+rm -f "${CLIPID}"
+sleep 3
+# Restore NS1 routing in case vpnc-script failed to run during server-initiated disconnect
+reset_client_routes
+
+assert_cookie_rejected "${COOKIE_ID}"
+
+# 3) terminate session <short sid>
+get_cookie
+COOKIE_SESSION="${COOKIE}"
+connect_with_cookie "${COOKIE_SESSION}"
+
+SID=$(${OCCTL} -s ${OCCTL_SOCKET} --json show sessions valid | jq -r '.[] | select((.Username // "") == "test") | .Session' | head -n 1)
+if test -z "${SID}";then
+	SID=$(${OCCTL} -s ${OCCTL_SOCKET} --json show sessions valid | jq -r '.[0].Session // empty')
+fi
+if test -z "${SID}";then
+	fail $PID "Could not extract session ID from occtl output"
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} terminate session ${SID}
+if test $? != 0;then
+	fail $PID "terminate session (short SID) failed"
+fi
+
+kill "$(cat ${CLIPID})" 2>/dev/null || true
+rm -f "${CLIPID}"
+sleep 3
+# Restore NS1 routing in case vpnc-script failed to run during server-initiated disconnect
+reset_client_routes
+
+assert_cookie_rejected "${COOKIE_SESSION}"
+
+# 4) terminate session <full sid> (for scripted use)
+get_cookie
+COOKIE_FULL="${COOKIE}"
+connect_with_cookie "${COOKIE_FULL}"
+
+FULL_SID=$(${OCCTL} -s ${OCCTL_SOCKET} --json show sessions valid | jq -r '.[] | select((.Username // "") == "test") | ."Full session"' | head -n 1)
+if test -z "${FULL_SID}";then
+	FULL_SID=$(${OCCTL} -s ${OCCTL_SOCKET} --json show sessions valid | jq -r '.[0]."Full session" // empty')
+fi
+if test -z "${FULL_SID}";then
+	fail $PID "Could not extract full session ID from occtl output"
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} terminate session ${FULL_SID}
+if test $? != 0;then
+	fail $PID "terminate session (full SID) failed"
+fi
+
+kill "$(cat ${CLIPID})" 2>/dev/null || true
+rm -f "${CLIPID}"
+sleep 3
+# Restore NS1 routing in case vpnc-script failed to run during server-initiated disconnect
+reset_client_routes
+
+assert_cookie_rejected "${COOKIE_FULL}"
+
+exit 0

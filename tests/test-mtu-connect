@@ -1,0 +1,197 @@
+#!/bin/bash
+#
+# Copyright (C) 2026 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+# Regression test for issue #717: unsigned underflow in MTU calculation.
+#
+# Requires root (TUN device creation).  Three scenarios are tested:
+#
+# 1. openconnect --base-mtu=1400: openconnect itself enforces base-mtu >= 1280
+#    so this exercises the normal acceptance path.  The server must honour the
+#    peer value and respond with X-CSTP-Base-MTU <= 1400.
+#
+# 2. Raw CONNECT via gnutls-cli with X-CSTP-Base-MTU: 500 (below MIN_MTU=800):
+#    openconnect cannot reach this code path (its own floor is 1280).  The
+#    server must ignore the tiny peer MTU and respond with X-CSTP-Base-MTU >=
+#    800.  Without the fix DATA_MTU() wraps to ~UINT_MAX and X-CSTP-MTU would
+#    be a value like 4294967167.
+#
+# 3. Raw CONNECT via gnutls-cli with X-CSTP-Base-MTU: 65535 (above MAX_MSG_SIZE
+#    = 16384): the parser clamps out-of-range values to 0 (= "not provided") so
+#    the server must fall back to its own configured MTU.  The response
+#    X-CSTP-Base-MTU must not exceed MAX_MSG_SIZE (16 * 1024).
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+builddir=${builddir:-.}
+TMPFILE=test-mtu-connect.$$.tmp
+
+. "$(dirname "$0")"/common.sh
+
+eval "${GETPORT}"
+
+if ! which gnutls-cli >/dev/null 2>&1; then
+	echo "gnutls-cli not found, skipping test"
+	exit 77
+fi
+
+function finish {
+	echo " * Cleaning up..."
+	test -n "${PID}" && kill "${PID}" >/dev/null 2>&1
+	rm -f "${TMPFILE}"
+}
+trap finish EXIT
+
+SERVERCERT="pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8="
+USERNAME="test"
+PASSWORD="test"
+
+echo "Testing MTU negotiation and MIN_MTU enforcement..."
+
+update_config test1.config
+launch_server -d 1 -f -c "${CONFIG}" & PID=$!
+wait_server $PID
+
+# tls_send: send a raw request over TLS via gnutls-cli and capture the
+# full server response in TMPFILE.  "sleep 3" keeps the pipe open until
+# the server has flushed its response headers.
+tls_send() {
+	{ printf '%b' "$1"; sleep 3; } | \
+		timeout 10 gnutls-cli \
+		--insecure \
+		localhost --port "${PORT}" \
+		--sni-hostname localhost >"${TMPFILE}" 2>/dev/null || true
+}
+
+MAX_MSG_SIZE=16384   # MAX_MSG_SIZE from vpn.h: TLS/DTLS max record payload (2^14)
+
+# check_mtu_headers: parse X-CSTP-Base-MTU and X-CSTP-MTU from TMPFILE and
+# verify both are sane.  Always warns if either value exceeds MAX_MSG_SIZE.
+# Usage: check_mtu_headers <description> <max_link_mtu> <min_link_mtu>
+check_mtu_headers() {
+	local desc="$1" max_link="$2" min_link="$3"
+	local link data
+
+	link=$(grep -ia "^X-CSTP-Base-MTU:" "${TMPFILE}" | head -1 | sed 's/[^0-9]//g')
+	data=$(grep -ia "^X-CSTP-MTU:" "${TMPFILE}" | head -1 | sed 's/[^0-9]//g')
+
+	if test -z "${link}" || test -z "${data}"; then
+		cat "${TMPFILE}"
+		fail "${PID}" "${desc}: missing X-CSTP-Base-MTU or X-CSTP-MTU header"
+	fi
+	# Underflow produces values like 4294967167; anything above MAX_MSG_SIZE is wrong.
+	if test "${link}" -gt "${MAX_MSG_SIZE}" 2>/dev/null; then
+		cat "${TMPFILE}"
+		fail "${PID}" "${desc}: X-CSTP-Base-MTU=${link} exceeds MAX_MSG_SIZE=${MAX_MSG_SIZE} — possible underflow or parser bypass"
+	fi
+	if test "${data}" -gt "${MAX_MSG_SIZE}" 2>/dev/null; then
+		cat "${TMPFILE}"
+		fail "${PID}" "${desc}: X-CSTP-MTU=${data} exceeds MAX_MSG_SIZE=${MAX_MSG_SIZE} — possible underflow or parser bypass"
+	fi
+	if test "${link}" -gt "${max_link}" 2>/dev/null; then
+		fail "${PID}" "${desc}: X-CSTP-Base-MTU=${link} exceeds peer-advertised ${max_link}"
+	fi
+	if test "${link}" -lt "${min_link}" 2>/dev/null; then
+		fail "${PID}" "${desc}: X-CSTP-Base-MTU=${link} is below minimum ${min_link}"
+	fi
+	if test "${data}" -ge "${link}" 2>/dev/null; then
+		fail "${PID}" "${desc}: X-CSTP-MTU=${data} must be less than X-CSTP-Base-MTU=${link}"
+	fi
+	echo " * ok (X-CSTP-Base-MTU=${link}, X-CSTP-MTU=${data})"
+}
+
+# --- 1. Normal connection with --base-mtu=1400 ---------------------------
+# openconnect clamps base-mtu to >= 1280 internally, so 1400 is sent
+# as-is.  Server must accept and respond with X-CSTP-Base-MTU <= 1400.
+echo -n " * openconnect --base-mtu=1400 (accepted, should be honoured)... "
+echo "${PASSWORD}" | timeout 10 "${OPENCONNECT}" --verbose --base-mtu=1400 \
+	localhost:"${PORT}" -u "${USERNAME}" \
+	--servercert="${SERVERCERT}" -s /bin/true \
+	>"${TMPFILE}" 2>&1 || true
+sleep 2
+check_mtu_headers "--base-mtu=1400" 1400 800
+
+# cookie_header: build a "Cookie: webvpn=VALUE" string from the output of
+# openconnect --cookieonly.  openconnect >= 9 prefixes the token with
+# "openconnect_strapkey=...; webvpn="; older versions print the raw token.
+# In both cases extract the webvpn value and prefix it consistently.
+cookie_header() {
+	local raw="$1"
+	local token
+	if echo "${raw}" | grep -q "webvpn="; then
+		token=$(echo "${raw}" | sed 's/.*webvpn=\([^;]*\).*/\1/' | tr -d ' \r\n')
+	else
+		token="${raw}"
+	fi
+	printf 'Cookie: webvpn=%s' "${token}"
+}
+
+# --- 2. Sub-MIN_MTU via raw CONNECT (the actual regression) ---------------
+# openconnect enforces base-mtu >= 1280, so values below MIN_MTU=800 can
+# only be sent via a raw CONNECT request.
+# Obtain a fresh session cookie first; then send the CONNECT directly.
+echo " * Obtaining session cookie for raw CONNECT..."
+COOKIE=$(echo "${PASSWORD}" | "${OPENCONNECT}" -q localhost:"${PORT}" \
+	-u "${USERNAME}" --servercert="${SERVERCERT}" --cookieonly 2>/dev/null)
+if test -z "${COOKIE}"; then
+	fail "${PID}" "Could not obtain session cookie"
+fi
+
+echo -n " * Raw CONNECT with X-CSTP-Base-MTU: 500 (below MIN_MTU=800)... "
+tls_send "CONNECT /CSCOSSLC/tunnel HTTP/1.1\r\nHost: localhost\r\nUser-Agent: AnyConnect Linux_64 4.10\r\nX-CSTP-Version: 1\r\nX-CSTP-Hostname: testhost\r\nX-CSTP-Base-MTU: 500\r\nX-CSTP-Address-Type: IPv4\r\nX-DTLS-Master-Secret: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\r\n$(cookie_header "${COOKIE}")\r\n\r\n"
+
+# Server must respond 200 CONNECTED with sane MTU (>= 800, not wrapped ~UINT_MAX)
+if ! grep -qa "^HTTP/1.1 200" "${TMPFILE}"; then
+	cat "${TMPFILE}"
+	fail "${PID}" "Server did not send 200 CONNECTED for raw CONNECT"
+fi
+check_mtu_headers "raw CONNECT base-mtu=500" 9000 800
+
+# --- 3. Above-MAX_MSG_SIZE via raw CONNECT --------------------------------
+# A peer claiming X-CSTP-Base-MTU: 65535 (> MAX_MSG_SIZE=16384) has the value
+# clamped to 0 by the parser (strtoul + range check in worker-http.c), so the
+# server treats it as "not provided" and uses its own configured MTU.
+# The negotiated X-CSTP-Base-MTU must not exceed MAX_MSG_SIZE.
+echo " * Obtaining session cookie for oversized-MTU CONNECT..."
+COOKIE=$(echo "${PASSWORD}" | "${OPENCONNECT}" -q localhost:"${PORT}" \
+	-u "${USERNAME}" --servercert="${SERVERCERT}" --cookieonly 2>/dev/null)
+if test -z "${COOKIE}"; then
+	fail "${PID}" "Could not obtain session cookie"
+fi
+
+echo -n " * Raw CONNECT with X-CSTP-Base-MTU: 65535 (above MAX_MSG_SIZE=${MAX_MSG_SIZE})... "
+tls_send "CONNECT /CSCOSSLC/tunnel HTTP/1.1\r\nHost: localhost\r\nUser-Agent: AnyConnect Linux_64 4.10\r\nX-CSTP-Version: 1\r\nX-CSTP-Hostname: testhost\r\nX-CSTP-Base-MTU: 65535\r\nX-CSTP-Address-Type: IPv4\r\nX-DTLS-Master-Secret: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\r\n$(cookie_header "${COOKIE}")\r\n\r\n"
+
+if ! grep -qa "^HTTP/1.1 200" "${TMPFILE}"; then
+	cat "${TMPFILE}"
+	fail "${PID}" "Server did not send 200 CONNECTED for oversized-MTU CONNECT"
+fi
+# min_link=800: server falls back to its own MTU (well above MIN_MTU).
+# max_link=MAX_MSG_SIZE: peer value must have been discarded, not accepted.
+check_mtu_headers "raw CONNECT base-mtu=65535" "${MAX_MSG_SIZE}" 800
+
+# --- Liveness check -------------------------------------------------------
+echo -n " * Server alive after oversized-MTU connection... "
+( echo "${PASSWORD}" | "${OPENCONNECT}" -q localhost:"${PORT}" -u "${USERNAME}" \
+	--servercert="${SERVERCERT}" --cookieonly >/dev/null 2>&1 ) ||
+	fail "${PID}" "Server did not survive bad-MTU connection"
+echo "ok"
+
+echo "MTU negotiation tests passed"
+exit 0

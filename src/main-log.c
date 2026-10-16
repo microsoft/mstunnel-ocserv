@@ -47,7 +47,7 @@ void __attribute__((format(printf, 4, 5))) _mslog(const main_server_st *s,
 	int syslog_prio;
 
 	if (s)
-		log_prio = GETPCONFIG(s)->log_level;
+		log_prio = GETSCONFIG(s)->log_level;
 
 	if (!log_check_priority(priority, log_prio, &syslog_prio))
 		return;
@@ -92,7 +92,7 @@ void mslog_hex(const main_server_st *s, const struct proc_st *proc,
 	int log_prio = DEFAULT_LOG_LEVEL;
 
 	if (s)
-		log_prio = GETPCONFIG(s)->log_level;
+		log_prio = GETSCONFIG(s)->log_level;
 
 	if (!log_check_priority(priority, log_prio, NULL))
 		return;
@@ -119,7 +119,7 @@ void seclog_hex(const struct sec_mod_st *sec, int priority, const char *prefix,
 	gnutls_datum_t data = { bin, bin_size };
 	int log_prio;
 
-	log_prio = GETPCONFIG(sec)->log_level;
+	log_prio = GETSCONFIG(sec)->log_level;
 
 	if (!log_check_priority(priority, log_prio, NULL))
 		return;
@@ -146,7 +146,7 @@ _seclog(const sec_mod_st *sec, int priority, const char *fmt, ...)
 	int syslog_prio;
 
 	if (sec)
-		log_prio = GETPCONFIG(sec)->log_level;
+		log_prio = GETSCONFIG(sec)->log_level;
 
 	if (!log_check_priority(priority, log_prio, &syslog_prio))
 		return;

@@ -380,7 +380,7 @@ static void usage(void)
 {
 	fprintf(stderr, "ocpasswd - OpenConnect server password utility\n");
 	fprintf(stderr,
-		"Usage:  ocpasswd [ -<flag> [<val>] | --<name>[{=| }<val>] ]... [username]\n");
+		"Usage:  ocpasswd [ -<flag> [<val>] | --<name>[{=| }<val>] ]... username\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "   -c, --passwd=file          Password file\n");
 	fprintf(stderr, "   -g, --groupname=str        User's group name\n");

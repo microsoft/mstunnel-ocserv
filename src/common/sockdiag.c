@@ -191,7 +191,7 @@ static int receive_responses(int fd, process_response process, void *context)
 
 			if (h->nlmsg_type != SOCK_DIAG_BY_FAMILY) {
 				oc_syslog(LOG_ERR,
-					  "unexpected nlmsg_type %" PRIu16 "\n",
+					  "unexpected nlmsg_type %" PRIu16,
 					  h->nlmsg_type);
 				return -1;
 			}
@@ -207,8 +207,7 @@ static int receive_responses(int fd, process_response process, void *context)
 			}
 
 			if (diag->udiag_family != AF_UNIX) {
-				oc_syslog(LOG_ERR,
-					  "unexpected family %" PRIu8 "\n",
+				oc_syslog(LOG_ERR, "unexpected family %" PRIu8,
 					  diag->udiag_family);
 				return -1;
 			}

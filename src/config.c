@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2023 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2026 Nikos Mavrogiannopoulos
  * Copyright (C) 2014, 2015 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -49,6 +49,7 @@
 #include <assert.h>
 
 #include <vpn.h>
+#include <cfg.pb-c.h>
 #include <main.h>
 #include <tlslib.h>
 #include <occtl/ctl.h>
@@ -61,6 +62,31 @@
 #define OLD_DEFAULT_CFG_FILE "/etc/ocserv.conf"
 #define DEFAULT_CFG_FILE "/etc/ocserv/ocserv.conf"
 
+static int parse_syslog_facility(const char *name)
+{
+	unsigned i;
+	static const struct {
+		const char *name;
+		int facility;
+	} table[] = {
+		{ "daemon", LOG_DAEMON },     { "user", LOG_USER },
+		{ "auth", LOG_AUTH },	      { "local0", LOG_LOCAL0 },
+		{ "local1", LOG_LOCAL1 },     { "local2", LOG_LOCAL2 },
+		{ "local3", LOG_LOCAL3 },     { "local4", LOG_LOCAL4 },
+		{ "local5", LOG_LOCAL5 },     { "local6", LOG_LOCAL6 },
+		{ "local7", LOG_LOCAL7 },
+#ifdef LOG_AUTHPRIV
+		{ "authpriv", LOG_AUTHPRIV },
+#endif
+	};
+
+	for (i = 0; i < ARRAY_SIZE(table); i++) {
+		if (strcasecmp(name, table[i].name) == 0)
+			return table[i].facility;
+	}
+	return -1;
+}
+
 static void print_version(void);
 
 static char pid_file[_POSIX_PATH_MAX] = "";
@@ -70,6 +96,9 @@ static void archive_cfg(struct list_head *head);
 static void clear_cfg(struct list_head *head);
 static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost,
 		      unsigned int silent);
+static bool error_on_vhost(const char *vname, const char *oname);
+static void vhost_inherit_static_config(vhost_cfg_st *vhost,
+					vhost_cfg_st *defvhost);
 
 #define ERRSTR "error: "
 #define WARNSTR "warning: "
@@ -83,32 +112,30 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost,
 		}                                                           \
 	}
 
-#define READ_MULTI_BRACKET_LINE(varname, varname2, num)                        \
-	{                                                                      \
-		if (varname == NULL || varname2 == NULL) {                     \
-			num = 0;                                               \
-			varname = talloc_size(pool,                            \
-					      sizeof(char *) *                 \
-						      DEFAULT_CONFIG_ENTRIES); \
-			varname2 = talloc_size(                                \
-				pool,                                          \
-				sizeof(char *) * DEFAULT_CONFIG_ENTRIES);      \
-			if (varname == NULL || varname2 == NULL) {             \
-				fprintf(stderr, ERRSTR "memory\n");            \
-				exit(EXIT_FAILURE);                            \
-			}                                                      \
-		}                                                              \
-		if (num < DEFAULT_CONFIG_ENTRIES) {                            \
-			char *xp;                                              \
-			varname[num] = talloc_strdup(pool, value);             \
-			xp = strchr(varname[num], '[');                        \
-			if (xp != NULL)                                        \
-				*xp = 0;                                       \
-			varname2[num] = get_brackets_string1(pool, value);     \
-			num++;                                                 \
-			varname[num] = NULL;                                   \
-			varname2[num] = NULL;                                  \
-		}                                                              \
+#define READ_MULTI_BRACKET_LINE(varname, varname2, num)                    \
+	{                                                                  \
+		if (varname == NULL || varname2 == NULL) {                 \
+			num = 0;                                           \
+			varname = talloc_array(pool, char *,               \
+					       DEFAULT_CONFIG_ENTRIES);    \
+			varname2 = talloc_array(pool, char *,              \
+						DEFAULT_CONFIG_ENTRIES);   \
+			if (varname == NULL || varname2 == NULL) {         \
+				fprintf(stderr, ERRSTR "memory\n");        \
+				exit(EXIT_FAILURE);                        \
+			}                                                  \
+		}                                                          \
+		if (num < DEFAULT_CONFIG_ENTRIES) {                        \
+			char *xp;                                          \
+			varname[num] = talloc_strdup(pool, value);         \
+			xp = strchr(varname[num], '[');                    \
+			if (xp != NULL)                                    \
+				*xp = 0;                                   \
+			varname2[num] = get_brackets_string1(pool, value); \
+			num++;                                             \
+			varname[num] = NULL;                               \
+			varname2[num] = NULL;                              \
+		}                                                          \
 	}
 
 #define PREAD_STRING(pool, varname)                         \
@@ -133,6 +160,30 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost,
 			varname = 1;                  \
 		else                                  \
 			varname = 0;                  \
+	}
+
+/* Variants for ReloadableConfig optional scalars: also set the has_X flag so
+ * that protobuf pack/unpack propagates the value into named vhosts. */
+#define READ_TF_VC(field)                             \
+	{                                             \
+		if (strcasecmp(value, "true") == 0 || \
+		    strcasecmp(value, "yes") == 0)    \
+			config->field = 1;            \
+		else                                  \
+			config->field = 0;            \
+		config->has_##field = 1;              \
+	}
+
+#define READ_NUMERIC_VC(field)                           \
+	{                                                \
+		config->field = strtol(value, NULL, 10); \
+		config->has_##field = 1;                 \
+	}
+
+#define READ_NUMERIC_VC_U64(field)                         \
+	{                                                  \
+		config->field = strtoull(value, NULL, 10); \
+		config->has_##field = 1;                   \
 	}
 
 #define READ_NUMERIC(varname)                      \
@@ -187,7 +238,7 @@ typedef struct auth_types_st {
 	unsigned int name_size;
 	const struct auth_mod_st *mod;
 	unsigned int type;
-	void *(*get_brackets_string)(void *pool, struct perm_cfg_st *config,
+	void *(*get_brackets_string)(void *pool, struct static_cfg_st *config,
 				     const char *);
 } auth_types_st;
 
@@ -215,7 +266,7 @@ static auth_types_st avail_auth_types[] = {
 #endif
 };
 
-static void check_for_duplicate_password_auth(struct perm_cfg_st *config,
+static void check_for_duplicate_password_auth(struct static_cfg_st *config,
 					      const char *vhostname,
 					      unsigned int type)
 {
@@ -237,7 +288,7 @@ static void check_for_duplicate_password_auth(struct perm_cfg_st *config,
 }
 
 static void figure_auth_funcs(void *pool, const char *vhostname,
-			      struct perm_cfg_st *config, char **auth,
+			      struct static_cfg_st *config, char **auth,
 			      unsigned int auth_size, unsigned int primary,
 			      unsigned int is_worker)
 {
@@ -390,7 +441,7 @@ typedef struct acct_types_st {
 	const char *name;
 	unsigned int name_size;
 	const struct acct_mod_st *mod;
-	void *(*get_brackets_string)(void *pool, struct perm_cfg_st *config,
+	void *(*get_brackets_string)(void *pool, struct static_cfg_st *config,
 				     const char *);
 } acct_types_st;
 
@@ -405,10 +456,10 @@ static acct_types_st avail_acct_types[] = {
 };
 
 static void figure_acct_funcs(void *pool, const char *vhostname,
-			      struct perm_cfg_st *config, const char *acct,
+			      struct static_cfg_st *config, const char *acct,
 			      unsigned int is_worker)
 {
-	unsigned int i;
+	int i;
 	unsigned int found = 0;
 
 	if (acct == NULL)
@@ -457,24 +508,83 @@ static void figure_acct_funcs(void *pool, const char *vhostname,
 			vhostname, config->acct.name);
 }
 
+/* Two-phase talloc allocator for protobuf-c unpack */
+struct cfg_alloc_ctx {
+	TALLOC_CTX *pool;
+	void *top; /* NULL until first alloc */
+};
+
+static void *cfg_talloc_alloc(void *data, size_t size)
+{
+	struct cfg_alloc_ctx *ctx = data;
+
+	if (ctx->top == NULL) {
+		ctx->top = talloc_size(ctx->pool, size);
+		return ctx->top;
+	}
+	return talloc_size(ctx->top, size);
+}
+
+static void cfg_talloc_free(void *data, void *ptr)
+{
+	(void)data;
+	talloc_free(ptr);
+}
+
+/*
+ * cfg_copy_from_default - deep-copy a ReloadableConfig via protobuf pack+unpack.
+ *
+ * All fields (strings, repeated, sub-messages) are talloc-allocated under the
+ * returned ReloadableConfig so a single talloc_free(copy) releases everything.
+ */
+static ReloadableConfig *cfg_copy_from_default(const ReloadableConfig *def,
+					       TALLOC_CTX *pool)
+{
+	struct cfg_alloc_ctx ctx = { .pool = pool, .top = NULL };
+	ProtobufCAllocator alloc = {
+		.alloc = cfg_talloc_alloc,
+		.free = cfg_talloc_free,
+		.allocator_data = &ctx,
+	};
+	size_t len;
+	uint8_t *buf;
+	ReloadableConfig *copy;
+
+	len = reloadable_config__get_packed_size(def);
+	buf = talloc_size(pool, len);
+	if (buf == NULL) {
+		fprintf(stderr, ERRSTR "memory\n");
+		exit(EXIT_FAILURE);
+	}
+	reloadable_config__pack(def, buf);
+	copy = (ReloadableConfig *)protobuf_c_message_unpack(
+		&reloadable_config__descriptor, &alloc, len, buf);
+	talloc_free(buf);
+	if (copy == NULL) {
+		fprintf(stderr, ERRSTR "protobuf unpack failed\n");
+		exit(EXIT_FAILURE);
+	}
+	return copy;
+}
+
 #ifdef HAVE_GSSAPI
-static void parse_kkdcp(struct cfg_st *config, char **urlfw,
+static void parse_kkdcp(ReloadableConfig *config, char **urlfw,
 			unsigned int urlfw_size)
 {
 	unsigned int i, j;
 	char *path, *server, *port, *realm;
 	struct addrinfo hints, *res;
 	int ret;
-	struct kkdcp_st *kkdcp;
-	struct kkdcp_realm_st *kkdcp_realm;
+	KkdcpConfig *kkdcp;
+	KkdcpRealmConfig *kkdcp_realm;
 
-	config->kkdcp = talloc_zero_size(config, urlfw_size * sizeof(kkdcp_st));
+	/* Allocate array of pointers */
+	config->kkdcp = talloc_zero_array(config, KkdcpConfig *, urlfw_size);
 	if (config->kkdcp == NULL) {
 		fprintf(stderr, ERRSTR "memory\n");
 		exit(EXIT_FAILURE);
 	}
-
-	config->kkdcp_size = 0;
+	config->n_kkdcp = 0;
 
 	for (i = 0; i < urlfw_size; i++) {
 		memset(&hints, 0, sizeof(hints));
@@ -491,44 +601,66 @@ static void parse_kkdcp(struct cfg_st *config, char **urlfw,
 
 		kkdcp = NULL;
 		/* check if the path is already added */
-		for (j = 0; j < config->kkdcp_size; j++) {
-			if (strcmp(path, config->kkdcp[j].url) == 0) {
-				kkdcp = &config->kkdcp[j];
+		for (j = 0; j < config->n_kkdcp; j++) {
+			if (strcmp(path, config->kkdcp[j]->url) == 0) {
+				kkdcp = config->kkdcp[j];
 			}
 		}
 
 		if (kkdcp == NULL) {
-			kkdcp = &config->kkdcp[i];
-			kkdcp->url = talloc_strdup(config->kkdcp, path);
-			config->kkdcp_size++;
+			kkdcp = talloc_zero(config, KkdcpConfig);
+			if (kkdcp == NULL) {
+				fprintf(stderr, ERRSTR "memory\n");
+				exit(EXIT_FAILURE);
+			}
+			kkdcp_config__init(kkdcp);
+			kkdcp->url = talloc_strdup(kkdcp, path);
+			config->kkdcp[config->n_kkdcp] = kkdcp;
+			config->n_kkdcp++;
 		}
 
-		if (kkdcp->realms_size >= MAX_KRB_REALMS) {
-			fprintf(stderr,
-				ERRSTR
-				"reached maximum number (%d) of realms per URL\n",
-				MAX_KRB_REALMS);
+		/* add realm to this kkdcp entry */
+		kkdcp->realms = talloc_realloc(kkdcp, kkdcp->realms,
+					       KkdcpRealmConfig *,
+					       kkdcp->n_realms + 1);
+		if (kkdcp->realms == NULL) {
+			fprintf(stderr, ERRSTR "memory\n");
 			exit(EXIT_FAILURE);
 		}
 
-		kkdcp_realm = &kkdcp->realms[kkdcp->realms_size];
+		kkdcp_realm = talloc_zero(kkdcp, KkdcpRealmConfig);
+		if (kkdcp_realm == NULL) {
+			fprintf(stderr, ERRSTR "memory\n");
+			exit(EXIT_FAILURE);
+		}
+		kkdcp_realm_config__init(kkdcp_realm);
 
-		memcpy(&kkdcp_realm->addr, res->ai_addr, res->ai_addrlen);
-		kkdcp_realm->addr_len = res->ai_addrlen;
+		kkdcp_realm->has_addr = 1;
+		kkdcp_realm->addr.len = res->ai_addrlen;
+		kkdcp_realm->addr.data = talloc_memdup(
+			kkdcp_realm, res->ai_addr, res->ai_addrlen);
+		if (kkdcp_realm->addr.data == NULL) {
+			fprintf(stderr, ERRSTR "memory\n");
+			exit(EXIT_FAILURE);
+		}
+		kkdcp_realm->has_ai_family = 1;
 		kkdcp_realm->ai_family = res->ai_family;
+		kkdcp_realm->has_ai_socktype = 1;
 		kkdcp_realm->ai_socktype = res->ai_socktype;
+		kkdcp_realm->has_ai_protocol = 1;
 		kkdcp_realm->ai_protocol = res->ai_protocol;
-
-		kkdcp_realm->realm = talloc_strdup(config->kkdcp, realm);
+		kkdcp_realm->realm = talloc_strdup(kkdcp_realm, realm);
 
 		freeaddrinfo(res);
-		kkdcp->realms_size++;
+
+		kkdcp->realms[kkdcp->n_realms] = kkdcp_realm;
+		kkdcp->n_realms++;
 	}
 }
 #endif
 
 struct iroute_ctx {
-	struct cfg_st *config;
+	ReloadableConfig *config;
 	const char *file;
 };
 
@@ -572,7 +704,7 @@ static int iroutes_handler(void *_ctx, const char *section, const char *name,
 		return 1;
 
 	ret = _add_multi_line_val(ctx->config, &ctx->config->known_iroutes,
-				  &ctx->config->known_iroutes_size, value);
+				  &ctx->config->n_known_iroutes, value);
 	if (ret < 0) {
 		fprintf(stderr, ERRSTR "cannot load iroute from %s\n",
 			ctx->file);
@@ -582,7 +714,7 @@ static int iroutes_handler(void *_ctx, const char *section, const char *name,
 	return 1;
 }
 
-static void append_iroutes_from_file(struct cfg_st *config, const char *file)
+static void append_iroutes_from_file(ReloadableConfig *config, const char *file)
 {
 	struct iroute_ctx ctx;
 	int ret;
@@ -595,14 +727,14 @@ static void append_iroutes_from_file(struct cfg_st *config, const char *file)
 	if (ret != 0)
 		return;
 
-	for (j = 0; j < config->known_iroutes_size; j++) {
+	for (j = 0; j < config->n_known_iroutes; j++) {
 		if (ip_route_sanity_check(config->known_iroutes,
 					  &config->known_iroutes[j]) != 0)
 			exit(EXIT_FAILURE);
 	}
 }
 
-static void load_iroutes(struct cfg_st *config)
+static void load_iroutes(ReloadableConfig *config)
 {
 	DIR *dir;
 	struct dirent *r;
@@ -633,49 +765,88 @@ static void load_iroutes(struct cfg_st *config)
 
 static void apply_default_conf(vhost_cfg_st *vhost, unsigned int reload)
 {
+	ReloadableConfig *c = vhost->config;
+
 	/* set config (no-zero) default vals
 	 */
 	if (!reload) { /* perm config defaults */
 		tls_vhost_init(vhost);
-		vhost->perm_config.stats_reset_time =
+		vhost->static_config.stats_reset_time =
 			24 * 60 * 60 * 7; /* weekly */
-		vhost->perm_config.log_level = DEFAULT_LOG_LEVEL;
+		vhost->static_config.log_level = DEFAULT_LOG_LEVEL;
+		vhost->static_config.syslog_facility = LOG_DAEMON;
 	}
 
-	vhost->perm_config.config->mobile_idle_timeout = (unsigned int)-1;
+	vhost->static_config.occtl_socket_file = OCCTL_UNIX_SOCKET;
+
+	c->has_mobile_idle_timeout = 1;
+	c->mobile_idle_timeout = (uint32_t)-1;
 #ifdef ENABLE_COMPRESSION
-	vhost->perm_config.config->no_compress_limit =
-		DEFAULT_NO_COMPRESS_LIMIT;
+	c->has_no_compress_limit = 1;
+	c->no_compress_limit = DEFAULT_NO_COMPRESS_LIMIT;
 #endif
-	vhost->perm_config.config->rekey_time = 24 * 60 * 60;
-	vhost->perm_config.config->cookie_timeout =
-		DEFAULT_COOKIE_RECON_TIMEOUT;
-	vhost->perm_config.config->auth_timeout = DEFAULT_AUTH_TIMEOUT_SECS;
-	vhost->perm_config.config->ban_reset_time = DEFAULT_BAN_RESET_TIME;
-	vhost->perm_config.config->max_ban_score = DEFAULT_MAX_BAN_SCORE;
-	vhost->perm_config.config->ban_points_wrong_password =
-		DEFAULT_PASSWORD_POINTS;
-	vhost->perm_config.config->ban_points_connect = DEFAULT_CONNECT_POINTS;
-	vhost->perm_config.config->ban_points_kkdcp = DEFAULT_KKDCP_POINTS;
-	vhost->perm_config.config->dpd = DEFAULT_DPD_TIME;
-	vhost->perm_config.config->network.ipv6_subnet_prefix = 128;
-	vhost->perm_config.config->dtls_legacy = 1;
-	vhost->perm_config.config->dtls_psk = 1;
-	vhost->perm_config.config->predictable_ips = 1;
-	vhost->perm_config.config->use_utmp = 1;
-	vhost->perm_config.config->keepalive = 3600;
-	vhost->perm_config.config->dpd = 60;
+	c->has_rekey_time = 1;
+	c->rekey_time = DEFAULT_REKEY_TIME;
+	c->has_cookie_timeout = 1;
+	c->cookie_timeout = DEFAULT_COOKIE_RECON_TIMEOUT;
+	c->has_auth_timeout = 1;
+	c->auth_timeout = DEFAULT_AUTH_TIMEOUT_SECS;
+	c->has_ban_time = 1;
+	c->ban_time = DEFAULT_BAN_TIME;
+	c->has_ban_reset_time = 1;
+	c->ban_reset_time = DEFAULT_BAN_RESET_TIME;
+	c->has_max_ban_score = 1;
+	c->max_ban_score = DEFAULT_MAX_BAN_SCORE;
+	c->has_ban_points_wrong_password = 1;
+	c->ban_points_wrong_password = DEFAULT_PASSWORD_POINTS;
+	c->has_ban_points_connect = 1;
+	c->ban_points_connect = DEFAULT_CONNECT_POINTS;
+	c->has_ban_points_kkdcp = 1;
+	c->ban_points_kkdcp = DEFAULT_KKDCP_POINTS;
+	c->has_dpd = 1;
+	c->dpd = DEFAULT_DPD_TIME;
+	c->network->has_ipv6_subnet_prefix = 1;
+	c->network->ipv6_subnet_prefix = 128;
+	c->has_dtls_legacy = 1;
+	c->dtls_legacy = 1;
+	c->has_dtls_psk = 1;
+	c->dtls_psk = 1;
+	c->has_predictable_ips = 1;
+	c->predictable_ips = 1;
+	c->has_use_utmp = 1;
+	c->use_utmp = 1;
+	c->has_keepalive = 1;
+	c->keepalive = DEFAULT_KEEPALIVE_TIME;
+	c->has_switch_to_tcp_timeout = 1;
+	c->switch_to_tcp_timeout = DEFAULT_SWITCH_TO_TCP_TIMEOUT;
+	c->has_mobile_dpd = 1;
+	c->mobile_dpd = DEFAULT_MOBILE_DPD_TIME;
 }
 
 static void cfg_new(struct vhost_cfg_st *vhost, unsigned int reload)
 {
-	vhost->perm_config.config = talloc_zero(vhost->pool, struct cfg_st);
-	if (vhost->perm_config.config == NULL)
-		exit(EXIT_FAILURE);
+	ReloadableConfig *cfg;
+	NetworkConfig *net;
 
-	vhost->perm_config.config->usage_count =
-		talloc_zero(vhost->perm_config.config, int);
-	if (vhost->perm_config.config->usage_count == NULL) {
+	cfg = talloc_zero(vhost->pool, ReloadableConfig);
+	if (cfg == NULL) {
+		fprintf(stderr, ERRSTR "memory\n");
+		exit(EXIT_FAILURE);
+	}
+	reloadable_config__init(cfg);
+
+	net = talloc_zero(cfg, NetworkConfig);
+	if (net == NULL) {
+		fprintf(stderr, ERRSTR "memory\n");
+		exit(EXIT_FAILURE);
+	}
+	network_config__init(net);
+	cfg->network = net;
+
+	vhost->config = cfg;
+
+	vhost->usage_count = talloc_zero(vhost->pool, int);
+	if (vhost->usage_count == NULL) {
 		fprintf(stderr, ERRSTR "memory\n");
 		exit(EXIT_FAILURE);
 	}
@@ -703,8 +874,8 @@ static vhost_cfg_st *vhost_add(void *pool, struct list_head *head,
 		}
 	}
 
-	vhost->perm_config.sup_config_type = SUP_CONFIG_FILE;
-	list_head_init(&vhost->perm_config.attic);
+	vhost->static_config.sup_config_type = SUP_CONFIG_FILE;
+	list_head_init(&vhost->attic);
 
 	list_add(head, &vhost->list);
 
@@ -719,81 +890,34 @@ struct ini_ctx_st {
 	void *pool;
 };
 
-#define WARN_ON_VHOST_ONLY(vname, oname)                                      \
-	({                                                                    \
-		int rval;                                                     \
-		if (vname) {                                                  \
-			fprintf(stderr,                                       \
-				WARNSTR "%s is ignored on %s virtual host\n", \
-				oname, vname);                                \
-			rval = 1;                                             \
-		} else {                                                      \
-			rval = 0;                                             \
-		}                                                             \
-		rval;                                                         \
-	})
+static bool error_on_vhost(const char *vname, const char *oname)
+{
+	if (vname) {
+		fprintf(stderr,
+			ERRSTR
+			"'%s' cannot be set inside a virtual host section\n",
+			oname);
+		return true;
+	}
 
-#define WARN_ON_VHOST(vname, oname, member)                                   \
-	({                                                                    \
-		int rval;                                                     \
-		if (vname) {                                                  \
-			fprintf(stderr,                                       \
-				WARNSTR "%s is ignored on %s virtual host\n", \
-				oname, vname);                                \
-			memcpy(&config->member,                               \
-			       &defvhost->perm_config.config->member,         \
-			       sizeof(config->member));                       \
-			rval = 1;                                             \
-		} else {                                                      \
-			rval = 0;                                             \
-		}                                                             \
-		rval;                                                         \
-	})
-
-#define PWARN_ON_VHOST(vname, oname, member)                                  \
-	({                                                                    \
-		int rval;                                                     \
-		if (vname) {                                                  \
-			fprintf(stderr,                                       \
-				WARNSTR "%s is ignored on %s virtual host\n", \
-				oname, vname);                                \
-			vhost->perm_config.member =                           \
-				defvhost->perm_config.member;                 \
-			rval = 1;                                             \
-		} else {                                                      \
-			rval = 0;                                             \
-		}                                                             \
-		rval;                                                         \
-	})
-
-#define PWARN_ON_VHOST_STRDUP(vname, oname, member)                           \
-	({                                                                    \
-		int rval;                                                     \
-		if (vname) {                                                  \
-			fprintf(stderr,                                       \
-				WARNSTR "%s is ignored on %s virtual host\n", \
-				oname, vname);                                \
-			vhost->perm_config.member = talloc_strdup(            \
-				pool, defvhost->perm_config.member);          \
-			rval = 1;                                             \
-		} else {                                                      \
-			rval = 0;                                             \
-		}                                                             \
-		rval;                                                         \
-	})
+	return false;
+}
 
 static char *idna_map(void *pool, const char *name, unsigned int size)
 {
 #if GNUTLS_VERSION_NUMBER > 0x030508
 	int ret;
 	gnutls_datum_t out;
+	char *result;
 
 	ret = gnutls_idna_map(name, size, &out, 0);
 	if (ret < 0) {
 		goto fallback;
 	}
 
-	return talloc_strdup(pool, (char *)out.data);
+	result = talloc_strdup(pool, (char *)out.data);
+	gnutls_free(out.data);
+	return result;
 
 fallback:
 #endif
@@ -822,7 +946,7 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name,
 	struct ini_ctx_st *ctx = _ctx;
 	vhost_cfg_st *vhost, *vtmp = NULL, *defvhost;
 	unsigned int use_dbus;
-	struct cfg_st *config;
+	ReloadableConfig *config;
 	void *pool;
 	unsigned int reload = ctx->reload;
 	unsigned int is_worker = ctx->is_worker;
@@ -886,6 +1010,23 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name,
 			vhost = vhost_add(ctx->pool, ctx->head, vname, reload);
 		}
 		talloc_free(vname);
+
+		/* Pre-populate this named vhost from the default vhost before
+		 * any of its options are parsed, so subsequent options overlay
+		 * the inherited values. */
+		if (!vhost->cfg_inherited) {
+			ReloadableConfig *copy;
+
+			copy = cfg_copy_from_default(defvhost->config,
+						     vhost->pool);
+			if (copy == NULL) {
+				fprintf(stderr, ERRSTR "memory\n");
+				exit(EXIT_FAILURE);
+			}
+			talloc_free(vhost->config);
+			vhost->config = copy;
+			vhost->cfg_inherited = 1;
+		}
 	}
 
 	value = sanitize_config_value(vhost->pool, _value);
@@ -903,94 +1044,94 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name,
 		} else if (strcmp(name, "acct") == 0) {
 			vhost->acct = talloc_strdup(pool, value);
 		} else if (strcmp(name, "listen-host") == 0) {
-			PREAD_STRING(pool, vhost->perm_config.listen_host);
+			if (error_on_vhost(vhost->name, "listen-host"))
+				return 0;
+			PREAD_STRING(pool, vhost->static_config.listen_host);
 		} else if (strcmp(name, "udp-listen-host") == 0) {
-			PREAD_STRING(pool, vhost->perm_config.udp_listen_host);
+			if (error_on_vhost(vhost->name, "udp-listen-host"))
+				return 0;
+			PREAD_STRING(pool,
+				     vhost->static_config.udp_listen_host);
 		} else if (strcmp(name, "listen-clear-file") == 0) {
 			fprintf(stderr, ERRSTR
 				"the 'listen-clear-file' option was removed in ocserv 1.1.2\n");
 			return 0;
 		} else if (strcmp(name, "listen-netns") == 0) {
-			vhost->perm_config.listen_netns_name =
+			vhost->static_config.listen_netns_name =
 				talloc_strdup(pool, value);
 		} else if (strcmp(name, "tcp-port") == 0) {
-			if (!PWARN_ON_VHOST(vhost->name, "tcp-port", port))
-				READ_NUMERIC(vhost->perm_config.port);
+			if (error_on_vhost(vhost->name, "tcp-port"))
+				return 0;
+			READ_NUMERIC(vhost->static_config.port);
 		} else if (strcmp(name, "udp-port") == 0) {
-			if (!PWARN_ON_VHOST(vhost->name, "udp-port", udp_port))
-				READ_NUMERIC(vhost->perm_config.udp_port);
+			if (error_on_vhost(vhost->name, "udp-port"))
+				return 0;
+			READ_NUMERIC(vhost->static_config.udp_port);
 		} else if (strcmp(name, "run-as-user") == 0) {
-			if (!PWARN_ON_VHOST(vhost->name, "run-as-user", uid)) {
-				const struct passwd *pwd = getpwnam(value);
+			if (error_on_vhost(vhost->name, "run-as-user"))
+				return 0;
+			const struct passwd *pwd = getpwnam(value);
 
-				if (pwd == NULL) {
-					fprintf(stderr,
-						ERRSTR "unknown user: %s\n",
-						value);
-					return 0;
-				}
-				vhost->perm_config.uid = pwd->pw_uid;
+			if (pwd == NULL) {
+				fprintf(stderr, ERRSTR "unknown user: %s\n",
+					value);
+				return 0;
 			}
+			vhost->static_config.uid = pwd->pw_uid;
 		} else if (strcmp(name, "run-as-group") == 0) {
-			if (!PWARN_ON_VHOST(vhost->name, "run-as-group", gid)) {
-				const struct group *grp = getgrnam(value);
+			if (error_on_vhost(vhost->name, "run-as-group"))
+				return 0;
+			const struct group *grp = getgrnam(value);
 
-				if (grp == NULL) {
-					fprintf(stderr,
-						ERRSTR "unknown group: %s\n",
-						value);
-					return 0;
-				}
-				vhost->perm_config.gid = grp->gr_gid;
+			if (grp == NULL) {
+				fprintf(stderr, ERRSTR "unknown group: %s\n",
+					value);
+				return 0;
 			}
+			vhost->static_config.gid = grp->gr_gid;
 		} else if (strcmp(name, "server-cert") == 0) {
-			READ_MULTI_LINE(vhost->perm_config.cert,
-					vhost->perm_config.cert_size);
+			READ_MULTI_LINE(vhost->static_config.cert,
+					vhost->static_config.cert_size);
 		} else if (strcmp(name, "server-key") == 0) {
-			READ_MULTI_LINE(vhost->perm_config.key,
-					vhost->perm_config.key_size);
+			READ_MULTI_LINE(vhost->static_config.key,
+					vhost->static_config.key_size);
 		} else if (strcmp(name, "debug-no-secmod-stats") == 0) {
-			READ_TF(vhost->perm_config.debug_no_secmod_stats);
+			READ_TF(vhost->static_config.debug_no_secmod_stats);
 		} else if (strcmp(name, "dh-params") == 0) {
-			READ_STRING(vhost->perm_config.dh_params_file);
+			READ_STRING(vhost->static_config.dh_params_file);
 		} else if (strcmp(name, "pin-file") == 0) {
-			READ_STRING(vhost->perm_config.pin_file);
+			READ_STRING(vhost->static_config.pin_file);
 		} else if (strcmp(name, "srk-pin-file") == 0) {
-			READ_STRING(vhost->perm_config.srk_pin_file);
+			READ_STRING(vhost->static_config.srk_pin_file);
 		} else if (strcmp(name, "ca-cert") == 0) {
-			READ_STRING(vhost->perm_config.ca);
+			READ_STRING(vhost->static_config.ca);
 #if !defined(OCSERV_WORKER_PROCESS)
 		} else if (strcmp(name, "key-pin") == 0) {
-			READ_STRING(vhost->perm_config.key_pin);
+			READ_STRING(vhost->static_config.key_pin);
 		} else if (strcmp(name, "srk-pin") == 0) {
-			READ_STRING(vhost->perm_config.srk_pin);
+			READ_STRING(vhost->static_config.srk_pin);
 #endif
 		} else if (strcmp(name, "socket-file") == 0) {
-			if (!PWARN_ON_VHOST_STRDUP(vhost->name, "socket-file",
-						   socket_file_prefix))
-				PREAD_STRING(
-					pool,
-					vhost->perm_config.socket_file_prefix);
+			if (error_on_vhost(vhost->name, "socket-file"))
+				return 0;
+			PREAD_STRING(pool,
+				     vhost->static_config.socket_file_prefix);
 		} else if (strcmp(name, "occtl-socket-file") == 0) {
-			if (!PWARN_ON_VHOST_STRDUP(vhost->name,
-						   "occtl-socket-file",
-						   occtl_socket_file))
-				PREAD_STRING(
-					pool,
-					vhost->perm_config.occtl_socket_file);
+			if (error_on_vhost(vhost->name, "occtl-socket-file"))
+				return 0;
+			PREAD_STRING(pool,
+				     vhost->static_config.occtl_socket_file);
 		} else if (strcmp(name, "chroot-dir") == 0) {
-			if (!PWARN_ON_VHOST_STRDUP(vhost->name, "chroot-dir",
-						   chroot_dir))
-				PREAD_STRING(pool,
-					     vhost->perm_config.chroot_dir);
+			if (error_on_vhost(vhost->name, "chroot-dir"))
+				return 0;
+			PREAD_STRING(pool, vhost->static_config.chroot_dir);
 		} else if (strcmp(name, "server-stats-reset-time") == 0) {
 			/* cannot be modified as it would require sec-mod to
 			 * re-read configuration too */
-			if (!PWARN_ON_VHOST(vhost->name,
-					    "server-stats-reset-time",
-					    stats_reset_time))
-				READ_NUMERIC(
-					vhost->perm_config.stats_reset_time);
+			if (error_on_vhost(vhost->name,
+					   "server-stats-reset-time"))
+				return 0;
+			READ_NUMERIC(vhost->static_config.stats_reset_time);
 		} else if (strcmp(name, "pid-file") == 0) {
 			if (pid_file[0] == 0) {
 				READ_STATIC_STRING(pid_file);
@@ -998,12 +1139,20 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name,
 				fprintf(stderr, NOTESTR
 					"skipping 'pid-file' config option\n");
 		} else if (strcmp(name, "sec-mod-scale") == 0) {
-			if (!PWARN_ON_VHOST(vhost->name, "sec-mod-scale",
-					    sec_mod_scale))
-				READ_NUMERIC(vhost->perm_config.sec_mod_scale);
+			if (error_on_vhost(vhost->name, "sec-mod-scale"))
+				return 0;
+			READ_NUMERIC(vhost->static_config.sec_mod_scale);
 		} else if (strcmp(name, "log-level") == 0) {
-			READ_NUMERIC(vhost->perm_config.log_level);
-			global_log_prio = vhost->perm_config.log_level;
+			READ_NUMERIC(vhost->static_config.log_level);
+			global_log_prio = vhost->static_config.log_level;
+		} else if (strcmp(name, "syslog-facility") == 0) {
+			int facility = parse_syslog_facility(value);
+			if (facility < 0) {
+				oc_syslog(LOG_ERR,
+					  "unknown syslog facility: %s", value);
+				return 0;
+			}
+			vhost->static_config.syslog_facility = facility;
 		} else {
 			stage1_found = 0;
 		}
@@ -1012,41 +1161,42 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name,
 	}
 
 	/* read the rest of the (non-permanent) configuration */
-	pool = vhost->perm_config.config;
-	config = vhost->perm_config.config;
+	pool = vhost->config;
+	config = vhost->config;
 
 	/* When adding allocated data, remember to modify
 	 * reload_cfg_file();
 	 */
 	if (strcmp(name, "listen-host-is-dyndns") == 0) {
-		READ_TF(config->is_dyndns);
+		READ_TF_VC(is_dyndns);
 	} else if (strcmp(name, "listen-proxy-proto") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "listen-proxy-proto",
-				   listen_proxy_proto))
-			READ_TF(config->listen_proxy_proto);
+		if (error_on_vhost(vhost->name, "listen-proxy-proto"))
+			return 0;
+		READ_TF_VC(listen_proxy_proto);
 	} else if (strcmp(name, "append-routes") == 0) {
-		READ_TF(config->append_routes);
+		READ_TF_VC(append_routes);
 #ifdef HAVE_GSSAPI
 	} else if (strcmp(name, "kkdcp") == 0) {
 		READ_MULTI_LINE(vhost->urlfw, vhost->urlfw_size);
 #endif
 	} else if (strcmp(name, "tunnel-all-dns") == 0) {
-		READ_TF(config->tunnel_all_dns);
+		READ_TF_VC(tunnel_all_dns);
 	} else if (strcmp(name, "keepalive") == 0) {
-		READ_NUMERIC(config->keepalive);
+		READ_NUMERIC_VC(keepalive);
 	} else if (strcmp(name, "switch-to-tcp-timeout") == 0) {
-		READ_NUMERIC(config->switch_to_tcp_timeout);
+		READ_NUMERIC_VC(switch_to_tcp_timeout);
 	} else if (strcmp(name, "dpd") == 0) {
-		READ_NUMERIC(config->dpd);
+		READ_NUMERIC_VC(dpd);
 	} else if (strcmp(name, "mobile-dpd") == 0) {
-		READ_NUMERIC(config->mobile_dpd);
+		READ_NUMERIC_VC(mobile_dpd);
 	} else if (strcmp(name, "rate-limit-ms") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "rate-limit-ms", rate_limit_ms))
-			READ_NUMERIC(config->rate_limit_ms);
+		if (error_on_vhost(vhost->name, "rate-limit-ms"))
+			return 0;
+		READ_NUMERIC_VC(rate_limit_ms);
 	} else if (strcmp(name, "server-drain-ms") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "server-drain-ms",
-				   server_drain_ms))
-			READ_NUMERIC(config->server_drain_ms);
+		if (error_on_vhost(vhost->name, "server-drain-ms"))
+			return 0;
+		READ_NUMERIC_VC(server_drain_ms);
 	} else if (strcmp(name, "ocsp-response") == 0) {
 		READ_STRING(config->ocsp_response);
 #ifdef ANYCONNECT_CLIENT_COMPAT
@@ -1054,7 +1204,7 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name,
 		READ_STRING(config->xml_config_file);
 #endif
 	} else if (strcmp(name, "client-bypass-protocol") == 0) {
-		READ_TF(config->client_bypass_protocol);
+		READ_TF_VC(client_bypass_protocol);
 	} else if (strcmp(name, "default-domain") == 0) {
 		READ_STRING(config->default_domain);
 	} else if (strcmp(name, "crl") == 0) {
@@ -1064,17 +1214,17 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name,
 	} else if (strcmp(name, "cert-group-oid") == 0) {
 		READ_STRING(config->cert_group_oid);
 	} else if (strcmp(name, "connect-script") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "connect-script",
-				   connect_script))
-			READ_STRING(config->connect_script);
+		if (error_on_vhost(vhost->name, "connect-script"))
+			return 0;
+		READ_STRING(config->connect_script);
 	} else if (strcmp(name, "host-update-script") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "host-update-script",
-				   host_update_script))
-			READ_STRING(config->host_update_script);
+		if (error_on_vhost(vhost->name, "host-update-script"))
+			return 0;
+		READ_STRING(config->host_update_script);
 	} else if (strcmp(name, "disconnect-script") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "disconnect-script",
-				   disconnect_script))
-			READ_STRING(config->disconnect_script);
+		if (error_on_vhost(vhost->name, "disconnect-script"))
+			return 0;
+		READ_STRING(config->disconnect_script);
 	} else if (strcmp(name, "session-control") == 0) {
 		fprintf(stderr,
 			WARNSTR "the option 'session-control' is deprecated\n");
@@ -1083,72 +1233,90 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name,
 	} else if (strcmp(name, "pre-login-banner") == 0) {
 		READ_STRING(config->pre_login_banner);
 	} else if (strcmp(name, "dtls-legacy") == 0) {
-		READ_TF(config->dtls_legacy);
+		READ_TF_VC(dtls_legacy);
 	} else if (strcmp(name, "cisco-client-compat") == 0) {
-		READ_TF(config->cisco_client_compat);
+		READ_TF_VC(cisco_client_compat);
 	} else if (strcmp(name, "always-require-cert") == 0) {
 		READ_TF(force_cert_auth);
 		if (force_cert_auth == 0) {
 			fprintf(stderr, NOTESTR
 				"'always-require-cert' was replaced by 'cisco-client-compat'\n");
 			config->cisco_client_compat = 1;
+			config->has_cisco_client_compat = 1;
 		}
 	} else if (strcmp(name, "cisco-svc-client-compat") == 0) {
-		READ_TF(config->cisco_svc_client_compat);
+		READ_TF_VC(cisco_svc_client_compat);
 	} else if (strcmp(name, "dtls-psk") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "dtls-psk", dtls_psk))
-			READ_TF(config->dtls_psk);
+		if (error_on_vhost(vhost->name, "dtls-psk"))
+			return 0;
+		READ_TF_VC(dtls_psk);
 	} else if (strcmp(name, "match-tls-dtls-ciphers") == 0) {
-		READ_TF(config->match_dtls_and_tls);
+		READ_TF_VC(match_dtls_and_tls);
 #ifdef ENABLE_COMPRESSION
 	} else if (strcmp(name, "compression") == 0) {
-		READ_TF(config->enable_compression);
+		READ_TF_VC(enable_compression);
 	} else if (strcmp(name, "compression-algo-priority") == 0) {
-		if (!WARN_ON_VHOST_ONLY(vhost->name,
-					"compression-algo-priority")) {
+		if (error_on_vhost(vhost->name, "compression-algo-priority"))
+			return 0;
 #if defined(OCSERV_WORKER_PROCESS)
-			if (switch_comp_priority(pool, value) == 0) {
-				fprintf(stderr,
-					WARNSTR
-					"invalid compression modstring %s\n",
-					value);
-			}
-#endif
+		if (switch_comp_priority(pool, value) == 0) {
+			fprintf(stderr,
+				WARNSTR "invalid compression modstring %s\n",
+				value);
 		}
+#endif
 	} else if (strcmp(name, "no-compress-limit") == 0) {
-		READ_NUMERIC(config->no_compress_limit);
+		READ_NUMERIC_VC(no_compress_limit);
 #endif
 	} else if (strcmp(name, "use-seccomp") == 0) {
-		READ_TF(config->isolate);
+		if (error_on_vhost(vhost->name, "use-seccomp"))
+			return 0;
+		READ_TF_VC(isolate);
 		if (config->isolate)
 			fprintf(stderr, NOTESTR
 				"'use-seccomp' was replaced by 'isolate-workers'\n");
 	} else if (strcmp(name, "isolate-workers") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "isolate-workers", isolate))
-			READ_TF(config->isolate);
+		if (error_on_vhost(vhost->name, "isolate-workers"))
+			return 0;
+		READ_TF_VC(isolate);
+	} else if (strcmp(name, "limit-worker-memory") == 0) {
+		if (error_on_vhost(vhost->name, "limit-worker-memory"))
+			return 0;
+		READ_TF_VC(limit_worker_memory);
+	} else if (strcmp(name, "sec-mod-db-cleanup-time") == 0) {
+		if (error_on_vhost(vhost->name, "sec-mod-db-cleanup-time"))
+			return 0;
+		READ_NUMERIC_VC(sec_mod_db_cleanup_time);
 	} else if (strcmp(name, "predictable-ips") == 0) {
-		READ_TF(config->predictable_ips);
+		READ_TF_VC(predictable_ips);
 	} else if (strcmp(name, "use-utmp") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "use-utmp", use_utmp))
-			READ_TF(config->use_utmp);
+		if (error_on_vhost(vhost->name, "use-utmp"))
+			return 0;
+		READ_TF_VC(use_utmp);
 	} else if (strcmp(name, "use-dbus") == 0) {
+		if (error_on_vhost(vhost->name, "use-dbus"))
+			return 0;
 		READ_TF(use_dbus);
 		if (use_dbus != 0) {
 			fprintf(stderr, NOTESTR
 				"'use-dbus' was replaced by 'use-occtl'\n");
 			config->use_occtl = use_dbus;
+			config->has_use_occtl = 1;
 		}
 	} else if (strcmp(name, "use-occtl") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "use-occtl", use_occtl))
-			READ_TF(config->use_occtl);
+		if (error_on_vhost(vhost->name, "use-occtl"))
+			return 0;
+		READ_TF_VC(use_occtl);
 	} else if (strcmp(name, "try-mtu-discovery") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "try-mtu-discovery", try_mtu))
-			READ_TF(config->try_mtu);
+		if (error_on_vhost(vhost->name, "try-mtu-discovery"))
+			return 0;
+		READ_TF_VC(try_mtu);
 	} else if (strcmp(name, "ping-leases") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "ping_leases", ping_leases))
-			READ_TF(config->ping_leases);
+		if (error_on_vhost(vhost->name, "ping-leases"))
+			return 0;
+		READ_TF_VC(ping_leases);
 	} else if (strcmp(name, "restrict-user-to-routes") == 0) {
-		READ_TF(config->restrict_user_to_routes);
+		READ_TF_VC(restrict_user_to_routes);
 	} else if (strcmp(name, "restrict-user-to-ports") == 0) {
 		ret = cfg_parse_ports(pool, &config->fw_ports,
 				      &config->n_fw_ports, value);
@@ -1160,23 +1328,24 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name,
 	} else if (strcmp(name, "tls-priorities") == 0) {
 		READ_STRING(config->priorities);
 	} else if (strcmp(name, "mtu") == 0) {
-		READ_NUMERIC(config->default_mtu);
+		READ_NUMERIC_VC(default_mtu);
 	} else if (strcmp(name, "net-priority") == 0) {
 		READ_PRIO_TOS(config->net_priority);
+		config->has_net_priority = 1;
 	} else if (strcmp(name, "output-buffer") == 0) {
-		READ_NUMERIC(config->output_buffer);
+		READ_NUMERIC_VC(output_buffer);
 	} else if (strcmp(name, "rx-data-per-sec") == 0) {
-		READ_NUMERIC(config->rx_per_sec);
+		READ_NUMERIC_VC_U64(rx_per_sec);
 		config->rx_per_sec /= 1000; /* in kb */
 	} else if (strcmp(name, "tx-data-per-sec") == 0) {
-		READ_NUMERIC(config->tx_per_sec);
+		READ_NUMERIC_VC_U64(tx_per_sec);
 		config->tx_per_sec /= 1000; /* in kb */
 	} else if (strcmp(name, "deny-roaming") == 0) {
-		READ_TF(config->deny_roaming);
+		READ_TF_VC(deny_roaming);
 	} else if (strcmp(name, "stats-report-time") == 0) {
-		READ_NUMERIC(config->stats_report_time);
+		READ_NUMERIC_VC(stats_report_time);
 	} else if (strcmp(name, "rekey-time") == 0) {
-		READ_NUMERIC(config->rekey_time);
+		READ_NUMERIC_VC(rekey_time);
 	} else if (strcmp(name, "rekey-method") == 0) {
 		if (strcmp(value, "ssl") == 0)
 			config->rekey_method = REKEY_METHOD_SSL;
@@ -1187,72 +1356,84 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name,
 				value);
 			return 0;
 		}
+		config->has_rekey_method = 1;
 	} else if (strcmp(name, "cookie-timeout") == 0) {
-		READ_NUMERIC(config->cookie_timeout);
+		READ_NUMERIC_VC(cookie_timeout);
 	} else if (strcmp(name, "persistent-cookies") == 0) {
-		READ_TF(config->persistent_cookies);
+		READ_TF_VC(persistent_cookies);
 	} else if (strcmp(name, "session-timeout") == 0) {
-		READ_NUMERIC(config->session_timeout);
+		READ_NUMERIC_VC(session_timeout);
 	} else if (strcmp(name, "auth-timeout") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "auth-timeout", auth_timeout))
-			READ_NUMERIC(config->auth_timeout);
+		if (error_on_vhost(vhost->name, "auth-timeout"))
+			return 0;
+		READ_NUMERIC_VC(auth_timeout);
 	} else if (strcmp(name, "idle-timeout") == 0) {
-		READ_NUMERIC(config->idle_timeout);
+		READ_NUMERIC_VC(idle_timeout);
 	} else if (strcmp(name, "mobile-idle-timeout") == 0) {
-		READ_NUMERIC(config->mobile_idle_timeout);
+		READ_NUMERIC_VC(mobile_idle_timeout);
 	} else if (strcmp(name, "max-clients") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "max-clients", max_clients))
-			READ_NUMERIC(config->max_clients);
+		if (error_on_vhost(vhost->name, "max-clients"))
+			return 0;
+		READ_NUMERIC_VC(max_clients);
 	} else if (strcmp(name, "min-reauth-time") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "min-reauth-time",
-				   min_reauth_time))
-			READ_NUMERIC(config->min_reauth_time);
+		if (error_on_vhost(vhost->name, "min-reauth-time"))
+			return 0;
+		READ_NUMERIC_VC(ban_time);
+		fprintf(stderr, NOTESTR
+			"'min-reauth-time' was replaced by 'ban-time'\n");
+	} else if (strcmp(name, "ban-time") == 0) {
+		if (error_on_vhost(vhost->name, "ban-time"))
+			return 0;
+		READ_NUMERIC_VC(ban_time);
 	} else if (strcmp(name, "ban-reset-time") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "ban-reset-time",
-				   ban_reset_time))
-			READ_NUMERIC(config->ban_reset_time);
+		if (error_on_vhost(vhost->name, "ban-reset-time"))
+			return 0;
+		READ_NUMERIC_VC(ban_reset_time);
 	} else if (strcmp(name, "max-ban-score") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "max-ban-score", max_ban_score))
-			READ_NUMERIC(config->max_ban_score);
+		if (error_on_vhost(vhost->name, "max-ban-score"))
+			return 0;
+		READ_NUMERIC_VC(max_ban_score);
 	} else if (strcmp(name, "ban-points-wrong-password") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "ban-points-wrong-password",
-				   ban_points_wrong_password))
-			READ_NUMERIC(config->ban_points_wrong_password);
+		if (error_on_vhost(vhost->name, "ban-points-wrong-password"))
+			return 0;
+		READ_NUMERIC_VC(ban_points_wrong_password);
 	} else if (strcmp(name, "ban-points-connection") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "ban-points-connection",
-				   ban_points_connect))
-			READ_NUMERIC(config->ban_points_connect);
+		if (error_on_vhost(vhost->name, "ban-points-connection"))
+			return 0;
+		READ_NUMERIC_VC(ban_points_connect);
 	} else if (strcmp(name, "ban-points-kkdcp") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "ban-points-kkdcp",
-				   ban_points_kkdcp))
-			READ_NUMERIC(config->ban_points_kkdcp);
+		if (error_on_vhost(vhost->name, "ban-points-kkdcp"))
+			return 0;
+		READ_NUMERIC_VC(ban_points_kkdcp);
 	} else if (strcmp(name, "max-same-clients") == 0) {
-		READ_NUMERIC(config->max_same_clients);
+		READ_NUMERIC_VC(max_same_clients);
 	} else if (strcmp(name, "device") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "device", network.name))
-			READ_STATIC_STRING(config->network.name);
-	} else if (strcmp(name, "cgroup") == 0) {
-		READ_STRING(config->cgroup);
+		if (error_on_vhost(vhost->name, "device"))
+			return 0;
+		PREAD_STRING(config->network, config->network->name);
 	} else if (strcmp(name, "proxy-url") == 0) {
 		READ_STRING(config->proxy_url);
 	} else if (strcmp(name, "ipv4-network") == 0) {
-		READ_STRING(config->network.ipv4);
-		prefix4 = extract_prefix(config->network.ipv4);
+		PREAD_STRING(config->network, config->network->ipv4);
+		prefix4 = extract_prefix(config->network->ipv4);
 		if (prefix4 != 0) {
-			config->network.ipv4_netmask =
-				ipv4_prefix_to_strmask(config, prefix4);
+			config->network->ipv4_netmask = ipv4_prefix_to_strmask(
+				config->network, prefix4);
 		}
 	} else if (strcmp(name, "ipv4-netmask") == 0) {
-		READ_STRING(config->network.ipv4_netmask);
+		PREAD_STRING(config->network, config->network->ipv4_netmask);
 	} else if (strcmp(name, "ipv6-network") == 0) {
-		READ_STRING(config->network.ipv6);
-		prefix = extract_prefix(config->network.ipv6);
-		if (prefix)
-			config->network.ipv6_prefix = prefix;
+		PREAD_STRING(config->network, config->network->ipv6);
+		prefix = extract_prefix(config->network->ipv6);
+		if (prefix) {
+			config->network->has_ipv6_prefix = 1;
+			config->network->ipv6_prefix = prefix;
+		}
 	} else if (strcmp(name, "ipv6-prefix") == 0) {
-		READ_NUMERIC(config->network.ipv6_prefix);
+		READ_NUMERIC(config->network->ipv6_prefix);
+		config->network->has_ipv6_prefix = 1;
 
-		if (valid_ipv6_prefix(config->network.ipv6_prefix) == 0) {
+		if (valid_ipv6_prefix(config->network->ipv6_prefix) == 0) {
 			fprintf(stderr, ERRSTR "invalid IPv6 prefix: %u\n",
 				prefix);
 			return 0;
@@ -1261,7 +1442,8 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name,
 		/* read subnet prefix */
 		READ_NUMERIC(prefix);
 		if (prefix > 0) {
-			config->network.ipv6_subnet_prefix = prefix;
+			config->network->has_ipv6_subnet_prefix = 1;
+			config->network->ipv6_subnet_prefix = prefix;
 
 			if (valid_ipv6_prefix(prefix) == 0) {
 				fprintf(stderr,
@@ -1272,71 +1454,79 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name,
 			}
 		}
 	} else if (strcmp(name, "custom-header") == 0) {
-		READ_MULTI_LINE(config->custom_header,
-				config->custom_header_size);
+		READ_MULTI_LINE(config->custom_header, config->n_custom_header);
 	} else if (strcmp(name, "split-dns") == 0) {
-		READ_MULTI_LINE(config->split_dns, config->split_dns_size);
+		READ_MULTI_LINE(config->split_dns, config->n_split_dns);
 	} else if (strcmp(name, "included-http-headers") == 0) {
-		// Don't use sanitized input since http header values can contain optional trailing blanks and double quotes
+		/* Don't use sanitized input since http header values can contain
+		 * optional trailing blanks and double quotes */
 		if (_add_multi_line_val(pool, &(config->included_http_headers),
-					&(config->included_http_headers_size),
+					&(config->n_included_http_headers),
 					_value) < 0) {
 			fprintf(stderr, ERRSTR "memory\n");
 			exit(EXIT_FAILURE);
 		}
 	} else if (strcmp(name, "route") == 0) {
-		READ_MULTI_LINE(config->network.routes,
-				config->network.routes_size);
+		_add_multi_line_val(config->network, &config->network->routes,
+				    &config->network->n_routes, value);
 	} else if (strcmp(name, "no-route") == 0) {
-		READ_MULTI_LINE(config->network.no_routes,
-				config->network.no_routes_size);
+		_add_multi_line_val(config->network,
+				    &config->network->no_routes,
+				    &config->network->n_no_routes, value);
 	} else if (strcmp(name, "default-select-group") == 0) {
 		READ_STRING(config->default_select_group);
 	} else if (strcmp(name, "select-group-by-url") == 0) {
-		READ_TF(config->select_group_by_url);
+		READ_TF_VC(select_group_by_url);
 	} else if (strcmp(name, "auto-select-group") == 0) {
-		READ_TF(config->auto_select_group);
+		READ_TF_VC(auto_select_group);
 	} else if (strcmp(name, "select-group") == 0) {
 		READ_MULTI_BRACKET_LINE(config->group_list,
 					config->friendly_group_list,
-					config->group_list_size);
+					config->n_group_list);
 	} else if (strcmp(name, "dns") == 0) {
-		READ_MULTI_LINE(config->network.dns, config->network.dns_size);
+		_add_multi_line_val(config->network, &config->network->dns,
+				    &config->network->n_dns, value);
 	} else if (strcmp(name, "ipv4-dns") == 0) {
-		READ_MULTI_LINE(config->network.dns, config->network.dns_size);
+		_add_multi_line_val(config->network, &config->network->dns,
+				    &config->network->n_dns, value);
 	} else if (strcmp(name, "ipv6-dns") == 0) {
-		READ_MULTI_LINE(config->network.dns, config->network.dns_size);
+		_add_multi_line_val(config->network, &config->network->dns,
+				    &config->network->n_dns, value);
 	} else if (strcmp(name, "nbns") == 0) {
-		READ_MULTI_LINE(config->network.nbns,
-				config->network.nbns_size);
+		_add_multi_line_val(config->network, &config->network->nbns,
+				    &config->network->n_nbns, value);
 	} else if (strcmp(name, "ipv4-nbns") == 0) {
-		READ_MULTI_LINE(config->network.nbns,
-				config->network.nbns_size);
+		_add_multi_line_val(config->network, &config->network->nbns,
+				    &config->network->n_nbns, value);
 	} else if (strcmp(name, "ipv6-nbns") == 0) {
-		READ_MULTI_LINE(config->network.nbns,
-				config->network.nbns_size);
+		_add_multi_line_val(config->network, &config->network->nbns,
+				    &config->network->n_nbns, value);
 	} else if (strcmp(name, "route-add-cmd") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "route-add-cmd", route_add_cmd))
-			READ_STRING(config->route_add_cmd);
+		if (error_on_vhost(vhost->name, "route-add-cmd"))
+			return 0;
+		READ_STRING(config->route_add_cmd);
 	} else if (strcmp(name, "route-del-cmd") == 0) {
-		if (!WARN_ON_VHOST(vhost->name, "route-del-cmd", route_del_cmd))
-			READ_STRING(config->route_del_cmd);
+		if (error_on_vhost(vhost->name, "route-del-cmd"))
+			return 0;
+		READ_STRING(config->route_del_cmd);
 	} else if (strcmp(name, "config-per-user") == 0) {
 		READ_STRING(config->per_user_dir);
 	} else if (strcmp(name, "config-per-group") == 0) {
 		READ_STRING(config->per_group_dir);
 	} else if (strcmp(name, "expose-iroutes") == 0) {
-		READ_TF(vhost->expose_iroutes);
+		READ_TF(config->expose_iroutes);
 	} else if (strcmp(name, "default-user-config") == 0) {
 		READ_STRING(config->default_user_conf);
 	} else if (strcmp(name, "default-group-config") == 0) {
 		READ_STRING(config->default_group_conf);
 	} else if (strcmp(name, "camouflage") == 0) {
-		READ_TF(config->camouflage);
+		READ_TF_VC(camouflage);
 	} else if (strcmp(name, "camouflage_secret") == 0) {
 		READ_STRING(config->camouflage_secret);
 	} else if (strcmp(name, "camouflage_realm") == 0) {
 		READ_STRING(config->camouflage_realm);
+	} else if (strcmp(name, "no-udp") == 0) {
+		READ_TF_VC(no_udp);
 	} else {
 		if (reload == 0)
 			fprintf(stderr,
@@ -1387,13 +1577,14 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 			   unsigned int flags)
 {
 	int ret, silent = 0;
-	struct cfg_st *config;
+	ReloadableConfig *config;
 	struct ini_ctx_st ctx;
 	vhost_cfg_st *vhost = NULL;
 	vhost_cfg_st *defvhost;
 
 	memset(&ctx, 0, sizeof(ctx));
 	ctx.file = file;
+	ctx.pool = pool;
 	ctx.reload = (flags & CFG_FLAG_RELOAD) ? 1 : 0;
 	ctx.is_worker = (flags & CFG_FLAG_WORKER) ? 1 : 0;
 	ctx.head = head;
@@ -1427,13 +1618,13 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 			size_t index;
 
 			replace_file_with_snapshot(
-				&vhost->perm_config.dh_params_file);
+				&vhost->static_config.dh_params_file);
 			replace_file_with_snapshot(
-				&vhost->perm_config.config->ocsp_response);
-			for (index = 0; index < vhost->perm_config.cert_size;
+				&vhost->config->ocsp_response);
+			for (index = 0; index < vhost->static_config.cert_size;
 			     index++) {
 				replace_file_with_snapshot(
-					&vhost->perm_config.cert[index]);
+					&vhost->static_config.cert[index]);
 			}
 		}
 	} else {
@@ -1469,14 +1660,14 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 			size_t index;
 
 			snapshot_create(config_snapshot,
-					vhost->perm_config.dh_params_file);
-			snapshot_create(
-				config_snapshot,
-				vhost->perm_config.config->ocsp_response);
-			for (index = 0; index < vhost->perm_config.cert_size;
+					vhost->static_config.dh_params_file);
+			snapshot_create(config_snapshot,
+					vhost->config->ocsp_response);
+			for (index = 0; index < vhost->static_config.cert_size;
 			     index++) {
-				snapshot_create(config_snapshot,
-						vhost->perm_config.cert[index]);
+				snapshot_create(
+					config_snapshot,
+					vhost->static_config.cert[index]);
 			}
 		}
 	}
@@ -1508,63 +1699,74 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 	 */
 	list_for_each_rev(head, vhost, list)
 	{
-		config = vhost->perm_config.config;
+		config = vhost->config;
 
 		if (vhost->auth_init == 0) {
 			if (vhost->auth_size == 0) {
-				fprintf(stderr,
-					ERRSTR
-					"%sthe 'auth' configuration option was not specified!\n",
-					PREFIX_VHOST(vhost));
-				exit(EXIT_FAILURE);
+				/* Named vhosts may inherit auth from the default;
+				 * figure_auth_funcs is skipped and auth_methods will
+				 * be populated by vhost_inherit_static_config below. */
+				if (vhost->name == NULL ||
+				    default_vhost(head)
+						    ->static_config
+						    .auth_methods == 0) {
+					fprintf(stderr,
+						ERRSTR
+						"%sthe 'auth' configuration option was not specified!\n",
+						PREFIX_VHOST(vhost));
+					exit(EXIT_FAILURE);
+				}
+			} else {
+				figure_auth_funcs(vhost, PREFIX_VHOST(vhost),
+						  &vhost->static_config,
+						  vhost->auth, vhost->auth_size,
+						  1, ctx.is_worker);
+				figure_auth_funcs(vhost, PREFIX_VHOST(vhost),
+						  &vhost->static_config,
+						  vhost->eauth,
+						  vhost->eauth_size, 0,
+						  ctx.is_worker);
+
+				figure_acct_funcs(vhost, PREFIX_VHOST(vhost),
+						  &vhost->static_config,
+						  vhost->acct, ctx.is_worker);
 			}
-
-			figure_auth_funcs(vhost, PREFIX_VHOST(vhost),
-					  &vhost->perm_config, vhost->auth,
-					  vhost->auth_size, 1, ctx.is_worker);
-			figure_auth_funcs(vhost, PREFIX_VHOST(vhost),
-					  &vhost->perm_config, vhost->eauth,
-					  vhost->eauth_size, 0, ctx.is_worker);
-
-			figure_acct_funcs(vhost, PREFIX_VHOST(vhost),
-					  &vhost->perm_config, vhost->acct,
-					  ctx.is_worker);
-
 			vhost->auth_init = 1;
 		}
 
 		if (config->auto_select_group != 0 &&
-		    vhost->perm_config.auth[0].amod != NULL &&
-		    vhost->perm_config.auth[0].amod->group_list != NULL) {
-			vhost->perm_config.auth[0].amod->group_list(
-				config, vhost->perm_config.auth[0].additional,
-				&config->group_list, &config->group_list_size);
-			switch (vhost->perm_config.auth[0].amod->type) {
+		    vhost->static_config.auth[0].amod != NULL &&
+		    vhost->static_config.auth[0].amod->group_list != NULL) {
+			unsigned int grp_sz = 0;
+
+			vhost->static_config.auth[0].amod->group_list(
+				config, vhost->static_config.auth[0].additional,
+				&config->group_list, &grp_sz);
+			config->n_group_list = grp_sz;
+			switch (vhost->static_config.auth[0].amod->type) {
 			case AUTH_TYPE_PAM | AUTH_TYPE_USERNAME_PASS:
 				pam_auth_group_list = config->group_list;
-				pam_auth_group_list_size =
-					config->group_list_size;
+				pam_auth_group_list_size = grp_sz;
 				break;
 			case AUTH_TYPE_GSSAPI:
 				gssapi_auth_group_list = config->group_list;
-				gssapi_auth_group_list_size =
-					config->group_list_size;
+				gssapi_auth_group_list_size = grp_sz;
 				break;
 			case AUTH_TYPE_PLAIN | AUTH_TYPE_USERNAME_PASS:
 				plain_auth_group_list = config->group_list;
-				plain_auth_group_list_size =
-					config->group_list_size;
+				plain_auth_group_list_size = grp_sz;
 				break;
 			}
 		}
 
-		if (vhost->expose_iroutes != 0) {
+		if (config->expose_iroutes != 0) {
 			load_iroutes(config);
 		}
 
-		if (vhost->name)
+		if (vhost->name) {
 			defvhost = default_vhost(head);
-		else
+			vhost_inherit_static_config(vhost, defvhost);
+		} else
 			defvhost = NULL;
 
 		/* this check copies mandatory fields from default vhost if needed */
@@ -1584,6 +1786,7 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 			parse_kkdcp(config, vhost->urlfw, vhost->urlfw_size);
 			talloc_free(vhost->urlfw);
 			vhost->urlfw = NULL;
+			vhost->urlfw_size = 0;
 		}
 #endif
 		if (!ctx.is_worker)
@@ -1592,8 +1795,123 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 				"%ssetting '%s' as supplemental config option\n",
 				PREFIX_VHOST(vhost),
 				sup_config_name(
-					vhost->perm_config.sup_config_type));
+					vhost->static_config.sup_config_type));
 	}
+}
+
+#define VHOST_INHERIT(member) \
+	({ vhost->static_config.member = defvhost->static_config.member; })
+
+#define VHOST_INHERIT_STRDUP(member)                                           \
+	({                                                                     \
+		if (defvhost->static_config.member != NULL)                    \
+			vhost->static_config.member =                          \
+				talloc_strdup(vhost->config,                   \
+					      defvhost->static_config.member); \
+	})
+
+#define VHOST_INHERIT_STRLCPY(member)                         \
+	({                                                    \
+		strlcpy(vhost->static_config.member,          \
+			defvhost->static_config.member,       \
+			sizeof(vhost->static_config.member)); \
+	})
+
+/* Inherit a string only when the named vhost did not set its own value. */
+#define VHOST_INHERIT_STRDUP_IF_NULL(member)                                  \
+	({                                                                    \
+		if (vhost->static_config.member == NULL &&                    \
+		    defvhost->static_config.member != NULL)                   \
+			vhost->static_config.member = talloc_strdup(          \
+				vhost->pool, defvhost->static_config.member); \
+	})
+
+/*
+ * Initialize per-vhost configuration by inheriting settings from default vhost.
+ *
+ * The reloadable ReloadableConfig is deep-copied from the default vhost via
+ * protobuf pack+unpack so all fields (including strings, repeated fields, and
+ * sub-messages) are inherited automatically.  Permanent static_cfg_st fields
+ * live outside ReloadableConfig and are handled here in two groups:
+ *
+ *  [scope: global (non-reloadable)] — unconditional copy; named vhosts cannot
+ *    override these (UID, ports, socket paths, etc.).
+ *
+ *  [scope: vhost (non-reloadable)] — conditional copy ("inherit if not set");
+ *    named vhosts that provide their own value keep it.  auth_ctx / acct_ctx
+ *    are NULL at this point and will be initialised later by sec_auth_init();
+ *    the `additional` pointer inside auth[]/acct is read-only module config
+ *    that lives for the server's lifetime, so sharing the pointer is safe.
+ *
+ *  sup_config_type is excluded: cfg_alloc_vhost always pre-sets it to
+ *  SUP_CONFIG_FILE (non-zero), so there is no reliable sentinel to detect
+ *  "not explicitly set".  Named vhosts that need a different sup-config must
+ *  set it explicitly.
+ */
+static void vhost_inherit_static_config(vhost_cfg_st *vhost,
+					vhost_cfg_st *defvhost)
+{
+	unsigned int i;
+
+	/* --- [scope: global (non-reloadable)] — always copy --- */
+	VHOST_INHERIT(port);
+	VHOST_INHERIT(udp_port);
+	VHOST_INHERIT(uid);
+	VHOST_INHERIT(gid);
+	VHOST_INHERIT(sec_mod_scale);
+	VHOST_INHERIT(stats_reset_time);
+	VHOST_INHERIT_STRDUP(socket_file_prefix);
+	VHOST_INHERIT_STRDUP(occtl_socket_file);
+	VHOST_INHERIT_STRDUP(chroot_dir);
+
+	/* --- [scope: vhost (non-reloadable)] — inherit if not set --- */
+
+	/* TLS credentials */
+	if (vhost->static_config.cert_size == 0 &&
+	    defvhost->static_config.cert_size > 0) {
+		vhost->static_config.cert_size =
+			defvhost->static_config.cert_size;
+		vhost->static_config.cert = talloc_array(
+			vhost->pool, char *, defvhost->static_config.cert_size);
+		for (i = 0; i < defvhost->static_config.cert_size; i++)
+			vhost->static_config.cert[i] = talloc_strdup(
+				vhost->pool, defvhost->static_config.cert[i]);
+	}
+	if (vhost->static_config.key_size == 0 &&
+	    defvhost->static_config.key_size > 0) {
+		vhost->static_config.key_size =
+			defvhost->static_config.key_size;
+		vhost->static_config.key = talloc_array(
+			vhost->pool, char *, defvhost->static_config.key_size);
+		for (i = 0; i < defvhost->static_config.key_size; i++)
+			vhost->static_config.key[i] = talloc_strdup(
+				vhost->pool, defvhost->static_config.key[i]);
+	}
+	VHOST_INHERIT_STRDUP_IF_NULL(ca);
+	VHOST_INHERIT_STRDUP_IF_NULL(dh_params_file);
+#ifdef ANYCONNECT_CLIENT_COMPAT
+	VHOST_INHERIT_STRDUP_IF_NULL(cert_hash);
+#endif
+
+	/* PKCS#11 / TPM pins */
+	VHOST_INHERIT_STRDUP_IF_NULL(pin_file);
+	VHOST_INHERIT_STRDUP_IF_NULL(srk_pin_file);
+	VHOST_INHERIT_STRDUP_IF_NULL(key_pin);
+	VHOST_INHERIT_STRDUP_IF_NULL(srk_pin);
+
+	/* Authentication methods */
+	if (vhost->static_config.auth_methods == 0 &&
+	    defvhost->static_config.auth_methods > 0) {
+		vhost->static_config.auth_methods =
+			defvhost->static_config.auth_methods;
+		memcpy(vhost->static_config.auth, defvhost->static_config.auth,
+		       sizeof(vhost->static_config.auth));
+	}
+
+	/* Accounting */
+	if (vhost->static_config.acct.amod == NULL &&
+	    defvhost->static_config.acct.amod != NULL)
+		vhost->static_config.acct = defvhost->static_config.acct;
 }
 
 /* sanity checks on config */
@@ -1601,47 +1919,33 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost,
 		      unsigned int silent)
 {
 	unsigned int j, i;
-	struct cfg_st *config;
+	ReloadableConfig *config;
 
 	assert(vhost->name == NULL || defvhost != NULL);
 
-	config = vhost->perm_config.config;
+	config = vhost->config;
 
-	if (vhost->perm_config.auth[0].enabled == 0) {
+	if (vhost->static_config.auth[0].enabled == 0) {
 		fprintf(stderr,
 			ERRSTR "%sno authentication method was specified!\n",
 			PREFIX_VHOST(vhost));
 		exit(EXIT_FAILURE);
 	}
 
-	if (vhost->perm_config.socket_file_prefix == NULL) {
-		if (vhost->name) {
-			vhost->perm_config.socket_file_prefix = talloc_strdup(
-				vhost,
-				defvhost->perm_config.socket_file_prefix);
-		} else {
-			/* The 'socket-file' is not mandatory on main server */
-			fprintf(stderr,
-				ERRSTR
-				"%sthe 'socket-file' configuration option must be specified!\n",
-				PREFIX_VHOST(vhost));
-			exit(EXIT_FAILURE);
-		}
+	if (vhost->static_config.socket_file_prefix == NULL) {
+		/* The 'socket-file' is mandatory on main server */
+		fprintf(stderr, ERRSTR
+			"the 'socket-file' configuration option must be specified!\n");
+		exit(EXIT_FAILURE);
 	}
 
-	if (vhost->perm_config.port == 0) {
-		if (defvhost) {
-			vhost->perm_config.port = defvhost->perm_config.port;
-		} else {
-			fprintf(stderr,
-				ERRSTR "%sthe tcp-port option is mandatory!\n",
-				PREFIX_VHOST(vhost));
-			exit(EXIT_FAILURE);
-		}
+	if (vhost->static_config.port == 0) {
+		fprintf(stderr, ERRSTR "the tcp-port option is mandatory!\n");
+		exit(EXIT_FAILURE);
 	}
 
-	if (vhost->perm_config.cert_size == 0 ||
-	    vhost->perm_config.key_size == 0) {
+	if (vhost->static_config.cert_size == 0 ||
+	    vhost->static_config.key_size == 0) {
 		fprintf(stderr,
 			ERRSTR
 			"%sthe 'server-cert' and 'server-key' configuration options must be specified!\n",
@@ -1649,7 +1953,7 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost,
 		exit(EXIT_FAILURE);
 	}
 
-	if (config->network.ipv4 == NULL && config->network.ipv6 == NULL) {
+	if (config->network->ipv4 == NULL && config->network->ipv6 == NULL) {
 		fprintf(stderr,
 			ERRSTR
 			"%sno ipv4-network or ipv6-network options set.\n",
@@ -1657,14 +1961,15 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost,
 		exit(EXIT_FAILURE);
 	}
 
-	if (config->network.ipv4 != NULL &&
-	    config->network.ipv4_netmask == NULL) {
+	if (config->network->ipv4 != NULL &&
+	    config->network->ipv4_netmask == NULL) {
 		fprintf(stderr, ERRSTR "%sno mask found for IPv4 network.\n",
 			PREFIX_VHOST(vhost));
 		exit(EXIT_FAILURE);
 	}
 
-	if (config->network.ipv6 != NULL && config->network.ipv6_prefix == 0) {
+	if (config->network->ipv6 != NULL &&
+	    config->network->ipv6_prefix == 0) {
 		fprintf(stderr, ERRSTR "%sno prefix found for IPv6 network.\n",
 			PREFIX_VHOST(vhost));
 		exit(EXIT_FAILURE);
@@ -1676,7 +1981,7 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost,
 		exit(EXIT_FAILURE);
 	}
 
-	if (vhost->perm_config.cert_size != vhost->perm_config.key_size) {
+	if (vhost->static_config.cert_size != vhost->static_config.key_size) {
 		fprintf(stderr,
 			ERRSTR
 			"%sthe specified number of keys doesn't match the certificates\n",
@@ -1684,19 +1989,21 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost,
 		exit(EXIT_FAILURE);
 	}
 
-	if ((vhost->perm_config.auth[0].type & AUTH_TYPE_CERTIFICATE) &&
-	    vhost->perm_config.auth_methods == 1) {
+	if ((vhost->static_config.auth[0].type & AUTH_TYPE_CERTIFICATE) &&
+	    vhost->static_config.auth_methods == 1) {
 		if (config->cisco_client_compat == 0)
 			config->cert_req = GNUTLS_CERT_REQUIRE;
 		else
 			config->cert_req = GNUTLS_CERT_REQUEST;
+		config->has_cert_req = 1;
 	} else {
 		unsigned int i;
 
-		for (i = 0; i < vhost->perm_config.auth_methods; i++) {
-			if (vhost->perm_config.auth[i].type &
+		for (i = 0; i < vhost->static_config.auth_methods; i++) {
+			if (vhost->static_config.auth[i].type &
 			    AUTH_TYPE_CERTIFICATE) {
 				config->cert_req = GNUTLS_CERT_REQUEST;
+				config->has_cert_req = 1;
 				break;
 			}
 		}
@@ -1722,20 +2029,21 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost,
 	}
 
 #ifdef ANYCONNECT_CLIENT_COMPAT
-	if (vhost->perm_config.cert && vhost->perm_config.cert_hash == NULL) {
-		vhost->perm_config.cert_hash = calc_sha1_hash(
-			vhost->pool, vhost->perm_config.cert[0], 1);
+	if (vhost->static_config.cert &&
+	    vhost->static_config.cert_hash == NULL) {
+		vhost->static_config.cert_hash = calc_sha1_hash(
+			vhost->pool, vhost->static_config.cert[0], 1);
 	}
 
 	if (config->xml_config_file) {
 		config->xml_config_hash =
 			calc_sha1_hash(vhost->pool, config->xml_config_file, 0);
 		if (config->xml_config_hash == NULL &&
-		    vhost->perm_config.chroot_dir != NULL) {
+		    vhost->static_config.chroot_dir != NULL) {
 			char path[_POSIX_PATH_MAX];
 
 			snprintf(path, sizeof(path), "%s/%s",
-				 vhost->perm_config.chroot_dir,
+				 vhost->static_config.chroot_dir,
 				 config->xml_config_file);
 			config->xml_config_hash =
 				calc_sha1_hash(vhost->pool, path, 0);
@@ -1765,8 +2073,8 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost,
 		config->dtls_legacy = 1;
 
 		/* The client will only connect to port 443 */
-		if (vhost->perm_config.udp_port != 0 &&
-		    vhost->perm_config.udp_port != 443) {
+		if (vhost->static_config.udp_port != 0 &&
+		    vhost->static_config.udp_port != 443) {
 			fprintf(stderr,
 				ERRSTR
 				"%s cisco-svc-client-compat option requires udp-port = 443\n",
@@ -1786,8 +2094,8 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost,
 
 		if (defvhost) {
 			config->priorities = talloc_asprintf(
-				config, "%s%s",
-				defvhost->perm_config.config->priorities, tmp);
+				config, "%s%s", defvhost->config->priorities,
+				tmp);
 		} else {
 			config->priorities = talloc_asprintf(
 				config, "%s%s",
@@ -1795,32 +2103,22 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost,
 		}
 	}
 
-	if (vhost->perm_config.occtl_socket_file == NULL)
-		vhost->perm_config.occtl_socket_file =
-			talloc_strdup(vhost, OCCTL_UNIX_SOCKET);
-
-	if (config->network.ipv6_prefix &&
-	    config->network.ipv6_prefix >= config->network.ipv6_subnet_prefix) {
+	if (config->network->ipv6_prefix &&
+	    config->network->ipv6_prefix >=
+		    config->network->ipv6_subnet_prefix) {
 		fprintf(stderr,
 			ERRSTR
 			"%sthe subnet prefix (%u) cannot be smaller or equal to network's (%u)\n",
-			PREFIX_VHOST(vhost), config->network.ipv6_subnet_prefix,
-			config->network.ipv6_prefix);
+			PREFIX_VHOST(vhost),
+			config->network->ipv6_subnet_prefix,
+			config->network->ipv6_prefix);
 		exit(EXIT_FAILURE);
 	}
 
-	if (config->network.name[0] == 0) {
-		if (!vhost->name) {
-			fprintf(stderr,
-				ERRSTR
-				"%sthe 'device' configuration option must be specified!\n",
-				PREFIX_VHOST(vhost));
-			exit(EXIT_FAILURE);
-		} else {
-			strlcpy(config->network.name,
-				defvhost->perm_config.config->network.name,
-				sizeof(config->network.name));
-		}
+	if (config->network->name == NULL || config->network->name[0] == 0) {
+		fprintf(stderr, ERRSTR
+			"the 'device' configuration option must be specified!\n");
+		exit(EXIT_FAILURE);
 	}
 
 	if (config->mobile_dpd == 0)
@@ -1863,9 +2161,9 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost,
 #endif
 
 	/* use tcp listen host by default */
-	if (vhost->perm_config.udp_listen_host == NULL) {
-		vhost->perm_config.udp_listen_host =
-			vhost->perm_config.listen_host;
+	if (vhost->static_config.udp_listen_host == NULL) {
+		vhost->static_config.udp_listen_host =
+			vhost->static_config.listen_host;
 	}
 
 #if !defined(HAVE_LIBSECCOMP)
@@ -1877,29 +2175,29 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost,
 	}
 #endif
 
-	for (j = 0; j < config->network.routes_size; j++) {
-		if (ip_route_sanity_check(config->network.routes,
-					  &config->network.routes[j]) != 0)
+	for (j = 0; j < config->network->n_routes; j++) {
+		if (ip_route_sanity_check(config->network->routes,
+					  &config->network->routes[j]) != 0)
 			exit(EXIT_FAILURE);
 
-		if (strcmp(config->network.routes[j], "0.0.0.0/0") == 0 ||
-		    strcmp(config->network.routes[j], "default") == 0) {
+		if (strcmp(config->network->routes[j], "0.0.0.0/0") == 0 ||
+		    strcmp(config->network->routes[j], "default") == 0) {
 			/* set default route */
 			for (i = 0; i < j; i++)
-				talloc_free(config->network.routes[i]);
-			config->network.routes_size = 0;
+				talloc_free(config->network->routes[i]);
+			config->network->n_routes = 0;
 			break;
 		}
 	}
 
-	for (j = 0; j < config->network.no_routes_size; j++) {
-		if (ip_route_sanity_check(config->network.no_routes,
-					  &config->network.no_routes[j]) != 0)
+	for (j = 0; j < config->network->n_no_routes; j++) {
+		if (ip_route_sanity_check(config->network->no_routes,
+					  &config->network->no_routes[j]) != 0)
 			exit(EXIT_FAILURE);
 	}
 
-	for (j = 0; j < config->network.dns_size; j++) {
-		if (strcmp(config->network.dns[j], "local") == 0) {
+	for (j = 0; j < config->network->n_dns; j++) {
+		if (strcmp(config->network->dns[j], "local") == 0) {
 			fprintf(stderr,
 				ERRSTR
 				"%sthe 'local' DNS keyword is no longer supported.\n",
@@ -1909,26 +2207,34 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost,
 	}
 
 	if (config->per_user_dir || config->per_group_dir) {
-		if (vhost->perm_config.sup_config_type != SUP_CONFIG_FILE) {
+		if (vhost->static_config.sup_config_type != SUP_CONFIG_FILE) {
 			fprintf(stderr,
 				ERRSTR
 				"%sspecified config-per-user or config-per-group but supplemental config is '%s'\n",
 				PREFIX_VHOST(vhost),
 				sup_config_name(
-					vhost->perm_config.sup_config_type));
+					vhost->static_config.sup_config_type));
 			exit(EXIT_FAILURE);
 		}
 	}
 }
 
 #define OPT_NO_CHDIR 1
+#define OPT_SYSLOG_FACILITY 2
 static const struct option long_options[] = {
-	{ "debug", 1, 0, 'd' },	     { "log-stderr", 0, 0, 'e' },
-	{ "syslog", 0, 0, 's' },     { "config", 1, 0, 'c' },
-	{ "pid-file", 1, 0, 'p' },   { "test-config", 0, 0, 't' },
-	{ "foreground", 0, 0, 'f' }, { "no-chdir", 0, 0, OPT_NO_CHDIR },
-	{ "help", 0, 0, 'h' },	     { "traceable", 0, 0, 'x' },
-	{ "version", 0, 0, 'v' },    { NULL, 0, 0, 0 }
+	{ "debug", 1, 0, 'd' },
+	{ "log-stderr", 0, 0, 'e' },
+	{ "syslog", 0, 0, 's' },
+	{ "config", 1, 0, 'c' },
+	{ "pid-file", 1, 0, 'p' },
+	{ "test-config", 0, 0, 't' },
+	{ "foreground", 0, 0, 'f' },
+	{ "no-chdir", 0, 0, OPT_NO_CHDIR },
+	{ "help", 0, 0, 'h' },
+	{ "traceable", 0, 0, 'x' },
+	{ "version", 0, 0, 'v' },
+	{ "syslog-facility", 1, 0, OPT_SYSLOG_FACILITY },
+	{ NULL, 0, 0, 0 }
 };
 
 static void usage(void)
@@ -1962,6 +2268,10 @@ static void usage(void)
 	fprintf(stderr,
 		"   -s, --syslog               Log to syslog (default)\n");
 	fprintf(stderr,
+		"       --syslog-facility=name  Syslog facility to use (default: daemon)\n");
+	fprintf(stderr,
+		"               - name: daemon user auth authpriv local0..local7\n");
+	fprintf(stderr,
 		"   -h, --help                 Display extended usage information and exit\n\n");
 
 	fprintf(stderr, PACKAGE_NAME " (" PACKAGE
@@ -1991,7 +2301,7 @@ int cmd_parser(void *pool, int argc, char **argv, struct list_head *head,
 
 		switch (c) {
 		case 'f':
-			vhost->perm_config.foreground = 1;
+			vhost->static_config.foreground = 1;
 			break;
 		case 'p':
 			strlcpy(pid_file, optarg, sizeof(pid_file));
@@ -2000,22 +2310,33 @@ int cmd_parser(void *pool, int argc, char **argv, struct list_head *head,
 			strlcpy(cfg_file, optarg, sizeof(cfg_file));
 			break;
 		case 'd':
-			vhost->perm_config.log_level = atoi(optarg);
-			global_log_prio = vhost->perm_config.log_level;
+			vhost->static_config.log_level = atoi(optarg);
+			global_log_prio = vhost->static_config.log_level;
 			debug_asked = 1;
 			break;
 		case 't':
 			test_only = 1;
 			break;
 		case 'e':
-			vhost->perm_config.log_stderr = 1;
+			vhost->static_config.log_stderr = 1;
 			break;
 		case 's':
-			vhost->perm_config.syslog = 1;
+			vhost->static_config.syslog = 1;
 			break;
 		case OPT_NO_CHDIR:
-			vhost->perm_config.no_chdir = 1;
+			vhost->static_config.no_chdir = 1;
 			break;
+		case OPT_SYSLOG_FACILITY: {
+			int fac = parse_syslog_facility(optarg);
+			if (fac < 0) {
+				fprintf(stderr,
+					ERRSTR "unknown syslog facility: %s\n",
+					optarg);
+				exit(EXIT_FAILURE);
+			}
+			vhost->static_config.syslog_facility = fac;
+			break;
+		}
 		case 'h':
 			usage();
 			exit(EXIT_SUCCESS);
@@ -2023,7 +2344,7 @@ int cmd_parser(void *pool, int argc, char **argv, struct list_head *head,
 			print_version();
 			exit(EXIT_SUCCESS);
 		case 'x':
-			vhost->perm_config.pr_dumpable = 1;
+			vhost->static_config.pr_dumpable = 1;
 			break;
 		}
 	}
@@ -2034,11 +2355,12 @@ int cmd_parser(void *pool, int argc, char **argv, struct list_head *head,
 		exit(EXIT_FAILURE);
 	}
 
-	if (vhost->perm_config.log_stderr == 0 &&
-	    vhost->perm_config.syslog == 0) {
-		vhost->perm_config.syslog = 1; /* default if nothing specified*/
+	if (vhost->static_config.log_stderr == 0 &&
+	    vhost->static_config.syslog == 0) {
+		vhost->static_config.syslog =
+			1; /* default if nothing specified*/
 		if (debug_asked)
-			vhost->perm_config.log_stderr =
+			vhost->static_config.log_stderr =
 				1; /* compatible with previous behavior */
 	}
 
@@ -2046,7 +2368,7 @@ int cmd_parser(void *pool, int argc, char **argv, struct list_head *head,
 		fprintf(stderr, ERRSTR "cannot access config file: %s\n",
 			cfg_file);
 		fprintf(stderr,
-			"Usage: %s -c [config]\nUse %s --help for more information.\n",
+			"Usage: %s [-c config]\nUse %s --help for more information.\n",
 			argv[0], argv[0]);
 		exit(EXIT_FAILURE);
 	}
@@ -2076,16 +2398,21 @@ static void archive_cfg(struct list_head *head)
 			return;
 		}
 
-		e->usage_count = vhost->perm_config.config->usage_count;
+		e->usage_count = vhost->usage_count;
+		talloc_steal(e, vhost->usage_count);
 
 		/* we rely on talloc doing that recursively */
-		talloc_steal(e, vhost->perm_config.config);
-		vhost->perm_config.config = NULL;
+		talloc_steal(e, vhost->config);
+		vhost->config = NULL;
+		vhost->usage_count = NULL;
+
+		/* reset so the next reload re-inherits from the new default */
+		vhost->cfg_inherited = 0;
 
 		if (e->usage_count == NULL || *e->usage_count == 0) {
 			talloc_free(e);
 		} else {
-			list_add(&vhost->perm_config.attic, &e->list);
+			list_add(&vhost->attic, &e->list);
 		}
 	}
 }
@@ -2097,8 +2424,10 @@ static void clear_cfg(struct list_head *head)
 	list_for_each_safe(head, cpos, ctmp, list)
 	{
 		/* we rely on talloc freeing recursively */
-		talloc_free(cpos->perm_config.config);
-		cpos->perm_config.config = NULL;
+		talloc_free(cpos->config);
+		cpos->config = NULL;
+		/* reset so the next reload re-inherits from the new default */
+		cpos->cfg_inherited = 0;
 	}
 }
 
@@ -2110,8 +2439,8 @@ void clear_vhosts(struct list_head *head)
 	{
 		tls_vhost_deinit(vhost);
 		/* we rely on talloc freeing recursively */
-		talloc_free(vhost->perm_config.config);
-		vhost->perm_config.config = NULL;
+		talloc_free(vhost->config);
+		vhost->config = NULL;
 	}
 }
 
@@ -2187,7 +2516,7 @@ void reload_cfg_file(void *pool, struct list_head *configs,
 	/* Create new config structures and apply defaults */
 	list_for_each(configs, vhost, list)
 	{
-		if (vhost->perm_config.config == NULL)
+		if (vhost->config == NULL)
 			cfg_new(vhost, 1);
 	}
 
@@ -2255,7 +2584,7 @@ void clear_old_configs(struct list_head *head)
 	list_for_each(head, cpos, list)
 	{
 		/* go through the attic and clear old configurations if unused */
-		list_for_each_safe(&cpos->perm_config.attic, e, pos, list)
+		list_for_each_safe(&cpos->attic, e, pos, list)
 		{
 			if (*e->usage_count == 0) {
 				list_del(&e->list);
@@ -2391,7 +2720,7 @@ void restore_secmod_socket_file_name(const char *save_path)
 
 /* Creates a permanent filename to use for secmod to main communication
  */
-const char *secmod_socket_file_name(struct perm_cfg_st *perm_config)
+const char *secmod_socket_file_name(struct static_cfg_st *static_config)
 {
 	unsigned int rnd;
 	int ret;
@@ -2406,7 +2735,7 @@ const char *secmod_socket_file_name(struct perm_cfg_st *perm_config)
 	/* make socket name */
 	snprintf(secmod_socket_file_name_socket_file,
 		 sizeof(secmod_socket_file_name_socket_file), "%s.%x",
-		 perm_config->socket_file_prefix, rnd);
+		 static_config->socket_file_prefix, rnd);
 
 	return secmod_socket_file_name_socket_file;
 }

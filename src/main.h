@@ -50,7 +50,7 @@ extern int saved_argc;
 extern char **saved_argv;
 
 extern struct ev_loop *main_loop;
-extern ev_timer maintainance_watcher;
+extern ev_timer maintenance_watcher;
 
 #include "log.h"
 
@@ -127,6 +127,8 @@ typedef struct proc_st {
 	/* The SID which acts as a cookie */
 	uint8_t sid[SID_SIZE];
 	unsigned int active_sid;
+
+	time_t session_start_time;
 
 	/* non zero if the sid has been invalidated and must not be allowed
 	 * to reconnect. */
@@ -268,8 +270,8 @@ typedef struct sec_mod_instance_st {
 } sec_mod_instance_st;
 
 typedef struct if_address_st {
-	struct sockaddr if_addr;
-	struct sockaddr if_netmask;
+	struct sockaddr_storage if_addr;
+	struct sockaddr_storage if_netmask;
 } if_address_st;
 
 typedef struct main_server_st {
@@ -315,6 +317,8 @@ typedef struct main_server_st {
 
 	struct if_address_st *if_addresses;
 	unsigned int if_addresses_count;
+
+	unsigned int abnormal_exit; /* set on unexpected child death */
 } main_server_st;
 
 void clear_lists(main_server_st *s);
@@ -377,8 +381,6 @@ inline static void disconnect_proc(main_server_st *s, proc_st *proc)
 	}
 }
 
-void put_into_cgroup(main_server_st *s, const char *cgroup, pid_t pid);
-
 inline static int send_msg_to_worker(main_server_st *s, struct proc_st *proc,
 				     uint8_t cmd, const void *msg,
 				     pack_size_func get_size, pack_func pack)
@@ -402,7 +404,7 @@ inline static int send_socket_msg_to_worker(main_server_st *s,
 
 int secmod_reload(sec_mod_instance_st *sec_mod_instance);
 
-const char *secmod_socket_file_name(struct perm_cfg_st *perm_config);
+const char *secmod_socket_file_name(struct static_cfg_st *static_config);
 void restore_secmod_socket_file_name(const char *save_path);
 void clear_vhosts(struct list_head *head);
 

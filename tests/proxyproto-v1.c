@@ -39,11 +39,9 @@ static unsigned int try(const char *src, unsigned int src_port, const char *dst,
 			unsigned int dst_port)
 {
 	char str[256];
-	struct worker_st ws;
+	struct worker_st ws = { 0 };
 	unsigned int ipv6 = 0;
 	int ret;
-
-	memset(&ws, 0, sizeof(ws));
 
 	if (strchr(src, ':') != NULL) {
 		/* ipv6 */

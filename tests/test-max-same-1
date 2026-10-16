@@ -27,16 +27,17 @@ eval "${GETPORT}"
 
 echo "Testing whether max-same-clients=1 allows cookie reuse... "
 
-PIDFILE1="${srcdir}/ci$$-1.pid.tmp"
-PIDFILE2="${srcdir}/ci$$-2.pid.tmp"
+PIDFILE1="ci$$-1.pid.tmp"
+PIDFILE2="ci$$-2.pid.tmp"
 rm -f "${PIDFILE1}" "${PIDFILE2}"
 
 function finish {
   set +e
   echo " * Cleaning up..."
-  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
   test -f "${PIDFILE1}" && kill $(cat ${PIDFILE1}) >/dev/null 2>&1
   test -f "${PIDFILE2}" && kill $(cat ${PIDFILE2}) >/dev/null 2>&1
+  sleep 2
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
   test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
   rm -f "${PIDFILE1}" "${PIDFILE2}" 2>&1
 }

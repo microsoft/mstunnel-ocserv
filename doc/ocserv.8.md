@@ -1,7 +1,7 @@
 # ocserv(8) -- OpenConnect VPN server
 
 ## SYNOPSIS
-**ocserv** [options] -c [config]
+**ocserv** \[ **-flag** \[<value>\] | **--option-name**\[\[=| \]<value>\] \]...
 
 OpenConnect VPN server (ocserv) is a VPN server compatible with the
 OpenConnect VPN client. It follows the AnyConnect VPN protocol which
@@ -9,12 +9,12 @@ is used by several CISCO routers.
 
 
 ## DESCRIPTION
-This a standalone server that reads a configuration file (see below for more details),
+This is a standalone server that reads a configuration file (see below for more details),
 and waits for client connections. Log messages are directed to the syslog daemon
 facility.
 
 The server maintains two connections/channels with the client. The main VPN
-channel is established over TCP, HTTP and TLS. This is the control channel as well
+channel is established over TCP, using HTTP and TLS. This is the control channel as well
 as the backup data channel. After its establishment a UDP channel using DTLS
 is initiated which serves as the main data channel. If the UDP channel fails
 to establish or is temporarily unavailable the backup channel over TCP/TLS
@@ -43,29 +43,110 @@ server.
 
 ## OPTIONS
 
-  * **-f, --foreground**::
+  * **-f, --foreground**:
     Do not fork server into background.
 
-  * **-d, --debug**=_num_::
+  * **-d, --debug**=_num_:
     Enable verbose network debugging information. _num_ must be between zero
     and 9999.
 
-  * **-c, --config**=_FILE_::
-    Specify the configuration file for the server.
+  * **-c, --config**=_FILE_:
+    Specify the configuration file for the server. The default is
+    _/etc/ocserv/ocserv.conf_.
 
-  * **-t, --test-config**::
+  * **-t, --test-config**:
     Test the provided configuration file and exit. A successful exit error code
     indicates a valid configuration.
 
-  * **-p, --pid-file**=_FILE_::
+  * **-p, --pid-file**=_FILE_:
     Specify a PID file for the server.
+    This option is also available as the configuration file key **pid-file**.
 
-  * **-h, --help**::
+  * **-e, --log-stderr**:
+    Log to stderr.
+
+  * **-s, --syslog**:
+    Log to syslog (default).
+
+  * **--syslog-facility**=_NAME_:
+    Set the syslog facility used when logging to syslog. _NAME_ must be one of:
+    `daemon` (default), `user`, `auth`, `authpriv`, `local0` … `local7`.
+    This option is also available as the configuration file key **syslog-facility**.
+
+  * **--no-chdir**:
+    Do not perform a chdir on daemonize.
+
+  * **-x, --traceable**:
+    Allows the process to be traced and dumped. Use for debugging purposes only.
+
+  * **-h, --help**:
     Display usage information and exit.
 
-  * **-v, --version**::
+  * **-v, --version**:
     Output version of program and exit.
 
+
+## CONFIGURATION
+
+Each configuration option has a **scope** that determines where it may appear.
+
+**Scope** takes one of three values:
+
+  * *global* — the option applies to the entire server and may only appear at
+    the top level of the configuration file. Placing it inside a `[vhost:]`
+    section is a configuration error that prevents the server from starting
+    (e.g. `max-clients`, `device`, `route-add-cmd`).
+
+  * *vhost* — the option may appear at the top level applying as a default
+    for all virtual hosts, or inside a specific `[vhost:]` (e.g. `tls-priorities`,
+    `banner`, `cookie-timeout`).
+
+  * *vhost user* — the option may appear at the top level, in a `[vhost:]` section,
+    and also in per-user or per-group supplemental configuration files
+    (e.g. `routes`, `iroutes`, `no-udp`).
+
+The description of each option in the configuration file carries a `[scope:]`
+annotation that identifies its scope.
+
+Furthermore, certain configuration options specified are not-reloadable and a
+change only takes effect when restarting the server. These options are marked
+as `(non-reloadable)` in their scope annotation.
+
+## PER-USER AND PER-GROUP CONFIGURATION
+
+Options with *vhost user* scope may be further overridden for individual users or
+groups through supplemental INI-format configuration files. The relevant
+directories are set with `config-per-user` and `config-per-group` in the main
+configuration file.
+
+When a user connects, ocserv looks for a file named after their username in
+the per-user directory and a file named after their group in the per-group
+directory. Values found there override the corresponding values from the
+active virtual host configuration for that session only; they do not affect
+other connected users.
+
+Ocserv rereads these files when the user is connected, so there is no need
+to reload ocserv after you modify per-user or per-group configuration.
+
+Options not specified within a virtual host, or within a per-user/group file,
+fall back to the global configuration value, or to the built-in default if
+not set globally.
+
+## VIRTUAL HOSTS
+Ocserv supports virtual hosts, allowing a single instance to serve multiple
+domains with different configurations. This feature operates similarly to
+virtual hosts in Apache or Nginx — when clients connect requesting a specific
+domain name (via TLS SNI), the server selects the corresponding virtual host
+configuration. If no matching virtual host is found, the connection falls back
+to the global configuration.
+
+Virtual host sections are introduced in the configuration file with a header
+of the form:
+
+    [vhost:www.example.com]
+
+All options that follow (until the next section header or end of file) apply
+only to that virtual host.
 
 ## AUTHENTICATION
 Users can be authenticated in multiple ways, which are explained in the following

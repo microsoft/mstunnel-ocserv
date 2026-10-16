@@ -1,0 +1,22 @@
+# Exclude gperf source files: gperf #line directives cause http-heads.gperf
+# to appear in coverage data, which genhtml cannot annotate meaningfully.
+exclude = */http-heads.gperf
+
+# Exclude generated files in the build directory.  With an in-tree meson
+# build, both source files (source_root/src/*.c) and generated files
+# (build_root/src/*.c) produce paths starting with "src/" after genhtml's
+# dual-prefix stripping, which causes genhtml to fail with
+# "duplicate merge record src".
+exclude = */build/src/*
+
+# Exclude vendored third-party libraries — not developed in this project.
+exclude = */src/ccan/*
+exclude = */src/gnulib/*
+exclude = */src/inih/*
+exclude = */src/llhttp/*
+exclude = */src/pcl/*
+exclude = */tests/*
+exclude = */src/protobuf/protobuf-c/*
+
+ignore_errors = unused
+genhtml_ignore_errors = unmapped

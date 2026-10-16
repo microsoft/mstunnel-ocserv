@@ -1,0 +1,259 @@
+#!/bin/bash
+#
+# Copyright (C) 2026 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Behavioral test for ocserv-fw-nftables driven by ocserv itself.
+#
+# When restrict-user-to-ports (or restrict-user-to-routes) is set in the
+# config, ocserv automatically calls the fw script.  The path is normally
+# compiled in, but main-user.c honours the OCSERV_FW_SCRIPT environment
+# variable as an override.  This test sets that variable to the local
+# nftables script and verifies that the resulting nftables rules actually
+# control forwarded VPN traffic.
+#
+# Network layout (provided by ns.sh):
+#
+#   [NS1/client] --ETHNAME1/ETHNAME2-- [NS2/server, runs ocserv+nft]
+#                                             |
+#                                       ETHNAME4/ETHNAME3
+#                                             |
+#                                      [NS3/destination]
+#
+# VPN client traffic arriving on the TUN device in NS2 is forwarded by the
+# kernel from TUN -> ETHNAME4 -> NS3.  The nftables forward chain installed
+# by ocserv-fw-nftables intercepts that traffic.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+TMPFILE=cookie.$$.tmp
+PATH=${PATH}:/usr/sbin
+IP=$(command -v ip)
+
+. "$(dirname $0)/common.sh"
+
+eval "${GETPORT}"
+
+if test -z "${IP}"; then
+	echo "no IP tool is present"
+	exit 77
+fi
+
+if ! command -v nft >/dev/null 2>&1; then
+	echo "Skipping: nft not found"
+	exit 77
+fi
+
+if ! command -v ncat >/dev/null 2>&1; then
+	echo "Error: ncat not found"
+	exit 1
+fi
+
+echo "Testing ocserv-fw-nftables behavior (via ocserv)..."
+
+# Point ocserv at the local (uninstalled) nftables fw script.
+export OCSERV_FW_SCRIPT="$(realpath "${srcdir}/../src/ocserv-fw-nftables")"
+
+LISTENER_PID=""
+
+function finish {
+	set +e
+	echo " * Cleaning up..."
+	test -n "${LISTENER_PID}" && kill "${LISTENER_PID}" >/dev/null 2>&1
+	test -n "${CLIPID}" && kill "$(cat ${CLIPID})" >/dev/null 2>&1
+	test -n "${CLIPID}" && rm -f "${CLIPID}" >/dev/null 2>&1
+	test -n "${PID}" && kill "${PID}" >/dev/null 2>&1
+	test -n "${PIDFILE}" && rm -f "${PIDFILE}" >/dev/null 2>&1
+	test -n "${CONFIG}" && rm -f "${CONFIG}" >/dev/null 2>&1
+	rm -f "${TMPFILE}" >/dev/null 2>&1
+}
+trap finish EXIT
+
+OCCTL_SOCKET=./occtl-fw-$$.socket
+USERNAME=test
+
+. "$(dirname $0)/random-net.sh"
+. "$(dirname $0)/random-net2.sh"
+
+# Advertise CLI_ADDRESS2 (NS3) as a split-tunnel route so the VPN client
+# sends that traffic through the tunnel, crossing the nftables forward chain.
+ROUTE1="${CLI_ADDRESS2}/32"
+
+. "$(dirname $0)/ns.sh"
+
+# ns.sh sets NS3's default route via CLI_ADDRESS2 (its own address), which
+# does not produce a usable outbound path.  Replace it with a route via
+# ADDRESS2 (NS2's end of the ETHNAME4/ETHNAME3 veth pair) so that NS3 can
+# send replies back to VPN clients forwarded through NS2.
+${IP} -n "${NSNAME3}" route replace default via "${ADDRESS2}" dev "${ETHNAME3}" onlink
+
+# Enable IP forwarding in NS2 so the kernel forwards VPN traffic from the
+# TUN device to ETHNAME4 toward NS3.
+${IP} netns exec "${NSNAME2}" sysctl -w net.ipv4.ip_forward=1 >/dev/null
+
+update_config fw-ocserv.config
+
+if test "${VERBOSE}" = 1; then
+	DEBUG="-d 3"
+fi
+
+${CMDNS2} ${SERV} -p "${PIDFILE}" -f -c "${CONFIG}" ${DEBUG} &
+PID=$!
+
+sleep 4
+
+echo " * Getting cookie from ${ADDRESS}:${PORT}..."
+echo "test" | ${CMDNS1} ${OPENCONNECT} "${ADDRESS}:${PORT}" \
+	-u "${USERNAME}" \
+	--servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= \
+	--authenticate --passwd-on-stdin >$TMPFILE
+if test $? != 0;then
+	echo "Could not get cookie from server"
+	cat $TMPFILE
+	exit 1
+fi
+
+echo " * Connecting to ${ADDRESS}:${PORT}..."
+( echo "test" | ${CMDNS1} ${OPENCONNECT} "${ADDRESS}:${PORT}" \
+	-u "${USERNAME}" \
+	--servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= \
+	-s "${srcdir}/scripts/vpnc-script" \
+	--pid-file="${CLIPID}" \
+	--passwd-on-stdin -b ) || { echo "Could not connect to server"; exit 1; }
+
+sleep 2
+
+# start_listener PORT — TCP listener in NS3.
+start_listener() {
+	${CMDNS3} ncat -l -p "$1" >/dev/null 2>&1 &
+	LISTENER_PID=$!
+	sleep 0.2
+}
+
+stop_listener() {
+	test -n "${LISTENER_PID}" && kill "${LISTENER_PID}" >/dev/null 2>&1 || true
+	LISTENER_PID=""
+}
+
+# tcp_ok IP PORT — connect from NS1; returns 0 if the connection succeeds.
+# ncat -w 1 times out after one second on a DROP rule.
+tcp_ok() {
+	${CMDNS1} ncat -w 1 "$1" "$2" </dev/null >/dev/null 2>&1
+}
+
+echo -n " * TCP 443 (denied by restrict-user-to-ports) should be blocked ... "
+start_listener 443
+tcp_ok "${CLI_ADDRESS2}" 443 && { echo "FAIL: port 443 should be dropped"; exit 1; }
+stop_listener
+echo "ok"
+
+echo -n " * TCP 80 (not denied) should be reachable ... "
+start_listener 80
+tcp_ok "${CLI_ADDRESS2}" 80 || { echo "FAIL: port 80 should be allowed"; exit 1; }
+stop_listener
+echo "ok"
+
+echo -n " * ICMP (denied by restrict-user-to-ports) should be blocked ... "
+${CMDNS1} ping -c 1 -W 2 "${CLI_ADDRESS2}" >/dev/null 2>&1 && \
+	{ echo "FAIL: ping should be rejected"; exit 1; }
+echo "ok"
+
+echo " * Disconnecting VPN client..."
+kill "$(cat ${CLIPID})" 2>/dev/null || true
+rm -f "${CLIPID}"
+sleep 2
+
+echo -n " * nft fw table should be removed after disconnect ... "
+${CMDNS2} nft list ruleset 2>/dev/null | grep -q "ocserv_" && \
+	{ echo "FAIL: nft fw table still present after disconnect"; exit 1; }
+echo "ok"
+
+# -----------------------------------------------------------------------
+# Phase 2: restrict-user-to-routes
+#
+# The server advertises only CLI_ADDRESS2 as a reachable route and sets
+# restrict-user-to-routes=true.  A VPN client that manually adds a route
+# for a non-advertised destination should have that traffic dropped by
+# the nftables forward chain — even though the packet reaches ocserv.
+# -----------------------------------------------------------------------
+
+echo ""
+echo "--- Phase 2: restrict-user-to-routes ---"
+
+# Add a second IP on NS3 that ocserv will NOT advertise to clients.
+# This simulates an internal host the user tries to reach by adding
+# a manual route after the VPN is up.
+BLOCKED_IP="10.111.0.1"
+${IP} -n "${NSNAME3}" addr add "${BLOCKED_IP}/32" dev "${ETHNAME3}"
+# NS2 must have a route to BLOCKED_IP so packets reach the forward chain.
+${IP} -n "${NSNAME2}" route add "${BLOCKED_IP}/32" via "${ADDRESS2}" dev "${ETHNAME4}" onlink
+
+# Restart ocserv with the route-restriction config.
+kill "${PID}" 2>/dev/null || true
+sleep 1
+eval "${GETPORT}"
+update_config fw-ocserv-routes.config
+${CMDNS2} ${SERV} -p "${PIDFILE}" -f -c "${CONFIG}" ${DEBUG} &
+PID=$!
+sleep 4
+
+echo " * Getting cookie from ${ADDRESS}:${PORT}..."
+echo "test" | ${CMDNS1} ${OPENCONNECT} "${ADDRESS}:${PORT}" \
+	-u "${USERNAME}" \
+	--servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= \
+	--authenticate --passwd-on-stdin >"${TMPFILE}"
+if test $? != 0; then
+	echo "Could not get cookie from server (phase 2)"
+	cat "${TMPFILE}"
+	exit 1
+fi
+
+echo " * Connecting to ${ADDRESS}:${PORT}..."
+( echo "test" | ${CMDNS1} ${OPENCONNECT} "${ADDRESS}:${PORT}" \
+	-u "${USERNAME}" \
+	--servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= \
+	-s "${srcdir}/scripts/vpnc-script" \
+	--pid-file="${CLIPID}" \
+	--passwd-on-stdin -b ) || { echo "Could not connect to server (phase 2)"; exit 1; }
+
+sleep 2
+
+# Simulate the user manually adding a route to the non-advertised destination
+# via the VPN gateway.  The kernel in NS2 will receive this traffic on the
+# TUN device and the nftables forward chain should drop it.
+${IP} -n "${NSNAME1}" route add "${BLOCKED_IP}/32" via "${VPNADDR}"
+
+echo -n " * Advertised route (CLI_ADDRESS2) should be reachable ... "
+start_listener 80
+tcp_ok "${CLI_ADDRESS2}" 80 || { echo "FAIL: advertised route should be reachable"; exit 1; }
+stop_listener
+echo "ok"
+
+echo -n " * Non-advertised route (manually added by client) should be blocked ... "
+start_listener 80
+tcp_ok "${BLOCKED_IP}" 80 && { echo "FAIL: non-advertised route should be dropped"; exit 1; }
+stop_listener
+echo "ok"
+
+echo " * Disconnecting VPN client..."
+kill "$(cat ${CLIPID})" 2>/dev/null || true
+sleep 2
+
+echo "All tests passed."
+exit 0

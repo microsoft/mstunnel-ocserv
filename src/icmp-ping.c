@@ -177,7 +177,7 @@ int icmp_ping4(main_server_st *s, struct sockaddr_in *addr1)
 	uint16_t id1;
 	unsigned int gotreply = 0, unreachable = 0;
 
-	if (GETCONFIG(s)->ping_leases == 0)
+	if (GETRCONFIG(s)->ping_leases == 0)
 		return 0;
 
 	e = gnutls_rnd(GNUTLS_RND_NONCE, &id1, sizeof(id1));
@@ -272,7 +272,7 @@ int icmp_ping6(main_server_st *s, struct sockaddr_in6 *addr1)
 	unsigned int gotreply = 0, unreachable = 0;
 	time_t now;
 
-	if (GETCONFIG(s)->ping_leases == 0)
+	if (GETRCONFIG(s)->ping_leases == 0)
 		return 0;
 
 	e = gnutls_rnd(GNUTLS_RND_NONCE, &id1, sizeof(id1));

@@ -24,8 +24,8 @@ PIDFILE=ocserv-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
 HACONFIG=haproxy.conf.$$.tmp
 PATH=${PATH}:/usr/sbin
-HAPROXY=$(which haproxy)
-IP=$(which ip)
+HAPROXY=$(command -v haproxy)
+IP=$(command -v ip)
 
 . `dirname $0`/common.sh
 
@@ -52,15 +52,10 @@ fi
 echo "Testing ocserv connection via haproxy... "
 
 function finish {
-  set +e
   echo " * Cleaning up..."
+  cleanup_client_server
   test -n "${HAPID}" && kill ${HAPID} >/dev/null 2>&1
-  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
-  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
-  test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
-  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
   test -n "${HACONFIG}" && rm -f ${HACONFIG} >/dev/null 2>&1
-  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
   test -n "${NUTTCPPID}" && kill ${NUTTCPPID} >/dev/null 2>&1
 }
 trap finish EXIT

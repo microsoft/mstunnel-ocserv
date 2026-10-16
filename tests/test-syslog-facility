@@ -1,0 +1,123 @@
+#!/bin/sh
+#
+# Copyright (C) 2026 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# Test: syslog-facility config option (Relates: #691)
+#
+# Starts ocserv under an LD_PRELOAD shim that intercepts openlog(3) and
+# records the facility argument to a temp file.  Verifies that:
+#   - the default facility is "daemon" when syslog-facility is not set
+#   - setting syslog-facility = auth changes the recorded facility to "auth"
+#
+# Requires cwrap (socket_wrapper + uid_wrapper) to run without root.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+
+. "$(dirname "$0")/common.sh"
+
+if test -z "${SYSLOG_SHIM}" || ! test -f "${SYSLOG_SHIM}"; then
+	echo "SYSLOG_SHIM not set or not built; skipping"
+	exit 77
+fi
+
+eval "${GETPORT}"
+
+SHIM_OUT="syslog-shim-out.$$.tmp"
+CONFIG_FILE="syslog-facility.$$.conf.tmp"
+SERV_LOG="syslog-facility-serv.$$.log"
+
+finish() {
+	set +e
+	test -n "${PID}" && kill "${PID}" >/dev/null 2>&1
+	test -n "${PID}" && wait "${PID}" 2>/dev/null
+	rm -f "${SHIM_OUT}" "${CONFIG_FILE}" "${SERV_LOG}"
+	test -n "${SOCKDIR}" && rm -rf "${SOCKDIR}"
+}
+trap finish EXIT
+
+write_config() {
+	facility="$1"
+	cat >"${CONFIG_FILE}" <<EOF
+auth = "plain[${srcdir}/data/test1.passwd]"
+tcp-port = ${PORT}
+socket-file = ./ocserv-syslog-test-$$.sock
+server-cert = ${srcdir}/certs/server-cert.pem
+server-key = ${srcdir}/certs/server-key.pem
+device = vpns
+ipv4-network = 192.168.100.0
+ipv4-netmask = 255.255.255.0
+run-as-user = $(id -un)
+run-as-group = $(id -gn)
+log-level = 0
+EOF
+	if test -n "${facility}"; then
+		echo "syslog-facility = ${facility}" >>"${CONFIG_FILE}"
+	fi
+}
+
+start_server() {
+	rm -f "${SHIM_OUT}" "${SERV_LOG}"
+	LD_PRELOAD="libsocket_wrapper.so:libuid_wrapper.so:${SYSLOG_SHIM}" \
+		UID_WRAPPER=1 UID_WRAPPER_ROOT=1 \
+		SYSLOG_SHIM_OUT="${SHIM_OUT}" \
+		${SERV} -f -c "${CONFIG_FILE}" \
+		>"${SERV_LOG}" 2>&1 &
+	PID=$!
+	# Give the main process time to call openlog() during startup
+	sleep 2
+}
+
+check_facility() {
+	expected="$1"
+	label="$2"
+	if ! test -f "${SHIM_OUT}"; then
+		echo "FAIL ${label}: openlog() was not called (server did not start?)"
+		echo "--- server log ---"
+		cat "${SERV_LOG}" 2>/dev/null || echo "(empty)"
+		echo "---"
+		exit 1
+	fi
+	if ! grep -q "^${expected}$" "${SHIM_OUT}"; then
+		echo "FAIL ${label}: expected facility '${expected}', got:"
+		cat "${SHIM_OUT}"
+		exit 1
+	fi
+	echo "PASS ${label}: facility = ${expected}"
+}
+
+stop_server() {
+	test -n "${PID}" && kill "${PID}" >/dev/null 2>&1
+	test -n "${PID}" && wait "${PID}" 2>/dev/null
+	PID=
+}
+
+# ---- Test 1: default facility is "daemon" ----
+echo "Testing default syslog facility..."
+write_config ""
+start_server
+check_facility "daemon" "default-facility"
+stop_server
+
+# ---- Test 2: syslog-facility = auth ----
+echo "Testing syslog-facility = auth..."
+write_config "auth"
+start_server
+check_facility "auth" "auth-facility"
+stop_server
+
+echo "test-syslog-facility: all checks passed"
+exit 0

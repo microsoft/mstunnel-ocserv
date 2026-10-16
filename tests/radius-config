@@ -26,13 +26,13 @@ srcdir=${srcdir:-.}
 PIDFILE=ocserv-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
 PATH=${PATH}:/usr/sbin
-IP=$(which ip)
+IP=$(command -v ip)
 OUTFILE=traffic.$$.tmp
 RADIUSLOG=radius-config.$$.log
-RADIUSD=$(which radiusd)
+RADIUSD=$(command -v radiusd)
 
 if test -z "${RADIUSD}";then
-	RADIUSD=$(which freeradius)
+	RADIUSD=$(command -v freeradius)
 fi
 
 . `dirname $0`/common.sh
@@ -57,41 +57,14 @@ fi
 echo "Testing ocserv with radius (user config)... "
 
 function finish {
-  set +e
   echo " * Cleaning up..."
-  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  cleanup_client_server
   test -n "${RADIUSPID}" && kill ${RADIUSPID} >/dev/null 2>&1
-  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
-  test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
-  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
-  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
   rm -f ${OUTFILE} 2>&1
   test -f "${RADIUSLOG}" && cat "${RADIUSLOG}"
   rm -f "${RADIUSLOG}"
 }
 trap finish EXIT
-
-function wait_file_contents {
-  local file=$1
-  local contents=$2
-  local max_time=$3
-  local time=0
-
-  while [ ${time} -lt ${max_time} ]
-  do
-    sleep 5
-    grep -E "${contents}" "${file}" >/dev/null
-    if test $? = 0;then
-      echo "Found ${contents} (waited ${time})"
-      return 0
-    fi
-    let time+=5
-  done
-
-  #timeout
-  echo "Could not find ${contents} in ${file} after ${time} secs"
-  exit 1
-}
 
 # server address
 . `dirname $0`/random-net.sh
@@ -110,7 +83,7 @@ ${CMDNS2} ${IP} link set dev lo up
 
 # Run servers
 rm -f ${RADIUSLOG}
-${CMDNS2} ${RADIUSD} -d ${srcdir}/data/raddb/ -s -xx -l ${RADIUSLOG} &
+${CMDNS2} ${RADIUSD} -d ${RADDB_DIR}/ -s -xx -l ${RADIUSLOG} &
 RADIUSPID=$!
 
 update_config radius.config
@@ -120,7 +93,8 @@ fi
 
 ${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
 
-sleep 4
+wait_file_contents "${RADIUSLOG}" "Ready to process requests" 30
+wait_ns_port t ${PORT}
 
 echo " * Connecting to ${ADDRESS}:${PORT}..."
 USERNAME=testtime

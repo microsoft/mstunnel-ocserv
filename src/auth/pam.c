@@ -48,8 +48,6 @@
 #include "auth/pam.h"
 #include "auth-unix.h"
 
-#define PAM_STACK_SIZE (1024 * 1024)
-
 #define MAX_REPLIES 2
 
 enum {
@@ -57,6 +55,28 @@ enum {
 	PAM_S_WAIT_FOR_PASS,
 	PAM_S_COMPLETE,
 };
+
+static void pam_vhost_init(void **_vctx, void *pool, void *additional)
+{
+	struct pam_cfg_st *config = additional;
+	struct pam_vhost_ctx *vctx = talloc_zero(pool, struct pam_vhost_ctx);
+
+	/* Defensive check; config is always allocated by pam_get_brackets_string() */
+	if (config == NULL) {
+		fprintf(stderr, "pam: no configuration passed!\n");
+		exit(EXIT_FAILURE);
+	}
+	if (vctx == NULL) {
+		fprintf(stderr, "PAM-auth: memory error\n");
+		exit(EXIT_FAILURE);
+	}
+
+	vctx->service_name = config->service_name != NULL ?
+				     config->service_name :
+				     PACKAGE;
+	vctx->use_token = config->use_token;
+	*_vctx = vctx;
+}
 
 static int ocserv_conv(int msg_size, const struct pam_message **msg,
 		       struct pam_response **resp, void *uptr)
@@ -122,7 +142,16 @@ static int ocserv_conv(int msg_size, const struct pam_message **msg,
 
 			pctx->state = PAM_S_WAIT_FOR_PASS;
 			pctx->cr_ret = PAM_SUCCESS;
+
 			co_resume();
+
+			/* if meanwhile the remote user aborted, quit immediately */
+			if (pctx->aborted) {
+				oc_syslog(LOG_ERR,
+					  "Error in memory allocation in PAM");
+				return PAM_CONV_ERR;
+			}
+
 			pctx->state = PAM_S_INIT;
 
 			if (pctx->password[0] != 0) {
@@ -188,30 +217,11 @@ wait:
 	}
 }
 
-static void pam_vhost_init(void **_vctx, void *pool, void *additional)
-{
-	pam_cfg_st *config = additional;
-	struct pam_vhost_ctx *vctx = talloc_zero(pool, struct pam_vhost_ctx);
-
-	if (vctx == NULL) {
-		fprintf(stderr, "PAM-auth: memory error\n");
-		exit(EXIT_FAILURE);
-	}
-
-	*_vctx = vctx;
-
-	if (config == NULL)
-		return;
-
-	vctx->use_token = config->use_token;
-}
-
 static int pam_auth_init(void **ctx, void *pool, void *vctx,
 			 const common_auth_init_st *info)
 {
 	int pret;
 	struct pam_ctx_st *pctx;
-	struct pam_vhost_ctx *pvctx = vctx;
 
 	if (info->username == NULL || info->username[0] == 0) {
 		oc_syslog(LOG_NOTICE, "pam-auth: no username present");
@@ -226,18 +236,26 @@ static int pam_auth_init(void **ctx, void *pool, void *vctx,
 
 	pctx->dc.conv = ocserv_conv;
 	pctx->dc.appdata_ptr = pctx;
-	pret = pam_start(PACKAGE, info->username, &pctx->dc, &pctx->ph);
+	pctx->config = vctx;
+
+	pret = pam_start(pctx->config->service_name, info->username, &pctx->dc,
+			 &pctx->ph);
 	if (pret != PAM_SUCCESS) {
 		oc_syslog(LOG_NOTICE, "PAM-auth init: %s",
 			  pam_strerror(pctx->ph, pret));
 		goto fail1;
 	}
 
-	pctx->cr = co_create(co_auth_user, pctx, NULL, PAM_STACK_SIZE);
-	if (pctx->cr == NULL)
+	size_t ssize = pam_stack_size();
+	pctx->cr = co_create(co_auth_user, pctx,
+			     pam_stack_alloc(&pctx->cr_stack, ssize),
+			     (int)ssize);
+	if (pctx->cr == NULL) {
+		pam_stack_free(&pctx->cr_stack);
 		goto fail2;
+	}
 
-	if (!pvctx->use_token) {
+	if (!pctx->config->use_token) {
 		strlcpy(pctx->username, info->username, sizeof(pctx->username));
 	}
 
@@ -246,7 +264,7 @@ static int pam_auth_init(void **ctx, void *pool, void *vctx,
 
 	*ctx = pctx;
 
-	if (pvctx->use_token) {
+	if (pctx->config->use_token) {
 		co_call(pctx->cr);
 
 		if (pctx->cr_ret != PAM_SUCCESS) {
@@ -387,11 +405,18 @@ static void pam_auth_deinit(void *ctx)
 {
 	struct pam_ctx_st *pctx = ctx;
 
+	/* if deinitializing while PAM is in use, allow it to cleanup */
+	if (pctx->cr != NULL && pctx->state == PAM_S_WAIT_FOR_PASS) {
+		pctx->aborted = 1;
+		co_call(pctx->cr);
+	}
+
 	pam_end(pctx->ph, pctx->cr_ret);
 	free(pctx->replies);
 	str_clear(&pctx->msg);
 	if (pctx->cr != NULL)
 		co_delete(pctx->cr);
+	pam_stack_free(&pctx->cr_stack);
 	talloc_free(pctx);
 }
 
@@ -409,7 +434,7 @@ static void pam_group_list(void *pool, void *_additional, char ***groupname,
 
 const struct auth_mod_st pam_auth_funcs = { .type = AUTH_TYPE_PAM |
 						    AUTH_TYPE_USERNAME_PASS,
-						.vhost_init = pam_vhost_init,
+					    .vhost_init = pam_vhost_init,
 					    .auth_init = pam_auth_init,
 					    .auth_deinit = pam_auth_deinit,
 					    .auth_msg = pam_auth_msg,

@@ -1,5 +1,6 @@
 #!/bin/bash
 
+builddir=${builddir:-.}
 #echo $USERNAME : $REASON : $DEVICE
 
 verify_env_set() {
@@ -28,7 +29,7 @@ case "$REASON" in
 	test "${OCSERV_DNS4}" = "192.168.1.1 192.168.5.1 " && \
 	test "${OCSERV_ROUTES}" = "192.168.1.0/255.255.255.0 192.168.5.0/255.255.255.0 " && \
 	test "${OCSERV_ROUTES4}" = "192.168.1.0/255.255.255.0 192.168.5.0/255.255.255.0 " && \
-	echo "${IP_REMOTE}" > connect.ok
+	echo "${IP_REMOTE}" > ${builddir}/connect.ok
 	;;
   disconnect)
 	if ! test -z "$DEVICE";then
@@ -36,12 +37,12 @@ case "$REASON" in
 		test "${OCSERV_DNS4}" = "192.168.1.1 192.168.5.1 " && \
 		test "${OCSERV_ROUTES}" = "192.168.1.0/255.255.255.0 192.168.5.0/255.255.255.0 " && \
 		test "${OCSERV_ROUTES4}" = "192.168.1.0/255.255.255.0 192.168.5.0/255.255.255.0 " && \
-		echo "${IP_REMOTE}" > disconnect.ok
+		echo "${IP_REMOTE}" > ${builddir}/disconnect.ok
 	fi
 	;;
   "host-update")
 	verify_env_set "HOSTNAME"
-	echo > host-update.ok
+	echo > ${builddir}/host-update.ok
 	;;
 esac
 

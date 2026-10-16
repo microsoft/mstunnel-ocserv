@@ -1,0 +1,124 @@
+#!/bin/bash
+#
+# Copyright (C) 2026 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# Reproducer for: Framed-IPv6-Prefix routes returned by RADIUS are silently
+# dropped because append_route() receives raw binary data instead of the
+# formatted "addr/prefix" string (issue #710).
+
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+PATH=${PATH}:/usr/sbin
+IP=$(command -v ip)
+OUTFILE=traffic.$$.tmp
+RADIUSLOG=radius-ipv6-prefix.$$.log
+RADIUSD=$(command -v radiusd)
+
+if test -z "${RADIUSD}";then
+	RADIUSD=$(command -v freeradius)
+fi
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+
+if test -z "${IP}";then
+	echo "no IP tool is present"
+	exit 77
+fi
+
+if test -z "${RADIUSD}";then
+	echo "no radiusd is present"
+	exit 77
+fi
+
+if test "$(id -u)" != "0";then
+	echo "This test must be run as root"
+	exit 77
+fi
+
+echo "Testing that RADIUS Framed-IPv6-Prefix routes are applied to the session..."
+
+function finish {
+  echo " * Cleaning up..."
+  cleanup_client_server
+  test -n "${RADIUSPID}" && kill ${RADIUSPID} >/dev/null 2>&1
+  rm -f ${OUTFILE} 2>&1
+  test -f "${RADIUSLOG}" && cat "${RADIUSLOG}"
+  rm -f "${RADIUSLOG}"
+}
+trap finish EXIT
+
+# server address
+. `dirname $0`/random-net.sh
+
+# These addresses must match the raddb/users entry for test-ipv6prefix
+VPNNET=192.168.66.0/24
+VPNADDR=192.168.66.1
+CLIVPNADDR=192.168.66.194
+VPNNET6=fd91:6d14:7241:dc6a::/112
+VPNADDR6=fd91:6d14:7241:dc6a::1
+OCCTL_SOCKET=./occtl-radius-ipv6-prefix-$$.socket
+
+. `dirname $0`/ns.sh
+
+${CMDNS2} ${IP} link set dev lo up
+
+# Run servers
+rm -f ${RADIUSLOG}
+${CMDNS2} ${RADIUSD} -d ${RADDB_DIR}/ -s -xx -l ${RADIUSLOG} &
+RADIUSPID=$!
+
+update_config radius.config
+if test "$VERBOSE" = 1;then
+	DEBUG="-d 3"
+fi
+
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+
+wait_file_contents "${RADIUSLOG}" "Ready to process requests" 30
+wait_ns_port t ${PORT}
+
+echo " * Connecting to ${ADDRESS}:${PORT} as test-ipv6prefix..."
+USERNAME=test-ipv6prefix
+( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} \
+	--servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= \
+	-s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} \
+	--passwd-on-stdin -b )
+if test $? != 0;then
+	echo "Could not connect to server"
+	exit 1
+fi
+
+sleep 3
+
+# Verify the IPv6 prefix route from RADIUS Framed-IPv6-Prefix appears in session
+MATCH="fd00:abcd:ef00::/48"
+${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME} >${OUTFILE} 2>&1
+grep "${MATCH}" ${OUTFILE}
+if test $? != 0;then
+	cat ${OUTFILE}
+	echo "IPv6 prefix route from RADIUS Framed-IPv6-Prefix not found in session"
+	exit 1
+fi
+
+exit 0

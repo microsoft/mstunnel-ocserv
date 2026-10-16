@@ -11,25 +11,38 @@ protocol between them.
 
 ```mermaid
 flowchart LR
-    ms((main server))
-    wp((worker process))
-    sm((security module))
     user[user]
-    subgraph root privileges
-    ms --> sm
-    sm --> ms
-    end
-    subgraph Non privileged/seccomp isolation
-    ms --> wp
-    wp --> ms
-    wp --> sm
-    sm --> wp
-    end
-    user --> wp
-    wp --> user
-```
 
-See also https://ocserv.openconnect-vpn.net/technical.html
+    subgraph root["root privileges"]
+        subgraph ms_box["main server"]
+            ms((main))
+            ms_tun[TUN device & IP allocation]
+            ms_priv[Execute up/down scripts]
+            ms_tls[Notifies sec-mod of user session start/stop]
+        end
+        subgraph sm_box["security module"]
+            sm((sec-mod))
+            sm_auth[PAM / password auth]
+            sm_key[Private key operations]
+            sm_stats["Session statistics (e.g., Radius)"]
+        end
+    end
+
+    subgraph wp_box["worker (isolated · one per client)"]
+        wp((worker))
+        wp_auth[HTTPS username/password auth]
+        wp_cert[HTTPS certificate auth]
+        wp_cookie[HTTPS cookie auth]
+        wp_tls[TLS / DTLS tunneling]
+    end
+
+    ms <-- "session start/stop" --> sm
+    wp -- "HTTPS cookie auth + TUN req" --> ms
+    ms <-- "TUN/UDP socket, set MTU,<br>TLS resumption data" --> wp
+    wp <-- "privkey sign/decrypt,<br>session stats" --> sm
+    sm <-- "user auth,<br>HTTPS cookie" --> wp
+    wp <--> user
+```
 
 ## The main process
 
@@ -126,42 +139,44 @@ device and the client. The tasks handled are:
 
 * Authentication
 
-```
-  main                 sec-mod                  worker
-   |                       |                       |
-   |                       | <--SEC_AUTH_INIT----- |
-   |                       | ---SEC_AUTH_REP-----> |
-   |                       | <--SEC_AUTH_CONT----- |
-   |                       |         .             |
-   |                       |         .             |
-   |                       |         .             |
-   |                       | ---SEC_AUTH_REP-----> |
-   |                       |                       |
-   | <----------AUTH_COOKIE_REQ------------------- |
-   |                       |                       |
-   | --SECM_SESSION_OPEN-> |                       |
-   | <-SECM_SESSION_REPLY- |                       |   #contains additional config for client
-   |                       |                       |
-   | ---------------AUTH_COOKIE_REP--------------> |   #forwards the additional config for client
-   |                       |                       |
-   | <------------SESSION_INFO-------------------- |
-   |                       |                       |
-   |                       | <--SEC_CLI_STATS----- |
-   |                       |             (disconnect)
-   | -SECM_SESSION_CLOSE-> |
-   | <---SECM_CLI_STATS--- |
+```mermaid
+sequenceDiagram
+    participant m as main
+    participant sm as sec-mod
+    participant w as worker
 
+    Note over w: auth state: PS_AUTH_INACTIVE
+    w->>sm: SEC_AUTH_INIT
+    sm->>w: SEC_AUTH_REP
+    w->>sm: SEC_AUTH_CONT
+    Note over sm,w: (authentication rounds...)
+    sm->>w: SEC_AUTH_REP
+
+    w->>m: AUTH_COOKIE_REQ
+    m->>sm: SECM_SESSION_OPEN
+    sm->>m: SECM_SESSION_REPLY
+    Note right of sm: contains additional config for client
+    m->>w: AUTH_COOKIE_REP
+    Note right of m: forwards additional config for client
+    Note over w: auth state: PS_AUTH_COMPLETED
+    w->>m: SESSION_INFO
+
+    w->>sm: SEC_CLI_STATS
+    Note over w: (disconnect)
+    m->>sm: SECM_SESSION_CLOSE
+    sm->>m: SECM_CLI_STATS
 ```
 
 
 * Auth in main process (cookie auth only)
 
-```
-   main                              worker
-                      <------     AUTH_COOKIE_REQ
- AUTH_REP(OK/FAILED)  ------>
-  +user config
+```mermaid
+sequenceDiagram
+    participant m as main
+    participant w as worker
 
+    w->>m: AUTH_COOKIE_REQ
+    m->>w: AUTH_REP(OK/FAILED) + user config
 ```
 
 
@@ -170,36 +185,67 @@ device and the client. The tasks handled are:
 This is the same diagram as above but shows how the session ID (SID)
 is assigned and used throughout the server.
 
+```mermaid
+sequenceDiagram
+    participant m as main
+    participant sm as sec-mod
+    participant w as worker
+
+    w->>sm: SEC_AUTH_INIT
+    sm->>w: SEC_AUTH_REP (new SID)
+    w->>sm: SEC_AUTH_CONT (SID)
+    Note over sm,w: (authentication rounds...)
+    sm->>w: SEC_AUTH_REP
+
+    Note over m,w: client/worker may disconnect and reconnect,<br>using SID cookie to resume the authenticated session
+
+    w->>m: AUTH_COOKIE_REQ (SID)
+    m->>sm: SECM_SESSION_OPEN (SID)
+    sm->>m: SECM_SESSION_REPLY
+    Note right of sm: contains additional config for client
+    m->>w: AUTH_COOKIE_REP
+    Note right of m: forwards additional config for client
+    w->>m: SESSION_INFO
+
+    w->>sm: SEC_CLI_STATS (SID)
+    Note over w: (disconnect)
+    m->>sm: SECM_SESSION_CLOSE (SID)
+    sm->>m: SECM_CLI_STATS (SID)
 ```
-  main                        sec-mod                        worker
-   |                             |                             |
-   |                             | <--SEC_AUTH_INIT----------- |
-   |                             | --SEC_AUTH_REP (NEW SID)--> |
-   |                             | <--SEC_AUTH_CONT (SID)----- |
-   |                             |         .                   |
-   |                             |         .                   |
-   |                             |         .                   |
-   |                             | -----SEC_AUTH_REP --------> |
 
-(note that by that time the client/worker may be disconnected,
-and reconnect later and use the cookie -SID- to resume the
-already authenticated session).
+## IPC Communication for session termination
 
-   |                             |                             |
-   | <----------------AUTH_COOKIE_REQ (SID)------------------- |
-   |                             |                             |
-   | --SECM_SESSION_OPEN (SID)-> |                             |
-   | <--SECM_SESSION_REPLY------ |                             |   #contains additional config for client
-   |                             |                             |
-   | -----------------AUTH_COOKIE_REP------------------------> |   #forwards the additional config for client
-   |                             |                             |
-   | <------------------SESSION_INFO-------------------------- |
-   |                             |                             |
-   |                             | <--SEC_CLI_STATS (SID)----- |
-   |                             |            (disconnect)
-   | -SECM_SESSION_CLOSE (SID)-> |
-   | <--SECM_CLI_STATS (SID)---- |
+When an administrator issues a terminate command via occtl, the main process
+disconnects the active worker (if any) and forwards the request to sec-mod
+to invalidate the session cookie, preventing automatic reconnection.
 
+For `terminate session`, occtl first fetches the full cookie list from the
+server to resolve a potentially shortened session ID prefix to the full
+safe_id. If the prefix is ambiguous (matches multiple sessions), occtl
+refuses the operation and lists the matching sessions. Scripts should use
+the full session ID from `occtl --json show sessions valid` ("Full session"
+field) to avoid ambiguity.
+
+```mermaid
+sequenceDiagram
+    participant ctl as occtl
+    participant m as main
+    participant sm as sec-mod
+
+    alt terminate session
+        ctl->>m: CTL_CMD_LIST_COOKIES
+        m->>ctl: cookie list (resolve short SID to full safe_id)
+    end
+    ctl->>m: CTL_CMD_TERMINATE_USER / ID / SESSION
+    Note over m: disconnect worker process(es)
+    alt terminate user
+        m->>sm: SECM_TERMINATE_USER_SESSIONS (username)
+        sm->>m: SECM_TERMINATE_SESSION_REPLY
+    else terminate id / session
+        m->>sm: SECM_TERMINATE_SESSION (safe_id)
+        sm->>m: SECM_TERMINATE_SESSION_REPLY
+    end
+    m->>ctl: CTL_CMD_TERMINATE_*_REP
 ```
 
 ## Cookies

@@ -202,9 +202,8 @@ static int get_ipv4_lease(main_server_st *s, struct proc_st *proc)
 		c_network = proc->config->ipv4_net;
 		c_netmask = proc->config->ipv4_netmask;
 	} else {
-		c_network = proc->vhost->perm_config.config->network.ipv4;
-		c_netmask =
-			proc->vhost->perm_config.config->network.ipv4_netmask;
+		c_network = proc->vhost->config->network->ipv4;
+		c_netmask = proc->vhost->config->network->ipv4_netmask;
 	}
 
 	if (c_network == NULL || c_netmask == NULL) {
@@ -387,10 +386,10 @@ static int get_ipv6_lease(main_server_st *s, struct proc_st *proc)
 		prefix = proc->config->ipv6_prefix;
 		subnet_prefix = proc->config->ipv6_subnet_prefix;
 	} else {
-		c_network = proc->vhost->perm_config.config->network.ipv6;
-		prefix = proc->vhost->perm_config.config->network.ipv6_prefix;
-		subnet_prefix = proc->vhost->perm_config.config->network
-					.ipv6_subnet_prefix;
+		c_network = proc->vhost->config->network->ipv6;
+		prefix = proc->vhost->config->network->ipv6_prefix;
+		subnet_prefix =
+			proc->vhost->config->network->ipv6_subnet_prefix;
 	}
 
 	if (c_network == NULL || prefix == 0 || subnet_prefix == 0) {

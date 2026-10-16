@@ -1,5 +1,5 @@
 %{
-#include "vpn.h"
+#include "worker.h"
 %}
 %language=ANSI-C
 %readonly-tables

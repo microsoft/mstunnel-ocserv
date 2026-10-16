@@ -27,13 +27,13 @@ srcdir=${srcdir:-.}
 PIDFILE=ocserv-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
 PATH=${PATH}:/usr/sbin
-IP=$(which ip)
+IP=$(command -v ip)
 OUTFILE=traffic.$$.tmp
 RADIUSLOG=radius-otp.$$.log
-RADIUSD=$(which radiusd)
+RADIUSD=$(command -v radiusd)
 
 if test -z "${RADIUSD}";then
-	RADIUSD=$(which freeradius)
+	RADIUSD=$(command -v freeradius)
 fi
 
 . `dirname $0`/common.sh
@@ -64,14 +64,9 @@ fi
 echo "Testing ocserv and radius (otp authentication)... "
 
 function finish {
-  set +e
   echo " * Cleaning up..."
-  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  cleanup_client_server
   test -n "${RADIUSPID}" && kill ${RADIUSPID} >/dev/null 2>&1
-  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
-  test -f "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
-  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
-  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
   rm -f ${OUTFILE} 2>&1
   test -f "${RADIUSLOG}" && cat "${RADIUSLOG}"
   rm -f "${RADIUSLOG}"
@@ -93,7 +88,7 @@ OCCTL_SOCKET=./occtl-radius-otp-$$.socket
 ${CMDNS2} ${IP} link set dev lo up
 
 # Run servers
-${CMDNS2} ${RADIUSD} -d ${srcdir}/data/raddb/ -s -xx -l ${RADIUSLOG} &
+${CMDNS2} ${RADIUSD} -d ${RADDB_DIR}/ -s -xx -l ${RADIUSLOG} &
 RADIUSPID=$!
 
 update_config radius-otp.config
@@ -103,7 +98,8 @@ fi
 
 ${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
 
-sleep 4
+wait_file_contents "${RADIUSLOG}" "Ready to process requests" 30
+wait_ns_port t ${PORT}
 
 echo " * Connecting with correct password and OTP..."
 USERNAME=test1-otp

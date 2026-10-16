@@ -58,6 +58,8 @@ static int common_info_cmd(UserListRep *args, FILE *out, cmd_params_st *params);
 static int session_info_cmd(void *ctx, SecmListCookiesReplyMsg *args, FILE *out,
 			    cmd_params_st *params, const char *lsid,
 			    unsigned int all);
+static char *shorten(void *cookie, unsigned int session_id_size,
+		     unsigned int small);
 
 struct unix_ctx {
 	int fd;
@@ -78,6 +80,9 @@ static uint8_t msg_map[] = {
 	[CTL_CMD_DISCONNECT_NAME] = CTL_CMD_DISCONNECT_NAME_REP,
 	[CTL_CMD_DISCONNECT_ID] = CTL_CMD_DISCONNECT_ID_REP,
 	[CTL_CMD_UNBAN_IP] = CTL_CMD_UNBAN_IP_REP,
+	[CTL_CMD_TERMINATE_USER] = CTL_CMD_TERMINATE_USER_REP,
+	[CTL_CMD_TERMINATE_ID] = CTL_CMD_TERMINATE_ID_REP,
+	[CTL_CMD_TERMINATE_SESSION] = CTL_CMD_TERMINATE_SESSION_REP,
 };
 
 struct cmd_reply_st {
@@ -669,6 +674,283 @@ cleanup:
 	return ret;
 }
 
+int handle_terminate_user_cmd(struct unix_ctx *ctx, const char *arg,
+			      cmd_params_st *params)
+{
+	int ret;
+	struct cmd_reply_st raw;
+	BoolMsg *rep;
+	unsigned int status;
+	UsernameReq req = USERNAME_REQ__INIT;
+
+	PROTOBUF_ALLOCATOR(pa, ctx);
+
+	if (arg == NULL || need_help(arg)) {
+		check_cmd_help(rl_line_buffer);
+		return 1;
+	}
+
+	init_reply(&raw);
+
+	req.username = (void *)arg;
+
+	ret = send_cmd(ctx, CTL_CMD_TERMINATE_USER, &req,
+		       (pack_size_func)username_req__get_packed_size,
+		       (pack_func)username_req__pack, &raw);
+	if (ret < 0) {
+		goto error;
+	}
+
+	rep = bool_msg__unpack(&pa, raw.data_size, raw.data);
+	if (rep == NULL)
+		goto error;
+
+	status = rep->status;
+	bool_msg__free_unpacked(rep, &pa);
+
+	if (status != 0) {
+		printf("user '%s' was terminated (session invalidated)\n", arg);
+		ret = 0;
+	} else {
+		printf("could not terminate user '%s'\n", arg);
+		ret = 1;
+	}
+
+	goto cleanup;
+
+error:
+	fprintf(stderr, ERR_SERVER_UNREACHABLE);
+	ret = 1;
+cleanup:
+	free_reply(&raw);
+
+	return ret;
+}
+
+int handle_terminate_id_cmd(struct unix_ctx *ctx, const char *arg,
+			    cmd_params_st *params)
+{
+	int ret;
+	struct cmd_reply_st raw;
+	BoolMsg *rep;
+	unsigned int status;
+	unsigned int id = 0;
+	IdReq req = ID_REQ__INIT;
+
+	PROTOBUF_ALLOCATOR(pa, ctx);
+
+	if (arg != NULL)
+		id = atoi(arg);
+
+	if (arg == NULL || need_help(arg) || id == 0) {
+		check_cmd_help(rl_line_buffer);
+		return 1;
+	}
+
+	init_reply(&raw);
+
+	req.id = id;
+
+	ret = send_cmd(ctx, CTL_CMD_TERMINATE_ID, &req,
+		       (pack_size_func)id_req__get_packed_size,
+		       (pack_func)id_req__pack, &raw);
+	if (ret < 0) {
+		goto error;
+	}
+
+	rep = bool_msg__unpack(&pa, raw.data_size, raw.data);
+	if (rep == NULL)
+		goto error;
+
+	status = rep->status;
+	bool_msg__free_unpacked(rep, &pa);
+
+	if (status != 0) {
+		printf("connection ID '%s' was terminated (session invalidated)\n",
+		       arg);
+		ret = 0;
+	} else {
+		printf("could not terminate ID '%s'\n", arg);
+		ret = 1;
+	}
+
+	goto cleanup;
+
+error:
+	fprintf(stderr, ERR_SERVER_UNREACHABLE);
+	ret = 1;
+cleanup:
+	free_reply(&raw);
+
+	return ret;
+}
+
+int handle_terminate_session_cmd(struct unix_ctx *ctx, const char *arg,
+				 cmd_params_st *params)
+{
+	int ret;
+	struct cmd_reply_st raw;
+	struct cmd_reply_st raw_cookies;
+	BoolMsg *rep;
+	SecmListCookiesReplyMsg *crep = NULL;
+	unsigned int status;
+	SafeIdReq req = SAFE_ID_REQ__INIT;
+	unsigned int i;
+	size_t arg_len;
+	char resolved_safe_id[SAFE_ID_SIZE];
+	unsigned int match_count = 0;
+
+	PROTOBUF_ALLOCATOR(pa, ctx);
+
+	if (arg == NULL || need_help(arg)) {
+		check_cmd_help(rl_line_buffer);
+		return 1;
+	}
+
+	arg_len = strlen(arg);
+	if (arg_len > SAFE_ID_SIZE - 1) {
+		printf("invalid session ID '%s'\n", arg);
+		return 1;
+	}
+
+	/* Fetch cookie list to resolve short SID to full safe_id */
+	init_reply(&raw_cookies);
+
+	ret = send_cmd(ctx, CTL_CMD_LIST_COOKIES, NULL, NULL, NULL,
+		       &raw_cookies);
+	if (ret < 0) {
+		goto error_cookies;
+	}
+
+	crep = secm_list_cookies_reply_msg__unpack(&pa, raw_cookies.data_size,
+						   raw_cookies.data);
+	if (crep == NULL)
+		goto error_cookies;
+
+	/* Find cookies matching the given prefix */
+	for (i = 0; i < crep->n_cookies; i++) {
+		if (crep->cookies[i]->safe_id.len < arg_len)
+			continue;
+		if (memcmp(crep->cookies[i]->safe_id.data, arg, arg_len) == 0) {
+			match_count++;
+			memcpy(resolved_safe_id, crep->cookies[i]->safe_id.data,
+			       MIN(crep->cookies[i]->safe_id.len,
+				   SAFE_ID_SIZE - 1));
+			resolved_safe_id[MIN(crep->cookies[i]->safe_id.len,
+					     SAFE_ID_SIZE - 1)] = 0;
+		}
+	}
+
+	if (match_count == 0) {
+		printf("no session matching '%s' was found\n", arg);
+		ret = 1;
+		goto cleanup_cookies;
+	}
+
+	if (match_count > 1) {
+		printf("ambiguous session ID '%s' matches %u sessions:\n", arg,
+		       match_count);
+		for (i = 0; i < crep->n_cookies; i++) {
+			if (crep->cookies[i]->safe_id.len < arg_len)
+				continue;
+			if (memcmp(crep->cookies[i]->safe_id.data, arg,
+				   arg_len) == 0) {
+				const char *username =
+					crep->cookies[i]->username;
+				if (username == NULL || username[0] == 0)
+					username = NO_USER;
+				printf("  %s  user: %s\n",
+				       shorten(crep->cookies[i]->safe_id.data,
+					       crep->cookies[i]->safe_id.len,
+					       0),
+				       username);
+			}
+		}
+		printf("use the full session ID to terminate a specific session\n");
+		ret = 1;
+		goto cleanup_cookies;
+	}
+
+	/* Warn if the session has an active connection */
+	for (i = 0; i < crep->n_cookies; i++) {
+		if (crep->cookies[i]->safe_id.len < arg_len)
+			continue;
+		if (memcmp(crep->cookies[i]->safe_id.data, arg, arg_len) == 0) {
+			if (crep->cookies[i]->in_use) {
+				const char *username =
+					crep->cookies[i]->username;
+				if (username == NULL || username[0] == 0)
+					username = NO_USER;
+				fprintf(stderr,
+					"warning: session '%.6s' (user: %s) has an active"
+					" connection; the connection will not be dropped\n",
+					(const char *)crep->cookies[i]
+						->safe_id.data,
+					username);
+			}
+			break;
+		}
+	}
+
+	secm_list_cookies_reply_msg__free_unpacked(crep, &pa);
+	crep = NULL;
+	free_reply(&raw_cookies);
+
+	/* Reconnect - server closes the socket after each command */
+	conn_posthandle(ctx);
+	if (conn_prehandle(ctx) < 0) {
+		fprintf(stderr, ERR_SERVER_UNREACHABLE);
+		return 1;
+	}
+
+	/* Exactly one match - send the full safe_id */
+	init_reply(&raw);
+
+	req.safe_id.data = (uint8_t *)resolved_safe_id;
+	req.safe_id.len = strlen(resolved_safe_id);
+
+	ret = send_cmd(ctx, CTL_CMD_TERMINATE_SESSION, &req,
+		       (pack_size_func)safe_id_req__get_packed_size,
+		       (pack_func)safe_id_req__pack, &raw);
+	if (ret < 0) {
+		goto error;
+	}
+
+	rep = bool_msg__unpack(&pa, raw.data_size, raw.data);
+	if (rep == NULL)
+		goto error;
+
+	status = rep->status;
+	bool_msg__free_unpacked(rep, &pa);
+
+	if (status != 0) {
+		printf("session '%.6s' was terminated\n", arg);
+		ret = 0;
+	} else {
+		printf("could not terminate session '%.6s'\n", arg);
+		ret = 1;
+	}
+
+	goto cleanup;
+
+error_cookies:
+	fprintf(stderr, ERR_SERVER_UNREACHABLE);
+	ret = 1;
+cleanup_cookies:
+	if (crep != NULL)
+		secm_list_cookies_reply_msg__free_unpacked(crep, &pa);
+	free_reply(&raw_cookies);
+	return ret;
+
+error:
+	fprintf(stderr, ERR_SERVER_UNREACHABLE);
+	ret = 1;
+cleanup:
+	free_reply(&raw);
+
+	return ret;
+}
+
 static const char *fix_ciphersuite(char *txt)
 {
 	if (txt != NULL && txt[0] != 0 && strlen(txt) > 16 &&
@@ -1078,7 +1360,7 @@ static int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg,
 	FILE *out;
 	struct tm *tm, _tm;
 	time_t t;
-	bool header_printed = false;
+	bool item_printed = false;
 
 	PROTOBUF_ALLOCATOR(pa, ctx);
 	char txt_ip[MAX_IP_STR];
@@ -1125,11 +1407,10 @@ static int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg,
 				continue;
 			}
 
-			if (!header_printed && NO_JSON(params)) {
-				fprintf(out, "%14s %14s %30s\n", "IP", "score",
+			if (!item_printed && NO_JSON(params))
+				fprintf(out, "%15s %10s %30s\n", "IP", "score",
 					"expires");
-				header_printed = true;
-			}
+			print_value_separator(out, params, item_printed);
 			print_start_block(out, params);
 
 			print_time_ival7(tmpbuf, t, time(NULL));
@@ -1142,15 +1423,13 @@ static int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg,
 				print_single_value_int(out, params, "Score",
 						       rep->info[i]->score, 0);
 			} else {
-				fprintf(out, "%14s %14u %30s (%s)\n", txt_ip,
-					(unsigned int)rep->info[i]->score,
-					str_since, tmpbuf);
+				fprintf(out, "%15s %10u %30s (%s)\n", txt_ip,
+					rep->info[i]->score, str_since, tmpbuf);
 			}
 		} else {
-			if (!header_printed && NO_JSON(params)) {
-				fprintf(out, "%14s %14s\n", "IP", "score");
-				header_printed = true;
-			}
+			if (!item_printed && NO_JSON(params))
+				fprintf(out, "%15s %10s\n", "IP", "score");
+			print_value_separator(out, params, item_printed);
 			print_start_block(out, params);
 
 			if (HAVE_JSON(params)) {
@@ -1159,16 +1438,19 @@ static int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg,
 				print_single_value_int(out, params, "Score",
 						       rep->info[i]->score, 0);
 			} else {
-				fprintf(out, "%14s %14u\n", txt_ip,
-					(unsigned int)rep->info[i]->score);
+				fprintf(out, "%15s %10u\n", txt_ip,
+					rep->info[i]->score);
 			}
 		}
 
-		print_end_block(out, params, i < (rep->n_info - 1) ? 1 : 0);
+		print_end_block_simple(out, params);
+		item_printed = true;
 
 		ip_entries_add(ctx, txt_ip, strlen(txt_ip));
 	}
 
+	if (item_printed && HAVE_JSON(params))
+		fprintf(out, "\n");
 	print_end_array_block(out, params);
 
 	ret = 0;
@@ -1211,7 +1493,8 @@ static int common_info_cmd(UserListRep *args, FILE *out, cmd_params_st *params)
 {
 	char *username;
 	char *groupname;
-	char str_since[64];
+	char str_last_connect[64];
+	char str_session_start[64];
 	char tmpbuf[MAX_TMPSTR_SIZE];
 	char tmpbuf2[MAX_TMPSTR_SIZE];
 	struct tm *tm, _tm;
@@ -1239,7 +1522,13 @@ static int common_info_cmd(UserListRep *args, FILE *out, cmd_params_st *params)
 
 		t = args->user[i]->conn_time;
 		tm = localtime_r(&t, &_tm);
-		strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
+		strftime(str_last_connect, sizeof(str_last_connect),
+			 DATE_TIME_FMT, tm);
+
+		t = args->user[i]->session_start_time;
+		tm = localtime_r(&t, &_tm);
+		strftime(str_session_start, sizeof(str_session_start),
+			 DATE_TIME_FMT, tm);
 
 		username = args->user[i]->username;
 		if (username == NULL || username[0] == 0)
@@ -1331,13 +1620,20 @@ static int common_info_cmd(UserListRep *args, FILE *out, cmd_params_st *params)
 		print_single_value(out, params, "Hostname",
 				   args->user[i]->hostname, 1);
 
-		print_time_ival7(tmpbuf, time(NULL), t);
-		print_single_value_ex(out, params, "Connected at", str_since,
-				      tmpbuf, 1);
+		print_time_ival7(tmpbuf, time(NULL), args->user[i]->conn_time);
+		print_single_value_ex(out, params, "Last connected at",
+				      str_last_connect, tmpbuf, 1);
+		print_time_ival7(tmpbuf, time(NULL),
+				 args->user[i]->session_start_time);
+		print_single_value_ex(out, params, "Session started at",
+				      str_session_start, tmpbuf, 1);
 
 		if (HAVE_JSON(params)) {
 			print_single_value_int(out, params, "raw_connected_at",
-					       t, 1);
+					       args->user[i]->conn_time, 1);
+			print_single_value_int(
+				out, params, "raw_session_started_at",
+				args->user[i]->session_start_time, 1);
 			print_single_value(out, params, "Full session",
 					   shorten(args->user[i]->safe_id.data,
 						   args->user[i]->safe_id.len,
@@ -1452,25 +1748,20 @@ static int session_info_cmd(void *ctx, SecmListCookiesReplyMsg *args, FILE *out,
 	time_t t;
 	unsigned int at_least_one = 0;
 	int ret = 1;
-	unsigned int i;
+	unsigned int i, j;
 	const char *sid;
 	unsigned int init_pager = 0;
 	unsigned int match_len = 0;
+	unsigned int n_visible = 0;
+	unsigned int vis[args->n_cookies > 0 ? args->n_cookies : 1];
 	char tmpbuf[MAX_TMPSTR_SIZE];
 
 	if (lsid)
 		match_len = strlen(lsid);
 
-	if (out == NULL) {
-		out = pager_start(params);
-		init_pager = 1;
-	}
-
-	if (HAVE_JSON(params))
-		fprintf(out, "[\n");
-
+	/* Pre-pass: populate session_entries for tab-completion and collect
+	 * the indices of entries that will actually be printed into vis[]. */
 	session_entries_clear();
-
 	for (i = 0; i < args->n_cookies; i++) {
 		if (!all && args->cookies[i]->status != PS_AUTH_COMPLETED &&
 		    lsid == NULL)
@@ -1483,7 +1774,23 @@ static int session_info_cmd(void *ctx, SecmListCookiesReplyMsg *args, FILE *out,
 		if (lsid && strncmp(sid, lsid, match_len) != 0)
 			continue;
 
-		if (at_least_one > 0)
+		vis[n_visible++] = i;
+	}
+
+	if (out == NULL) {
+		out = pager_start(params);
+		init_pager = 1;
+	}
+
+	if (HAVE_JSON(params))
+		fprintf(out, "[\n");
+
+	for (j = 0; j < n_visible; j++) {
+		i = vis[j];
+		sid = shorten(args->cookies[i]->safe_id.data,
+			      args->cookies[i]->safe_id.len, 1);
+
+		if (j > 0)
 			fprintf(out, "\n");
 
 		print_start_block(out, params);
@@ -1589,7 +1896,7 @@ static int session_info_cmd(void *ctx, SecmListCookiesReplyMsg *args, FILE *out,
 		}
 #endif
 
-		print_end_block(out, params, i < (args->n_cookies - 1) ? 1 : 0);
+		print_end_block(out, params, j < n_visible - 1);
 
 		at_least_one = 1;
 	}

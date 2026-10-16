@@ -113,7 +113,7 @@ static int group_cfg_ini_handler(void *_ctx, const char *section,
 	} else if (strcmp(name, "restrict-user-to-routes") == 0) {
 		READ_TF(msg->config->restrict_user_to_routes,
 			msg->config->has_restrict_user_to_routes);
-	} else if (strcmp(name, "tunnel_all_dns") == 0) {
+	} else if (strcmp(name, "tunnel-all-dns") == 0) {
 		READ_TF(msg->config->tunnel_all_dns,
 			msg->config->has_tunnel_all_dns);
 	} else if (strcmp(name, "deny-roaming") == 0) {
@@ -142,8 +142,6 @@ static int group_cfg_ini_handler(void *_ctx, const char *section,
 		READ_RAW_MULTI_LINE(msg->config->nbns, msg->config->n_nbns);
 	} else if (strcmp(name, "ipv6-nbns") == 0) {
 		READ_RAW_MULTI_LINE(msg->config->nbns, msg->config->n_nbns);
-	} else if (strcmp(name, "cgroup") == 0) {
-		READ_RAW_STRING(msg->config->cgroup);
 	} else if (strcmp(name, "ipv4-network") == 0) {
 		READ_RAW_STRING(msg->config->ipv4_net);
 		prefix4 = extract_prefix(msg->config->ipv4_net);
@@ -239,7 +237,7 @@ static int group_cfg_ini_handler(void *_ctx, const char *section,
  * config. The provided config must either be memset to zero, or be
  * already allocated using this function.
  */
-static int parse_group_cfg_file(struct cfg_st *global_config,
+static int parse_group_cfg_file(ReloadableConfig *global_config,
 				SecmSessionReplyMsg *msg, void *pool,
 				const char *file)
 {
@@ -291,7 +289,7 @@ fail:
 	return ret;
 }
 
-static int read_sup_config_file(struct cfg_st *global_config,
+static int read_sup_config_file(ReloadableConfig *global_config,
 				SecmSessionReplyMsg *msg, void *pool,
 				const char *file, const char *fallback,
 				const char *type)
@@ -321,7 +319,7 @@ static int read_sup_config_file(struct cfg_st *global_config,
 	return 0;
 }
 
-static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
+static int get_sup_config(ReloadableConfig *cfg, client_entry_st *entry,
 			  SecmSessionReplyMsg *msg, void *pool)
 {
 	char file[_POSIX_PATH_MAX];

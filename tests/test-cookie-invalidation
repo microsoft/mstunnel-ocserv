@@ -25,8 +25,8 @@ srcdir=${srcdir:-.}
 
 eval "${GETPORT}"
 
-PIDFILE1="${srcdir}/ci$$-1.pid.tmp"
-PIDFILE2="${srcdir}/ci$$-2.pid.tmp"
+PIDFILE1="ci$$-1.pid.tmp"
+PIDFILE2="ci$$-2.pid.tmp"
 echo "Testing whether cookies are being correctly invalidated... "
 rm -f "${PIDFILE1}" "${PIDFILE2}"
 

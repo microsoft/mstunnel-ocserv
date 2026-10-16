@@ -45,7 +45,7 @@ static void free_expanded_brackets_string(subcfg_val_st out[MAX_SUBOPTIONS],
 static unsigned int expand_brackets_string(void *pool, const char *str,
 					   subcfg_val_st out[MAX_SUBOPTIONS])
 {
-	char *p, *p2, *p3;
+	const char *p, *p2, *p3;
 	unsigned int len, len2;
 	unsigned int pos = 0, finish = 0;
 
@@ -104,7 +104,7 @@ static unsigned int expand_brackets_string(void *pool, const char *str,
 }
 
 #ifdef HAVE_GSSAPI
-void *gssapi_get_brackets_string(void *pool, struct perm_cfg_st *config,
+void *gssapi_get_brackets_string(void *pool, struct static_cfg_st *config,
 				 const char *str)
 {
 	subcfg_val_st vals[MAX_SUBOPTIONS];
@@ -152,7 +152,7 @@ void *gssapi_get_brackets_string(void *pool, struct perm_cfg_st *config,
 
 void *get_brackets_string1(void *pool, const char *str)
 {
-	char *p, *p2;
+	const char *p, *p2;
 	unsigned int len;
 
 	p = strchr(str, '[');
@@ -180,7 +180,7 @@ void *get_brackets_string1(void *pool, const char *str)
 #ifdef HAVE_RADIUS
 static void *get_brackets_string2(void *pool, const char *str)
 {
-	char *p, *p2;
+	const char *p, *p2;
 	unsigned int len;
 
 	p = strchr(str, '[');
@@ -212,10 +212,10 @@ static void *get_brackets_string2(void *pool, const char *str)
 	return talloc_strndup(pool, p, len);
 }
 
-void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config,
+void *radius_get_brackets_string(void *pool, struct static_cfg_st *config,
 				 const char *str)
 {
-	char *p;
+	const char *p;
 	subcfg_val_st vals[MAX_SUBOPTIONS];
 	unsigned int vals_size, i;
 	radius_cfg_st *additional;
@@ -250,6 +250,19 @@ void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config,
 				   0) {
 				additional->nas_identifier = vals[i].value;
 				vals[i].value = NULL;
+			} else if (strcasecmp(vals[i].name,
+					      "group-separator") == 0) {
+				if (strcasecmp(vals[i].value, "comma") == 0)
+					additional->group_separator = ",";
+				else if (strcasecmp(vals[i].value,
+						    "semicolon") == 0)
+					additional->group_separator = ";";
+				else {
+					fprintf(stderr,
+						"unknown group-separator value '%s'; use 'semicolon' or 'comma'\n",
+						vals[i].value);
+					exit(EXIT_FAILURE);
+				}
 			} else if (strcasecmp(vals[i].name, "groupconfig") ==
 				   0) {
 				if (CHECK_TRUE(vals[i].value))
@@ -274,7 +287,7 @@ void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config,
 #endif
 
 #ifdef HAVE_PAM
-void *pam_get_brackets_string(void *pool, struct perm_cfg_st *config,
+void *pam_get_brackets_string(void *pool, struct static_cfg_st *config,
 			      const char *str)
 {
 	subcfg_val_st vals[MAX_SUBOPTIONS];
@@ -296,6 +309,9 @@ void *pam_get_brackets_string(void *pool, struct perm_cfg_st *config,
 					additional->gid_min);
 				exit(EXIT_FAILURE);
 			}
+		} else if (strcasecmp(vals[i].name, "service") == 0) {
+			additional->service_name = vals[i].value;
+			vals[i].value = NULL;
 		} else if (strcasecmp(vals[i].name, "use-token") == 0) {
 			additional->use_token = CHECK_TRUE(vals[i].value);
 		} else {
@@ -309,7 +325,7 @@ void *pam_get_brackets_string(void *pool, struct perm_cfg_st *config,
 }
 #endif
 
-void *plain_get_brackets_string(void *pool, struct perm_cfg_st *config,
+void *plain_get_brackets_string(void *pool, struct static_cfg_st *config,
 				const char *str)
 {
 	subcfg_val_st vals[MAX_SUBOPTIONS];
@@ -352,7 +368,7 @@ void *plain_get_brackets_string(void *pool, struct perm_cfg_st *config,
 	return additional;
 }
 
-void *oidc_get_brackets_string(void *pool, struct perm_cfg_st *config,
+void *oidc_get_brackets_string(void *pool, struct static_cfg_st *config,
 			       const char *str)
 {
 	subcfg_val_st vals[MAX_SUBOPTIONS];

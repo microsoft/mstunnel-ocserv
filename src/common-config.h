@@ -48,6 +48,8 @@ typedef struct gssapi_cfg_st {
 typedef struct radius_cfg_st {
 	char *config;
 	char *nas_identifier;
+	/* separator character(s) used in OU= Class attributes */
+	const char *group_separator;
 } radius_cfg_st;
 
 typedef struct plain_cfg_st {
@@ -56,6 +58,7 @@ typedef struct plain_cfg_st {
 } plain_cfg_st;
 
 typedef struct pam_cfg_st {
+	char *service_name;
 	int gid_min;
 	bool use_token;
 } pam_cfg_st;
@@ -66,18 +69,18 @@ typedef struct pam_cfg_st {
 		 1 :                                                       \
 		 0)
 
-struct perm_cfg_st;
+struct static_cfg_st;
 
 void *get_brackets_string1(void *pool, const char *str);
-void *gssapi_get_brackets_string(void *pool, struct perm_cfg_st *config,
+void *gssapi_get_brackets_string(void *pool, struct static_cfg_st *config,
 				 const char *str);
-void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config,
+void *radius_get_brackets_string(void *pool, struct static_cfg_st *config,
 				 const char *str);
-void *pam_get_brackets_string(void *pool, struct perm_cfg_st *config,
+void *pam_get_brackets_string(void *pool, struct static_cfg_st *config,
 			      const char *str);
-void *plain_get_brackets_string(void *pool, struct perm_cfg_st *config,
+void *plain_get_brackets_string(void *pool, struct static_cfg_st *config,
 				const char *str);
-void *oidc_get_brackets_string(void *pool, struct perm_cfg_st *config,
+void *oidc_get_brackets_string(void *pool, struct static_cfg_st *config,
 			       const char *str);
 
 void parse_kkdcp_string(char *str, int *socktype, char **_port, char **_server,

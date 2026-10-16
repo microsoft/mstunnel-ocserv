@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2026 Nikos Mavrogiannopoulos
  *
  * Author: Nikos Mavrogiannopoulos
  *
@@ -134,6 +134,7 @@ struct http_req_st {
 	str_st header;
 	str_st value;
 	unsigned int header_state;
+	size_t header_bytes;
 
 	char devtype[MAX_AGENT_NAME]; /* Device-Type */
 	char devplatform[MAX_AGENT_NAME]; /* Device-Platform */
@@ -158,7 +159,14 @@ struct http_req_st {
 
 	unsigned int headers_complete;
 	unsigned int message_complete;
+	/* link_mtu: peer's path (outer) MTU from X-CSTP-Base-MTU header.
+	 * Includes IP + UDP + DTLS record + crypto + CSTP framing headers.
+	 * Stored in ws->link_mtu after negotiation. */
 	unsigned int link_mtu;
+	/* tunnel_mtu: peer's plaintext (inner) MTU from X-CSTP-MTU header.
+	 * Legacy field from old clients that omit X-CSTP-Base-MTU.
+	 * Represents DATA_MTU(ws, link_mtu): usable payload after all
+	 * overhead is subtracted. */
 	unsigned int tunnel_mtu;
 
 	unsigned int no_ipv4;
@@ -199,7 +207,7 @@ typedef struct worker_st {
 
 	struct http_req_st req;
 
-	/* inique session identifier */
+	/* unique session identifier */
 	uint8_t sid[SID_SIZE];
 	unsigned int sid_set;
 
@@ -213,8 +221,8 @@ typedef struct worker_st {
 
 	/* pointer inside vconfig */
 #define WSCREDS(ws) (&ws->vhost->creds)
-#define WSCONFIG(ws) (ws->vhost->perm_config.config)
-#define WSPCONFIG(ws) (&ws->vhost->perm_config)
+#define WSRCONFIG(ws) (ws->vhost->config)
+#define WSSCONFIG(ws) (&ws->vhost->static_config)
 	struct vhost_cfg_st *vhost;
 
 	unsigned int auth_state; /* S_AUTH */
@@ -267,11 +275,16 @@ typedef struct worker_st {
 	bandwidth_st b_tx;
 	bandwidth_st b_rx;
 
-	/* ws->link_mtu: The MTU of the link of the connecting. The plaintext
-	 *  data we can send to the client (i.e., MTU of the tun device,
-	 *  can be accessed using the DATA_MTU() macro and this value. */
+	/* link_mtu: negotiated outer MTU for this session.
+	 * Outer = IP + UDP + DTLS record + crypto + CSTP framing headers.
+	 * The plaintext payload that fits in one DTLS frame is
+	 *   DATA_MTU(ws, link_mtu) = link_mtu - dtls_proto_overhead
+	 *                                      - dtls_crypto_overhead.
+	 * Always >= MIN_MTU(ws) after negotiation. */
 	unsigned int link_mtu;
-	unsigned int adv_link_mtu; /* the MTU advertised on connection setup */
+	/* adv_link_mtu: link_mtu advertised to the peer at connect time.
+	 * Used as a ceiling so MTU probing never exceeds what we promised. */
+	unsigned int adv_link_mtu;
 
 	unsigned int
 		cstp_crypto_overhead; /* estimated overhead of DTLS ciphersuite + DTLS CSTP HEADER */
@@ -295,6 +308,7 @@ typedef struct worker_st {
 
 	char username[MAX_USERNAME_SIZE];
 	char groupname[MAX_GROUPNAME_SIZE];
+	unsigned int groupname_url_forced;
 
 	char cert_username[MAX_USERNAME_SIZE];
 	char **cert_groups;
@@ -318,6 +332,10 @@ typedef struct worker_st {
 	/* tun device stats */
 	uint64_t tun_bytes_in;
 	uint64_t tun_bytes_out;
+
+	/* packet held while writing to tun fd returns EAGAIN; NULL otherwise */
+	uint8_t *tun_pending;
+	size_t tun_pending_len;
 
 	/* information on the tun device addresses and network */
 	struct vpn_st vinfo;
@@ -347,10 +365,6 @@ int auth_user_deinit(worker_st *ws);
 int get_auth_handler(worker_st *server, unsigned int http_ver);
 int post_auth_handler(worker_st *server, unsigned int http_ver);
 int post_kkdcp_handler(worker_st *server, unsigned int http_ver);
-int get_cert_handler(worker_st *ws, unsigned int http_ver);
-int get_cert_der_handler(worker_st *ws, unsigned int http_ver);
-int get_ca_handler(worker_st *ws, unsigned int http_ver);
-int get_ca_der_handler(worker_st *ws, unsigned int http_ver);
 int get_svc_handler(worker_st *ws, unsigned int http_ver);
 int post_svc_handler(worker_st *ws, unsigned int http_ver);
 
@@ -372,12 +386,14 @@ int http_header_value_cb(llhttp_t *parser, const char *at, size_t length);
 int http_header_field_cb(llhttp_t *parser, const char *at, size_t length);
 int http_header_complete_cb(llhttp_t *parser);
 int http_message_complete_cb(llhttp_t *parser);
+int http_message_begin_cb(llhttp_t *parser);
 int http_body_cb(llhttp_t *parser, const char *at, size_t length);
 void http_req_deinit(worker_st *ws);
 void http_req_reset(worker_st *ws);
 void http_req_init(worker_st *ws);
 
 unsigned int valid_hostname(const char *host);
+void strip_domain(char *host);
 
 url_handler_fn http_get_url_handler(const char *url);
 url_handler_fn http_post_url_handler(worker_st *ws, const char *url);

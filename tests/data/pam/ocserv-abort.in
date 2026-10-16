@@ -1,0 +1,4 @@
+#%PAM-1.0
+auth       required	@PAM_ABORT_MOD@
+account    sufficient	pam_permit.so
+session    sufficient	pam_permit.so

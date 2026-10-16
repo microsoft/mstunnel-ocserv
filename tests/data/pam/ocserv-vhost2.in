@@ -1,0 +1,5 @@
+#%PAM-1.0
+auth       required	@PAMWRAPDIR@/pam_matrix.so passdb=%PAM_WRAPPER_SERVICE_DIR%/passdb-vhost2
+account    required	@PAMWRAPDIR@/pam_matrix.so passdb=%PAM_WRAPPER_SERVICE_DIR%/passdb-vhost2
+account    required	@PAMWRAPDIR@/pam_matrix.so passdb=%PAM_WRAPPER_SERVICE_DIR%/passdb-vhost2
+session    required	@PAMWRAPDIR@/pam_matrix.so passdb=%PAM_WRAPPER_SERVICE_DIR%/passdb-vhost2

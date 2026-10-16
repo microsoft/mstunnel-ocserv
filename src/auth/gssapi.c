@@ -67,7 +67,7 @@ static void print_gss_err(const char *where, gss_OID mech, OM_uint32 err_maj,
 					   mech, &msg_ctx, &status);
 		if (GSS_ERROR(major))
 			break;
-		oc_syslog(LOG_ERR, "gssapi: %s[maj]: %s\n", where,
+		oc_syslog(LOG_ERR, "gssapi: %s[maj]: %s", where,
 			  (char *)status.value);
 		gss_release_buffer(&minor, &status);
 	} while (msg_ctx);
@@ -78,7 +78,7 @@ static void print_gss_err(const char *where, gss_OID mech, OM_uint32 err_maj,
 					   mech, &msg_ctx, &status);
 		if (GSS_ERROR(major))
 			break;
-		oc_syslog(LOG_ERR, "gssapi: %s[min]: %s\n", where,
+		oc_syslog(LOG_ERR, "gssapi: %s[min]: %s", where,
 			  (char *)status.value);
 		gss_release_buffer(&minor, &status);
 	} while (msg_ctx);

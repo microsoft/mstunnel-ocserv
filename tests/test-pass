@@ -41,6 +41,12 @@ echo "Connecting to obtain cookie with wrong password... "
 ( echo "tost" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie when we shouldn't"
 
+# Regression test for https://gitlab.com/openconnect/ocserv/-/work_items/323:
+# wrong password on first attempt followed by correct password must succeed.
+echo "Connecting with wrong password first, then correct password (retry in same session)... "
+( printf "wrongpass\ntest\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --passwd-on-stdin -q $ADDRESS:$PORT -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly ) ||
+	fail $PID "Could not obtain cookie after retrying with correct password in same session"
+
 echo "Connecting to obtain cookie with empty password... "
 ( echo -e "\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie when we shouldn't"

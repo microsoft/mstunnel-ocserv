@@ -35,6 +35,7 @@
 struct radius_vhost_ctx {
 	rc_handle *rh;
 	char nas_identifier[64];
+	char group_separator[2]; /* separator used in OU= Class attributes */
 };
 
 struct radius_ctx_st {
@@ -73,6 +74,7 @@ struct radius_ctx_st {
 
 	struct radius_vhost_ctx *vctx;
 	char *state;
+	unsigned int state_len;
 	unsigned int passwd_counter;
 	size_t prev_prompt_hash;
 };

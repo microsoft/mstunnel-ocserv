@@ -27,7 +27,7 @@ eval "${GETPORT}"
 
 echo "Testing ocserv and user route application... "
 
-rm -f ${srcdir}/test-iroute.tmp
+rm -f test-iroute.tmp
 
 update_config test-iroute.config
 launch_server -d 1 -f -c "${CONFIG}" & PID=$!
@@ -50,19 +50,19 @@ kill $kpid
 sleep 1
 echo -n "Checking if routes have been applied... "
 
-if [ ! -f ${srcdir}/test-iroute.tmp ];then
+if [ ! -f test-iroute.tmp ];then
 	fail $PID "Temporary file cannot be found"
 fi
 
-CONTENTS=`cat ${srcdir}/test-iroute.tmp`
+CONTENTS=`cat test-iroute.tmp`
 if [[ "$CONTENTS" =~ "192.168.1.0/255.255.255.0 192.168.1.0/24 [vpns|tun]$" ]];then
-	cat ${srcdir}/test-iroute.tmp
+	cat test-iroute.tmp
 	fail $PID "Temporary file contents are not correct"
 fi
 
 echo ok
 
-rm -f ${srcdir}/test-iroute.tmp ${CONFIG}
+rm -f test-iroute.tmp ${CONFIG}
 
 kill $PID
 wait

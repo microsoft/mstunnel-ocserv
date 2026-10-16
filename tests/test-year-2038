@@ -1,0 +1,122 @@
+#!/bin/bash
+#
+# Copyright (C) 2026 Grigory Trenin
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# Test ocserv compatibility with year 2038
+
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+OCCTL_SOCKET=./occtl-faketime-$$.socket
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+PATH=${PATH}:/usr/sbin
+OUTFILE=occtl-faketime.$$.tmp
+USERNAME=test
+FAKETIME_CMD=$(command -v faketime)
+FAKETIME_DATE=2038-10-01
+
+if test -z "${FAKETIME_CMD}";then
+	echo "you need faketime utility to run this test"
+	exit 77
+fi
+
+if test "${DISABLE_ASAN_BROKEN_TESTS}" = 1;then
+	echo "libfaketime has known issues with ASAN. Skipping test."
+	exit 77
+fi
+
+if test "$(getconf LONG_BIT)" = "32";then
+	echo "32-bit systems are natively Y2038-limited. Skipping test."
+	exit 77
+fi
+
+if test -z ${FAKETIME};then
+	exec ${FAKETIME_CMD} ${FAKETIME_DATE} $0 $*
+fi
+
+echo "Testing whether ocserv works in year $(date +%Y)... "
+
+function finish {
+	set +e
+	echo " * Cleaning up..."
+	test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+	test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
+	test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+	test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
+	test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+	rm -f ${OUTFILE}
+}
+
+. `dirname $0`/common.sh
+. `dirname $0`/random-net.sh
+. `dirname $0`/ns.sh
+
+eval "${GETPORT}"
+
+# Run server
+update_config test-traffic.config
+if test "$VERBOSE" = 1;then
+	DEBUG="-d 3"
+fi
+
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+
+sleep 4
+
+# Run client
+echo " * Connecting to ${ADDRESS}:${PORT}..."
+( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+if test $? != 0;then
+	echo "Could not connect to server"
+	exit 1
+fi
+
+set -e
+echo " * ping remote address"
+${CMDNS1} ping -c 3 ${VPNADDR}
+set +e
+
+${OCCTL} -s ${OCCTL_SOCKET} show status >${OUTFILE}
+if test $? != 0;then
+	echo "occtl show status failed!"
+	cat ${OUTFILE}
+	exit 1
+fi
+
+START_DATE=$(awk '/Up since:/ {print $3}' ${OUTFILE})
+if test "${START_DATE}" != "${FAKETIME_DATE}";then
+	echo "Incorrect server start date. Expected: ${FAKETIME_DATE}, found: ${START_DATE}"
+	exit 1
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME} >${OUTFILE}
+if test $? != 0;then
+	echo "occtl show user ${USERNAME} failed!"
+	cat ${OUTFILE}
+	exit 1
+fi
+
+START_DATE=$(awk '/Session started at:/ {print $4}' ${OUTFILE})
+if test "${START_DATE}" != "${FAKETIME_DATE}";then
+	echo "Incorrect session start date. Expected: ${FAKETIME_DATE}, found: ${START_DATE}"
+	exit 1
+fi
+
+exit 0

@@ -1,0 +1,113 @@
+#!/bin/bash
+#
+# Copyright (C) 2026 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+# Regression test for is_data() IPv6 offset bug: ICMPv6 Next Header is at
+# byte offset 6 of the IPv6 fixed header, not offset 9 (which is the correct
+# offset only for the IPv4 Protocol field).  With the bug present, ICMPv6
+# traffic is misclassified as data traffic and resets the idle timer, so the
+# server never disconnects a client that sends only ICMPv6 packets.  This test
+# expects the server to enforce idle-timeout even when ICMPv6 (ping6) traffic
+# is flowing continuously.
+
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+OCCTL_SOCKET=./occtl-idle6-$$.socket
+PIDFILE=ocserv-pid.$$.tmp
+CPIDFILE=openpid.$$.tmp
+
+function finish {
+  echo " * Cleaning up..."
+  test -n "${PING6PID}" && kill "${PING6PID}" >/dev/null 2>&1 || true
+  CLIPID=${CPIDFILE} cleanup_client_server
+}
+trap finish EXIT
+
+. `dirname $0`/random-net.sh
+. `dirname $0`/common.sh
+. `dirname $0`/ns.sh
+
+eval "${GETPORT}"
+
+echo "Testing that idle timeout fires despite continuous ICMPv6 traffic..."
+
+update_config idle-timeout-icmpv6.config
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} -d 3 &
+PID=$!
+
+sleep 5
+
+echo "Connecting to obtain cookie..."
+eval `echo "test" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} \
+	-u test --authenticate \
+	--servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8=`
+
+if [ -z "$COOKIE" ]; then
+	fail $PID "Could not obtain cookie"
+fi
+
+sleep 1
+echo "Connecting with cookie..."
+${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u test -C "$COOKIE" \
+	--servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= \
+	-s "${srcdir}/scripts/vpnc-script" \
+	--background --pid-file "${CPIDFILE}"
+
+sleep 4
+
+if [ ! -f "${CPIDFILE}" ]; then
+	fail $PID "It was not possible to establish session!"
+fi
+
+echo "Verifying initial IPv6 connectivity..."
+set -e
+${CMDNS1} ping -6 -c 3 ${VPNADDR6}
+${CMDNS2} ${OCCTL} -s ${OCCTL_SOCKET} show user test
+set +e
+
+# Keep sending ICMPv6 Echo Requests through the tunnel for the duration of the
+# wait.  ICMPv6 (Next Header = 0x3A at offset 6) must not be counted as data
+# traffic by is_data(), so the idle timer must not be reset and the server
+# must disconnect the client after idle-timeout = 25 s.
+#
+# With the bug (data[9] instead of data[6] for IPv6): is_data() never matches
+# 0x3A at the wrong offset, treats ICMPv6 as data, keeps resetting the timer,
+# and the client is never disconnected → this test fails.
+echo "Sending ICMPv6 traffic during idle window (idle-timeout = 25 s)..."
+${CMDNS1} ping -6 -i 2 -c 30 ${VPNADDR6} >/dev/null 2>&1 &
+PING6PID=$!
+
+# Wait well past idle-timeout (25 s) plus the server's enforcement period.
+sleep 60
+
+wait "${PING6PID}" 2>/dev/null || true
+PING6PID=
+
+${CMDNS2} ${OCCTL} -s ${OCCTL_SOCKET} show user test
+if test $? = 0; then
+	fail $PID "Client still listed in occtl after idle-timeout despite only ICMPv6 traffic!"
+fi
+
+${CMDNS1} ping -6 -c 3 ${VPNADDR6}
+if test $? = 0; then
+	fail $PID "Client remains reachable via IPv6 after idle-timeout!"
+fi
+
+exit 0

@@ -25,7 +25,7 @@ PIDFILE=ocserv-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
 CLIPID2=oc-pid.2.$$.tmp
 PATH=${PATH}:/usr/sbin
-IP=$(which ip)
+IP=$(command -v ip)
 OUTFILE=traffic.$$.tmp
 
 . `dirname $0`/common.sh
@@ -47,12 +47,13 @@ echo "Testing ocserv connection via haproxy... "
 function finish {
   set +e
   echo " * Cleaning up..."
+  test -n "${CLIPID}" && test -f "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
+  test -n "${CLIPID2}" && test -f "${CLIPID2}" && kill $(cat ${CLIPID2}) >/dev/null 2>&1
+  test -n "${CLIPID2}" && rm -f ${CLIPID2} >/dev/null 2>&1
+  sleep 2
   test -n "${PID}" && kill ${PID} >/dev/null 2>&1
   test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
-  test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
-  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
-  test -n "${CLIPID2}" && kill $(cat ${CLIPID2}) >/dev/null 2>&1
-  test -n "${CLIPID2}" && rm -f ${CLIPID2} >/dev/null 2>&1
   test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
   rm -f ${OUTFILE} 2>&1
 }

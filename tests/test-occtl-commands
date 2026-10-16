@@ -1,0 +1,426 @@
+#!/bin/bash
+#
+# Copyright (C) 2026 Red Hat
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# This test validates occtl commands:
+# - show status (with known output values)
+# - reload (with banner change verification)
+# - show iroutes
+# - disconnect id
+# - show id
+# - show sessions all / show sessions valid
+# - show session <SID>
+# - terminate user
+# - show ip ban points / show ip bans / unban ip
+
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+TMPFILE=ocfile.$$.tmp
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+OUTFILE=occtl-cmds.$$.tmp
+OCCTL_SOCKET=./occtl-cmds-$$.socket
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+
+if test "$(id -u)" != "0";then
+	echo "This test must be run as root"
+	exit 77
+fi
+
+function finish {
+  echo " * Cleaning up..."
+  cleanup_client_server
+  test -n "${TMPFILE}" && rm -f ${TMPFILE} >/dev/null 2>&1
+  test -n "${OUTFILE}" && rm -f ${OUTFILE} >/dev/null 2>&1
+}
+trap finish EXIT
+
+# server address
+. `dirname $0`/random-net.sh
+. `dirname $0`/ns.sh
+
+echo "Testing ocserv occtl commands..."
+
+update_config test-occtl-commands.config
+if test "$VERBOSE" = 1;then
+	DEBUG="-d 3"
+fi
+
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+
+sleep 4
+
+get_cookie() {
+	echo " * Getting cookie from ${ADDRESS}:${PORT}..."
+	( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --authenticate >${TMPFILE} )
+	if test $? != 0;then
+		fail $PID "Could not get cookie from server"
+	fi
+
+	unset COOKIE
+	eval $(cat ${TMPFILE})
+	if test -z "${COOKIE}";then
+		fail $PID "Cookie was not returned by server"
+	fi
+}
+
+connect_with_cookie() {
+	echo " * Connecting to ${ADDRESS}:${PORT}..."
+	rm -f ${CLIPID}
+	( ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script -C "${1}" --pid-file=${CLIPID} -b )
+	if test $? != 0;then
+		fail $PID "Could not connect to server"
+	fi
+
+	sleep 2
+	if test ! -f "${CLIPID}";then
+		fail $PID "Connection did not create pid file"
+	fi
+}
+
+assert_cookie_rejected() {
+	echo " * Re-connecting with old cookie (must fail)..."
+	rm -f ${CLIPID}
+	( ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s /bin/true -C "${1}" --pid-file=${CLIPID} -b )
+	if test $? = 0;then
+		fail $PID "Succeeded using invalidated cookie to reconnect"
+	fi
+
+	sleep 2
+	if test -f "${CLIPID}";then
+		fail $PID "Reconnection unexpectedly left an active client process"
+	fi
+}
+
+# -----------------------------------------------------------------------
+# Section 1: show status — output content
+# -----------------------------------------------------------------------
+echo ""
+echo "Section 1: show status..."
+
+get_cookie
+connect_with_cookie "${COOKIE}"
+
+${OCCTL} -s ${OCCTL_SOCKET} show status >${OUTFILE}
+if test $? != 0;then
+	fail $PID "occtl show status failed"
+fi
+
+grep "Active sessions: 1" ${OUTFILE}
+if test $? != 0;then
+	echo "Expected 'Active sessions: 1' not found in show status output"
+	cat ${OUTFILE}
+	fail $PID "show status active sessions count mismatch"
+fi
+
+grep "Server PID:" ${OUTFILE}
+if test $? != 0;then
+	fail $PID "show status missing Server PID field"
+fi
+
+grep "IPs in ban list: 0" ${OUTFILE}
+if test $? != 0;then
+	echo "Expected 'IPs in ban list: 0' not found in show status output"
+	cat ${OUTFILE}
+	fail $PID "show status ban list count mismatch"
+fi
+
+kill "$(cat ${CLIPID})" 2>/dev/null || true
+rm -f "${CLIPID}"
+sleep 2
+reset_client_routes
+
+# -----------------------------------------------------------------------
+# Section 2: reload — functional with banner change verification
+# -----------------------------------------------------------------------
+echo ""
+echo "Section 2: reload with banner change..."
+
+# Change the banner in the live config file
+sed -i 's/OCSERV_BANNER_BEFORE/OCSERV_BANNER_AFTER/' ${CONFIG}
+
+${OCCTL} -s ${OCCTL_SOCKET} reload
+if test $? != 0;then
+	fail $PID "occtl reload failed"
+fi
+
+sleep 3
+
+# Connect with wrong password — banner appears in openconnect output (stdout+stderr)
+echo "wrongpass" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin \
+	${ADDRESS}:${PORT} -u test --cookieonly \
+	--servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= \
+	>${OUTFILE} 2>&1 || true
+
+grep "OCSERV_BANNER_AFTER" ${OUTFILE}
+if test $? != 0;then
+	echo "New banner not found after reload"
+	cat ${OUTFILE}
+	fail $PID "reload did not apply new pre-login-banner"
+fi
+
+grep "OCSERV_BANNER_BEFORE" ${OUTFILE} >/dev/null 2>&1
+if test $? = 0;then
+	fail $PID "Old banner still active after reload"
+fi
+
+# -----------------------------------------------------------------------
+# Section 3: show iroutes — command completeness
+# -----------------------------------------------------------------------
+echo ""
+echo "Section 3: show iroutes..."
+
+${OCCTL} -s ${OCCTL_SOCKET} show iroutes
+if test $? != 0;then
+	fail $PID "occtl show iroutes failed"
+fi
+
+# -----------------------------------------------------------------------
+# Section 4: disconnect id — functional
+# -----------------------------------------------------------------------
+echo ""
+echo "Section 4: disconnect id..."
+
+get_cookie
+connect_with_cookie "${COOKIE}"
+
+ID=$(${OCCTL} -s ${OCCTL_SOCKET} --json show users 2>${OUTFILE} | jq -r '.[] | select(.Username == "test") | .ID // empty' | head -n1)
+if test -z "${ID}";then
+	fail $PID "Could not extract user ID from occtl show users output"
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} disconnect id ${ID}
+if test $? != 0;then
+	fail $PID "occtl disconnect id failed"
+fi
+
+kill "$(cat ${CLIPID})" 2>/dev/null || true
+rm -f "${CLIPID}"
+sleep 2
+reset_client_routes
+
+${OCCTL} -s ${OCCTL_SOCKET} show user test >/dev/null 2>&1
+if test $? = 0;then
+	fail $PID "show user test succeeded after disconnect id (user should be gone)"
+fi
+
+# -----------------------------------------------------------------------
+# Section 5: show id — output content
+# -----------------------------------------------------------------------
+echo ""
+echo "Section 5: show id..."
+
+get_cookie
+connect_with_cookie "${COOKIE}"
+
+ID=$(${OCCTL} -s ${OCCTL_SOCKET} --json show users 2>${OUTFILE} | jq -r '.[] | select(.Username == "test") | .ID // empty' | head -n1)
+if test -z "${ID}";then
+	fail $PID "Could not extract user ID from occtl show users output"
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} show id ${ID} >${OUTFILE}
+if test $? != 0;then
+	fail $PID "occtl show id failed"
+fi
+
+grep "test" ${OUTFILE}
+if test $? != 0;then
+	echo "Username 'test' not found in show id output"
+	cat ${OUTFILE}
+	fail $PID "show id output missing expected username"
+fi
+
+kill "$(cat ${CLIPID})" 2>/dev/null || true
+rm -f "${CLIPID}"
+sleep 2
+reset_client_routes
+
+# -----------------------------------------------------------------------
+# Section 6: show sessions all/valid and show session <SID>
+# -----------------------------------------------------------------------
+echo ""
+echo "Section 6: show sessions all / show sessions valid / show session..."
+
+get_cookie
+connect_with_cookie "${COOKIE}"
+
+# Wait for the session to reach authenticated state in 'show sessions valid',
+# then capture its SID. Querying 'show sessions all' first would risk picking
+# a session still in 'authenticating' state (or a leftover from a previous
+# section) before the SECM_SESSION_OPEN IPC has completed.
+SID=""
+for i in 1 2 3 4 5; do
+	SID=$(${OCCTL} -s ${OCCTL_SOCKET} --json show sessions valid | \
+		jq -r '.[] | select((.Username // "") == "test") | .Session' | head -n1)
+	test -n "${SID}" && break
+	sleep 2
+done
+if test -z "${SID}";then
+	fail $PID "Could not extract session ID from occtl show sessions valid output"
+fi
+
+# Verify the session also appears in 'show sessions all'
+${OCCTL} -s ${OCCTL_SOCKET} show sessions all >${OUTFILE}
+if test $? != 0;then
+	fail $PID "occtl show sessions all failed"
+fi
+
+grep "${SID}" ${OUTFILE}
+if test $? != 0;then
+	echo "Session ID '${SID}' not found in show sessions all output"
+	cat ${OUTFILE}
+	fail $PID "show sessions all missing expected session ID"
+fi
+
+# Verify the session appears in 'show sessions valid'
+${OCCTL} -s ${OCCTL_SOCKET} show sessions valid >${OUTFILE}
+if test $? != 0;then
+	fail $PID "occtl show sessions valid failed"
+fi
+
+grep "${SID}" ${OUTFILE}
+if test $? != 0;then
+	echo "Session ID '${SID}' not found in show sessions valid output"
+	cat ${OUTFILE}
+	fail $PID "show sessions valid missing expected session ID"
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} show session ${SID} >${OUTFILE}
+if test $? != 0;then
+	fail $PID "occtl show session ${SID} failed"
+fi
+
+grep "test" ${OUTFILE}
+if test $? != 0;then
+	echo "Username 'test' not found in show session output"
+	cat ${OUTFILE}
+	fail $PID "show session output missing expected username"
+fi
+
+kill "$(cat ${CLIPID})" 2>/dev/null || true
+rm -f "${CLIPID}"
+sleep 2
+reset_client_routes
+
+# -----------------------------------------------------------------------
+# Section 7: terminate user — cookie invalidation
+# -----------------------------------------------------------------------
+echo ""
+echo "Section 7: terminate user..."
+
+get_cookie
+SAVED_COOKIE="${COOKIE}"
+connect_with_cookie "${SAVED_COOKIE}"
+
+${OCCTL} -s ${OCCTL_SOCKET} terminate user test
+if test $? != 0;then
+	fail $PID "occtl terminate user failed"
+fi
+
+kill "$(cat ${CLIPID})" 2>/dev/null || true
+rm -f "${CLIPID}"
+sleep 2
+reset_client_routes
+
+assert_cookie_rejected "${SAVED_COOKIE}"
+
+# -----------------------------------------------------------------------
+# Section 8: show ip ban points / show ip bans / unban ip
+# -----------------------------------------------------------------------
+echo ""
+echo "Section 8: show ip ban points, show ip bans, unban ip..."
+
+# Trigger ban: 5 wrong-password attempts (5 * 10 pts = 50 = max-ban-score)
+echo "Connecting with wrong password 5 times to trigger ban..."
+for i in 1 2 3 4 5; do
+	echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q \
+		${ADDRESS}:${PORT} -u test --authenticate \
+		--servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= || true
+done
+
+sleep 1
+
+# show ip ban points — client address must appear
+${OCCTL} -s ${OCCTL_SOCKET} --json show ip ban points >${OUTFILE}
+if test $? != 0;then
+	fail $PID "occtl show ip ban points failed"
+fi
+
+grep "${CLI_ADDRESS}" ${OUTFILE}
+if test $? != 0;then
+	echo "Client address '${CLI_ADDRESS}' not found in show ip ban points output"
+	cat ${OUTFILE}
+	fail $PID "show ip ban points missing expected client address"
+fi
+
+# show ip bans — client address must be in ban list
+${OCCTL} -s ${OCCTL_SOCKET} --json show ip bans >${OUTFILE}
+if test $? != 0;then
+	fail $PID "occtl show ip bans failed"
+fi
+
+grep "${CLI_ADDRESS}" ${OUTFILE}
+if test $? != 0;then
+	echo "Client address '${CLI_ADDRESS}' not found in show ip bans output"
+	cat ${OUTFILE}
+	fail $PID "show ip bans missing expected client address"
+fi
+
+# show status — confirm ban count = 1
+${OCCTL} -s ${OCCTL_SOCKET} show status >${OUTFILE}
+if test $? != 0;then
+	fail $PID "occtl show status failed"
+fi
+
+grep "IPs in ban list: 1" ${OUTFILE}
+if test $? != 0;then
+	echo "Expected 'IPs in ban list: 1' not found after triggering ban"
+	cat ${OUTFILE}
+	fail $PID "show status ban count mismatch after triggering ban"
+fi
+
+# unban ip — functional test
+${OCCTL} -s ${OCCTL_SOCKET} unban ip ${CLI_ADDRESS}
+if test $? != 0;then
+	fail $PID "occtl unban ip failed"
+fi
+
+sleep 1
+
+# verify cleared
+${OCCTL} -s ${OCCTL_SOCKET} show status >${OUTFILE}
+if test $? != 0;then
+	fail $PID "occtl show status failed after unban"
+fi
+
+grep "IPs in ban list: 0" ${OUTFILE}
+if test $? != 0;then
+	echo "Expected 'IPs in ban list: 0' not found after unban"
+	cat ${OUTFILE}
+	fail $PID "show status ban count still non-zero after unban ip"
+fi
+
+# verify can connect again after unban
+get_cookie
+
+exit 0

@@ -78,7 +78,7 @@ static int init_listen_namespace(const char *ns_name)
 }
 
 /* open default and listen namespaces */
-int open_namespaces(struct netns_fds *netns, struct perm_cfg_st *config)
+int open_namespaces(struct netns_fds *netns, struct static_cfg_st *config)
 {
 	netns->default_fd = init_default_namespace();
 	if (netns->default_fd < 0)

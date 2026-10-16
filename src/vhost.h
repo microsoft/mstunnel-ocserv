@@ -24,6 +24,7 @@
 /* Virtual host entries; common between main and sec-mod */
 #include <config.h>
 #include "tlslib.h"
+#include <cfg.pb-c.h>
 
 #define MAX_PIN_SIZE GNUTLS_PKCS11_MAX_PIN_LEN
 typedef struct pin_st {
@@ -34,7 +35,14 @@ typedef struct pin_st {
 typedef struct vhost_cfg_st {
 	struct list_node list;
 	char *name;
-	struct perm_cfg_st perm_config;
+
+	/* === Reloadable on SIGHUP === */
+	ReloadableConfig *config; /* protobuf-generated reloadable config */
+	int *usage_count; /* ref-count for in-flight workers */
+	struct list_head attic; /* old configs awaiting ref-count drain */
+
+	/* === Non-reloadable: requires restart === */
+	struct static_cfg_st static_config;
 
 	tls_st creds;
 	/* set to non-zero if authentication/accounting is initialized */
@@ -61,7 +69,8 @@ typedef struct vhost_cfg_st {
 	size_t auth_size;
 	char **eauth;
 	size_t eauth_size;
-	unsigned int expose_iroutes;
+	/* set after cfg_copy_from_default() populates this vhost from default */
+	unsigned int cfg_inherited;
 #ifdef HAVE_GSSAPI
 	char **urlfw;
 	size_t urlfw_size;
@@ -89,23 +98,23 @@ static inline struct vhost_cfg_st *GETVHOST(void *s)
 	return v;
 }
 
-static inline struct cfg_st *GETCONFIG(void *s)
+static inline ReloadableConfig *GETRCONFIG(void *s)
 	__attribute__((returns_nonnull));
-static inline struct cfg_st *GETCONFIG(void *s)
+static inline ReloadableConfig *GETRCONFIG(void *s)
 {
 	return v;
 }
 
-static inline struct perm_cfg_st *GETPCONFIG(void *s)
+static inline struct static_cfg_st *GETSCONFIG(void *s)
 	__attribute__((returns_nonnull));
-static inline struct perm_cfg_st *GETPCONFIG(void *s)
+static inline struct static_cfg_st *GETSCONFIG(void *s)
 {
 	return v;
 }
 #else
 #define GETVHOST(s) default_vhost((s)->vconfig)
-#define GETCONFIG(s) GETVHOST(s)->perm_config.config
-#define GETPCONFIG(s) (&(GETVHOST(s)->perm_config))
+#define GETRCONFIG(s) GETVHOST(s)->config
+#define GETSCONFIG(s) (&(GETVHOST(s)->static_config))
 
 inline static vhost_cfg_st *default_vhost(struct list_head *vconfig)
 {

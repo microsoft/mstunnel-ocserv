@@ -30,6 +30,7 @@ srcdir=${srcdir:-.}
 TMPFILE=ocfile.$$.tmp
 PIDFILE=ocserv-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
+CLIPID2=oc-pid2.$$.tmp
 OCCTL_SOCKET=./occtl-$$.socket
 
 . `dirname $0`/common.sh
@@ -44,13 +45,10 @@ fi
 echo "Testing ocserv disconnection via occtl... "
 
 function finish {
-  set +e
   echo " * Cleaning up..."
-  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
-  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
-  test -n "${CLIPID}" && test -f "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
-  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
-  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  test -n "${CLIPID2}" && test -f "${CLIPID2}" && kill $(cat ${CLIPID2}) >/dev/null 2>&1
+  test -n "${CLIPID2}" && rm -f "${CLIPID2}" >/dev/null 2>&1
+  cleanup_client_server
   test -n "${TMPFILE}" && rm -f ${TMPFILE} >/dev/null 2>&1
 }
 trap finish EXIT
@@ -99,7 +97,7 @@ if test $? != 0;then
 fi
 
 echo " * Re-connecting to obtain cookie after disconnect... "
-( ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script -C "${COOKIE}" --pid-file=${CLIPID} -b )
+( ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script -C "${COOKIE}" --pid-file=${CLIPID2} -b )
 if test $? = 0;then
 	echo "Succeeded using the cookie to connect"
 	exit 1

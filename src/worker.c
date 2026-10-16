@@ -45,7 +45,6 @@ asn1_node _kkdcp_pkix1_asn;
 
 extern struct snapshot_t *config_snapshot;
 
-int syslog_open;
 sigset_t sig_default_set;
 static unsigned int allow_broken_clients;
 
@@ -65,6 +64,9 @@ int main(int argc, char *argv[])
 #ifdef DEBUG_LEAKS
 	talloc_enable_leak_report_full();
 #endif
+
+	saved_argc = argc;
+	saved_argv = argv;
 
 	if (!getenv(OCSERV_ENV_WORKER_STARTUP_MSG)) {
 		fprintf(stderr,
@@ -155,19 +157,19 @@ int main(int argc, char *argv[])
 	snapshot_terminate(config_snapshot);
 	config_snapshot = NULL;
 
-	if (GETPCONFIG(s)->syslog) {
+	if (GETSCONFIG(s)->syslog) {
 		flags = LOG_PID | LOG_NDELAY;
 #ifdef LOG_PERROR
-		if (GETPCONFIG(s)->log_stderr)
+		if (GETSCONFIG(s)->log_stderr)
 			flags |= LOG_PERROR;
 #endif
-		openlog("ocserv", flags, LOG_DAEMON);
+		openlog("ocserv", flags, GETSCONFIG(s)->syslog_facility);
 		syslog_open = 1;
 	}
 
 #ifdef HAVE_LIBWRAP
-	allow_severity = LOG_DAEMON | LOG_INFO;
-	deny_severity = LOG_DAEMON | LOG_WARNING;
+	allow_severity = GETSCONFIG(s)->syslog_facility | LOG_INFO;
+	deny_severity = GETSCONFIG(s)->syslog_facility | LOG_WARNING;
 #endif
 
 #ifdef HAVE_GSSAPI
@@ -190,6 +192,7 @@ int main(int argc, char *argv[])
 	DTLS_ACTIVE(ws)->dtls_tptr.fd = -1;
 	DTLS_INACTIVE(ws)->dtls_tptr.fd = -1;
 
+	set_worker_mem_limits(ws);
 	set_worker_fd_limits(ws);
 
 	/* Drop privileges after this point */

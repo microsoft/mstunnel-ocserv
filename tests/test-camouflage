@@ -75,7 +75,7 @@ else
 fi
 
 echo "Checking with CURL that server returns HTTP 200 for user authenticated GET"
-http_result=$(curl --insecure https://localhost:${PORT}/cert.pem --output /dev/null --cookie "${HTTP_COOKIE}" --silent --write-out "%{http_code}")
+http_result=$(curl --insecure https://localhost:${PORT}/svc --output /dev/null --cookie "${HTTP_COOKIE}" --silent --write-out "%{http_code}")
 if [ "${http_result}" != "200" ]; then
 	fail ${PID} "Server returned ${http_result} instead of 200 for GET"
 fi
@@ -88,7 +88,7 @@ if [ ! -f "${CLIENTPIDFILE}" ];then
 	fail ${PID} "Failed to establish the session"
 fi
 echo "Seems like the connection is established, stopping the client to finish the test...."
-kill -USR1 `cat "${CLIENTPIDFILE}"`
+kill `cat "${CLIENTPIDFILE}"`
 if test $? != 0;then
     fail ${PID} "Client process could not be killed"
 fi

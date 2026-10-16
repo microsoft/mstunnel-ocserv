@@ -209,7 +209,7 @@ static int handle_cookie_auth_res(main_server_st *s, struct proc_st *proc,
 		ret = result;
 	} else {
 		proc->status = PS_AUTH_FAILED;
-		mslog(s, proc, LOG_ERR, "unexpected auth result: %d\n", result);
+		mslog(s, proc, LOG_ERR, "unexpected auth result: %d", result);
 		ret = ERR_BAD_COMMAND;
 	}
 
@@ -259,7 +259,7 @@ int handle_worker_commands(main_server_st *s, struct proc_st *proc)
 	}
 
 	mslog(s, proc, LOG_DEBUG,
-	      "main received worker's message '%s' of %u bytes\n",
+	      "main received worker's message '%s' of %u bytes",
 	      cmd_request_to_str(cmd), (unsigned int)length);
 
 	raw = talloc_size(proc, length);
@@ -325,8 +325,8 @@ int handle_worker_commands(main_server_st *s, struct proc_st *proc)
 		TunMtuMsg *tmsg;
 		unsigned int minimum_mtu = RFC_791_MTU;
 		unsigned int maximum_mtu =
-			proc->vhost->perm_config.config->default_mtu != 0 ?
-				proc->vhost->perm_config.config->default_mtu :
+			proc->vhost->config->default_mtu != 0 ?
+				proc->vhost->config->default_mtu :
 				MAX_DTLS_MTU;
 
 		if (proc->status != PS_AUTH_COMPLETED) {
@@ -384,7 +384,7 @@ int handle_worker_commands(main_server_st *s, struct proc_st *proc)
 			user_hostname_update(s, proc);
 		}
 
-		if (GETCONFIG(s)->listen_proxy_proto) {
+		if (GETRCONFIG(s)->listen_proxy_proto) {
 			if (tmsg->has_remote_addr &&
 			    tmsg->remote_addr.len <=
 				    sizeof(struct sockaddr_storage)) {

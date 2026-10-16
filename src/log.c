@@ -34,6 +34,8 @@
 /* This global variable is used by oc_syslog() */
 int global_log_prio = DEFAULT_LOG_LEVEL;
 
+int syslog_open;
+
 void __attribute__((format(printf, 2, 3))) oc_syslog(int priority,
 						     const char *fmt, ...)
 {

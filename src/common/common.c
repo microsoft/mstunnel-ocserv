@@ -33,6 +33,7 @@
 #include <limits.h>
 #include <assert.h>
 #include <nettle/sha1.h>
+#include <nettle/version.h>
 #include "common.h"
 #include "defs.h"
 #include "common/base64-helper.h"
@@ -59,7 +60,11 @@ static void safe_hash(const uint8_t *data, unsigned int data_size,
 	sha1_init(&ctx);
 
 	sha1_update(&ctx, data_size, data);
+#if NETTLE_VERSION_MAJOR >= 4
+	sha1_digest(&ctx, output);
+#else
 	sha1_digest(&ctx, 20, output);
+#endif
 }
 
 char *calc_safe_id(const uint8_t *data, unsigned int size, char *output,
@@ -168,6 +173,14 @@ const char *cmd_request_to_str(unsigned int _cmd)
 		return "sm: reload";
 	case CMD_SECM_RELOAD_REPLY:
 		return "sm: reload reply";
+	case CMD_SECM_TERMINATE_USER_SESSIONS:
+		return "sm: terminate user sessions";
+	case CMD_SECM_TERMINATE_USER_SESSIONS_REPLY:
+		return "sm: terminate user sessions reply";
+	case CMD_SECM_TERMINATE_SESSION:
+		return "sm: terminate session";
+	case CMD_SECM_TERMINATE_SESSION_REPLY:
+		return "sm: terminate session reply";
 	default:
 		snprintf(tmp, sizeof(tmp), "unknown (%u)", _cmd);
 		return tmp;

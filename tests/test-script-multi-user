@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Copyright (C) 2013-2016 Nikos Mavrogiannopoulos
 #
@@ -26,55 +26,47 @@ PIDFILE=ocserv-pid.$$.tmp
 VPNNET=172.29.205.0/24
 OUTFILE=out.$$.tmp
 USERNAME=test
+OCCTL_SOCKET=./occtl-test-script-$$.socket
 
 . `dirname $0`/common.sh
 
 eval "${GETPORT}"
 
-if test "${DISABLE_ASAN_BROKEN_TESTS}" = 1;then
-	echo "Skipping test requiring ldpreload"
-	exit 77
-fi
+function finish {
+	echo " * Cleaning up..."
+	test -f "${PIDFILE}" && kill -- -$(cat ${PIDFILE}) 2>/dev/null
+	wait
+	rm -f ${OUTFILE} ${PIDFILE} test-sleep.tmp
+}
+trap finish EXIT
 
 rm -f test-sleep.tmp
 
-OCCTL_SOCKET=./occtl-test-script-$$.socket
-
 echo "Testing whether ocserv blocks when script blocks..."
 update_config test-script-multi-user.config
+${SERV} -p ${PIDFILE} -f -c ${CONFIG} -d 1 >/dev/null 2>&1 &
+PID=$!
 
-launch_sr_server -d 1 -f -c ${CONFIG} & PID=$!
-wait_server $PID
+sleep 5
 
 echo "Connecting to force script block... "
-echo "!@#$%^&*()<>" | timeout 60 $OPENCONNECT -q localhost:$PORT -u "sp@c/al" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s /bin/true &
+echo "!@#\$%^&*()<>" | timeout 60 ${OPENCONNECT} -q localhost:${PORT} -u "sp@c/al" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s /bin/true &
 
 sleep 3
 
 echo "Connecting to obtain cookie... "
-( echo "${USERNAME}" | $OPENCONNECT -q localhost:$PORT -u "${USERNAME}" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
+( echo "${USERNAME}" | ${OPENCONNECT} -q localhost:${PORT} -u "${USERNAME}" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
 echo "Connecting in background... "
-( echo "${USERNAME}" | timeout 15 $OPENCONNECT -q localhost:$PORT -u "${USERNAME}" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --background >/dev/null 2>&1 ) ||
+( echo "${USERNAME}" | timeout 15 ${OPENCONNECT} -q localhost:${PORT} -u "${USERNAME}" --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --background >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect to server; probably blocked"
 
 sleep 3
 
 echo "Calling occtl"
-${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME} >$OUTFILE
+${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME} >${OUTFILE}
 
-kill $PID
-wait
+grep ${USERNAME} ${OUTFILE} || fail $PID "Username not found in occtl output"
 
-grep ${USERNAME} ${OUTFILE}
-if test $? != 0;then
-	ret=1
-else
-	ret=0
-fi
-
-rm -f $OUTFILE
-rm -f test-sleep.tmp
-
-exit $ret
+exit 0

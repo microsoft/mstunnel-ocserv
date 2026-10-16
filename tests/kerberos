@@ -27,7 +27,7 @@ PIDFILE=ocserv-pid.$$.tmp
 KRB5PIDFILE=krb5-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
 PATH=${PATH}:/usr/sbin
-IP=$(which ip)
+IP=$(command -v ip)
 OUTFILE=traffic.$$.tmp
 # This port needs to be fixed to 443 due to KKDCP
 PORT=443
@@ -57,15 +57,10 @@ fi
 echo "Testing ocserv with kerberos... "
 
 function finish {
-  set +e
   echo " * Cleaning up..."
-  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  cleanup_client_server
   test -e "${KRB5PIDFILE}" && kill $(cat ${KRB5PIDFILE}) >/dev/null 2>&1
   test -e "${KRB5PIDFILE}" && rm -f ${KRB5PIDFILE} >/dev/null 2>&1
-  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
-  test -e "${CLIPID}" && kill -s INT $(cat ${CLIPID}) >/dev/null 2>&1
-  test -e "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
-  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
   rm -f ${OUTFILE} 2>&1
   #reset kerberos changes
   echo -e "secret123\nsecret123"|/usr/sbin/kdb5_util destroy -f

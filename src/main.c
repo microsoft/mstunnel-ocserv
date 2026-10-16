@@ -82,7 +82,6 @@ char **worker_argv;
 static void listen_watcher_cb(EV_P_ ev_io *w, int revents);
 static void resume_accept_cb(EV_P_ ev_timer *w, int revents);
 
-int syslog_open;
 sigset_t sig_default_set;
 struct ev_loop *main_loop;
 static unsigned int allow_broken_clients;
@@ -132,11 +131,10 @@ static void add_listener(void *pool, struct listen_list_st *list, int fd,
 	list->total++;
 }
 
-static void set_udp_socket_options(struct perm_cfg_st *config, int fd,
-				   int family)
+static void set_udp_socket_options(ReloadableConfig *config, int fd, int family)
 {
 	int y;
-	if (config->config->try_mtu) {
+	if (config->try_mtu) {
 		set_mtu_disc(fd, family, 1);
 	}
 #if defined(IP_PKTINFO)
@@ -167,9 +165,9 @@ static void set_common_socket_options(int fd)
 	set_cloexec_flag(fd, 1);
 }
 
-static int _listen_ports(void *pool, struct perm_cfg_st *config,
-			 struct addrinfo *res, struct listen_list_st *list,
-			 struct netns_fds *netns)
+static int _listen_ports(void *pool, struct static_cfg_st *sconfig,
+			 ReloadableConfig *rconfig, struct addrinfo *res,
+			 struct listen_list_st *list, struct netns_fds *netns)
 {
 	struct addrinfo *ptr;
 	int s, y;
@@ -187,7 +185,7 @@ static int _listen_ports(void *pool, struct perm_cfg_st *config,
 		else
 			continue;
 
-		if (config->foreground != 0)
+		if (sconfig->foreground != 0)
 			fprintf(stderr, "listening (%s) on %s...\n", type,
 				human_addr(ptr->ai_addr, ptr->ai_addrlen, buf,
 					   sizeof(buf)));
@@ -218,7 +216,7 @@ static int _listen_ports(void *pool, struct perm_cfg_st *config,
 		}
 
 		if (ptr->ai_socktype == SOCK_DGRAM) {
-			set_udp_socket_options(config, s, ptr->ai_family);
+			set_udp_socket_options(rconfig, s, ptr->ai_family);
 		}
 
 		if (bind(s, ptr->ai_addr, ptr->ai_addrlen) < 0) {
@@ -250,8 +248,9 @@ static int _listen_ports(void *pool, struct perm_cfg_st *config,
 
 /* Returns 0 on success or negative value on error.
  */
-static int listen_ports(void *pool, struct perm_cfg_st *config,
-			struct listen_list_st *list, struct netns_fds *netns)
+static int listen_ports(void *pool, struct static_cfg_st *sconfig,
+			ReloadableConfig *rconfig, struct listen_list_st *list,
+			struct netns_fds *netns)
 {
 	struct addrinfo hints, *res;
 	char portname[6];
@@ -297,7 +296,7 @@ static int listen_ports(void *pool, struct perm_cfg_st *config,
 			}
 
 			if (type == SOCK_DGRAM)
-				set_udp_socket_options(config, fd, family);
+				set_udp_socket_options(rconfig, fd, family);
 
 			/* obtain socket params */
 			tmp_sock_len = sizeof(tmp_sock);
@@ -312,21 +311,21 @@ static int listen_ports(void *pool, struct perm_cfg_st *config,
 
 			if (type == SOCK_STREAM) {
 				if (family == AF_INET)
-					config->port = ntohs(
+					sconfig->port = ntohs(
 						((struct sockaddr_in *)&tmp_sock)
 							->sin_port);
 				else
-					config->port =
+					sconfig->port =
 						ntohs(((struct sockaddr_in6
 								*)&tmp_sock)
 							      ->sin6_port);
 			} else if (type == SOCK_DGRAM) {
 				if (family == AF_INET)
-					config->udp_port = ntohs(
+					sconfig->udp_port = ntohs(
 						((struct sockaddr_in *)&tmp_sock)
 							->sin_port);
 				else
-					config->udp_port =
+					sconfig->udp_port =
 						ntohs(((struct sockaddr_in6
 								*)&tmp_sock)
 							      ->sin6_port);
@@ -345,7 +344,7 @@ static int listen_ports(void *pool, struct perm_cfg_st *config,
 			exit(EXIT_FAILURE);
 		}
 
-		if (config->foreground != 0)
+		if (sconfig->foreground != 0)
 			fprintf(stderr, "listening on %d systemd sockets...\n",
 				list->total);
 
@@ -353,13 +352,13 @@ static int listen_ports(void *pool, struct perm_cfg_st *config,
 	}
 #endif
 
-	if (config->port == 0) {
+	if (sconfig->port == 0) {
 		fprintf(stderr, "tcp-port option is mandatory!\n");
 		return -1;
 	}
 
-	if (config->port != 0) {
-		snprintf(portname, sizeof(portname), "%d", config->port);
+	if (sconfig->port != 0) {
+		snprintf(portname, sizeof(portname), "%d", sconfig->port);
 
 		memset(&hints, 0, sizeof(hints));
 		hints.ai_socktype = SOCK_STREAM;
@@ -369,14 +368,14 @@ static int listen_ports(void *pool, struct perm_cfg_st *config,
 #endif
 			;
 
-		ret = getaddrinfo(config->listen_host, portname, &hints, &res);
+		ret = getaddrinfo(sconfig->listen_host, portname, &hints, &res);
 		if (ret != 0) {
 			fprintf(stderr, "getaddrinfo() failed: %s\n",
 				gai_strerror(ret));
 			return -1;
 		}
 
-		ret = _listen_ports(pool, config, res, list, netns);
+		ret = _listen_ports(pool, sconfig, rconfig, res, list, netns);
 		freeaddrinfo(res);
 
 		if (ret < 0) {
@@ -389,8 +388,8 @@ static int listen_ports(void *pool, struct perm_cfg_st *config,
 		exit(EXIT_FAILURE);
 	}
 
-	if (config->udp_port) {
-		snprintf(portname, sizeof(portname), "%d", config->udp_port);
+	if (sconfig->udp_port) {
+		snprintf(portname, sizeof(portname), "%d", sconfig->udp_port);
 
 		memset(&hints, 0, sizeof(hints));
 		hints.ai_socktype = SOCK_DGRAM;
@@ -400,7 +399,7 @@ static int listen_ports(void *pool, struct perm_cfg_st *config,
 #endif
 			;
 
-		ret = getaddrinfo(config->udp_listen_host, portname, &hints,
+		ret = getaddrinfo(sconfig->udp_listen_host, portname, &hints,
 				  &res);
 		if (ret != 0) {
 			fprintf(stderr, "getaddrinfo() failed: %s\n",
@@ -408,7 +407,7 @@ static int listen_ports(void *pool, struct perm_cfg_st *config,
 			return -1;
 		}
 
-		ret = _listen_ports(pool, config, res, list, netns);
+		ret = _listen_ports(pool, sconfig, rconfig, res, list, netns);
 		if (ret < 0) {
 			return -1;
 		}
@@ -430,7 +429,7 @@ static void set_worker_udp_opts(main_server_st *s, int fd, int family)
 		perror("setsockopt(SO_REUSEADDR) failed");
 	}
 
-	if (GETCONFIG(s)->try_mtu) {
+	if (GETRCONFIG(s)->try_mtu) {
 		set_mtu_disc(fd, family, 1);
 	}
 	set_cloexec_flag(fd, 1);
@@ -561,7 +560,7 @@ static unsigned int get_session_id(main_server_st *s, uint8_t *buffer,
 		return 0;
 	}
 
-	if (!GETCONFIG(s)->dtls_psk)
+	if (!GETRCONFIG(s)->dtls_psk)
 		goto fallback;
 
 	/* try to read the extension data */
@@ -671,7 +670,7 @@ static int forward_udp_to_owner(main_server_st *s, struct listener_st *listener)
 	ret = oc_recvfrom_at(listener->fd, s->msg_buffer, sizeof(s->msg_buffer),
 			     0, (struct sockaddr *)&cli_addr, &cli_addr_size,
 			     (struct sockaddr *)&our_addr, &our_addr_size,
-			     GETPCONFIG(s)->udp_port);
+			     GETSCONFIG(s)->udp_port);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_INFO, "error receiving in UDP socket");
 		return -1;
@@ -717,14 +716,14 @@ static int forward_udp_to_owner(main_server_st *s, struct listener_st *listener)
 
 	if (s->msg_buffer[0] != 22) {
 		mslog(s, NULL, LOG_DEBUG,
-		      "%s: unexpected DTLS content type: %u; possibly a firewall disassociated a UDP session",
+		      "%s: unexpected DTLS content type: %u; likely a stale packet from a closed session or expired NAT mapping",
 		      human_addr((struct sockaddr *)&cli_addr, cli_addr_size,
 				 tbuf, sizeof(tbuf)),
 		      (unsigned int)s->msg_buffer[0]);
-		/* Here we received a non-client-hello packet. It may be that
-		 * the client's NAT changed its UDP source port and the previous
-		 * connection is invalidated. Try to see if we can simply match
-		 * the IP address and forward the socket.
+		/* Here we received a non-client-hello packet. This could be an in-flight
+		 * packet destined to the worker that recently terminated, or a client whose
+		 * NAT changed its UDP source port, invalidating the previous connection.
+		 * Try to see if we can simply match the IP address and forward the socket.
 		 */
 		match_ip_only = 1;
 	} else {
@@ -768,6 +767,23 @@ static int forward_udp_to_owner(main_server_st *s, struct listener_st *listener)
 	}
 
 	if (proc_to_send != 0) {
+		/* Avoid race between AUTH_COOKIE_REP and CMD_UDP_FD messages */
+		if (proc_to_send->status != PS_AUTH_COMPLETED) {
+			mslog(s, proc_to_send, LOG_DEBUG,
+			      "Discarding DTLS packet; the client is not authenticated yet");
+			goto fail;
+		}
+
+		if (GETSCONFIG(s)->udp_port == 0 ||
+		    proc_to_send->config->no_udp) {
+			mslog(s, proc_to_send, LOG_WARNING,
+			      "Received UDP packet from %s while UDP is disabled for this client. "
+			      "Possible cause: compromised worker or incorrect worker match.",
+			      human_addr((struct sockaddr *)&cli_addr,
+					 cli_addr_size, tbuf, sizeof(tbuf)));
+			goto fail;
+		}
+
 		UdpFdMsg msg = UDP_FD_MSG__INIT;
 
 		if (now - proc_to_send->udp_fd_receive_time <=
@@ -875,20 +891,20 @@ static void sec_mod_child_watcher_cb(struct ev_loop *loop, ev_child *w,
 
 	if (WIFSIGNALED(w->rstatus)) {
 		if (WTERMSIG(w->rstatus) == SIGSEGV)
-			mslog(s, NULL, LOG_ERR,
-			      "Sec-mod %u died with sigsegv\n",
+			mslog(s, NULL, LOG_ERR, "Sec-mod %u died with sigsegv",
 			      (unsigned int)w->pid);
 		else if (WTERMSIG(w->rstatus) == SIGSYS)
-			mslog(s, NULL, LOG_ERR, "Sec-mod %u died with sigsys\n",
+			mslog(s, NULL, LOG_ERR, "Sec-mod %u died with sigsys",
 			      (unsigned int)w->pid);
 		else
 			mslog(s, NULL, LOG_ERR,
-			      "Sec-mod %u died with signal %d\n",
+			      "Sec-mod %u died with signal %d",
 			      (unsigned int)w->pid, (int)WTERMSIG(w->rstatus));
 	}
 
 	ev_child_stop(loop, w);
 	mslog(s, NULL, LOG_ERR, "ocserv-secmod died unexpectedly");
+	s->abnormal_exit = 1;
 	ev_feed_signal_event(loop, SIGTERM);
 }
 
@@ -925,14 +941,13 @@ static void worker_child_watcher_cb(struct ev_loop *loop, ev_child *w,
 
 	if (WIFSIGNALED(w->rstatus)) {
 		if (WTERMSIG(w->rstatus) == SIGSEGV)
-			mslog(s, NULL, LOG_ERR, "Child %u died with sigsegv\n",
+			mslog(s, NULL, LOG_ERR, "Child %u died with sigsegv",
 			      (unsigned int)w->pid);
 		else if (WTERMSIG(w->rstatus) == SIGSYS)
-			mslog(s, NULL, LOG_ERR, "Child %u died with sigsys\n",
+			mslog(s, NULL, LOG_ERR, "Child %u died with sigsys",
 			      (unsigned int)w->pid);
 		else
-			mslog(s, NULL, LOG_ERR,
-			      "Child %u died with signal %d\n",
+			mslog(s, NULL, LOG_ERR, "Child %u died with signal %d",
 			      (unsigned int)w->pid, (int)WTERMSIG(w->rstatus));
 	}
 
@@ -968,7 +983,7 @@ static void kill_children_auth_timeout(main_server_st *s)
 {
 	struct proc_st *ctmp = NULL, *cpos;
 	time_t oldest_permitted_session =
-		time(NULL) - GETCONFIG(s)->auth_timeout;
+		time(NULL) - GETRCONFIG(s)->auth_timeout;
 
 	/* kill the security module server */
 	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list)
@@ -1023,7 +1038,7 @@ static void term_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revents)
 {
 	main_server_st *s = ev_userdata(loop);
 	struct listener_st *ltmp = NULL, *lpos;
-	unsigned int server_drain_ms = GETCONFIG(s)->server_drain_ms;
+	unsigned int server_drain_ms = GETRCONFIG(s)->server_drain_ms;
 
 	if (server_drain_ms == 0) {
 		terminate_server(s);
@@ -1068,7 +1083,7 @@ static void reload_sig_watcher_cb(struct ev_loop *loop, ev_signal *w,
 		* used key. */
 		ret = secmod_reload(&s->sec_mod_instances[i]);
 		if (ret < 0) {
-			mslog(s, NULL, LOG_ERR, "could not reload sec-mod!\n");
+			mslog(s, NULL, LOG_ERR, "could not reload sec-mod!");
 			ev_feed_signal_event(loop, SIGTERM);
 		}
 	}
@@ -1096,7 +1111,7 @@ static void resume_accept_cb(EV_P_ ev_timer *w, int revents)
 		(struct listener_st *)((char *)w - offsetof(struct listener_st,
 							    resume_accept));
 	// Add hysteresis to the pause/resume cycle to damp oscillations
-	unsigned int resume_threshold = GETCONFIG(s)->max_clients * 9 / 10;
+	unsigned int resume_threshold = GETRCONFIG(s)->max_clients * 9 / 10;
 
 	// Only resume accepting connections if we are under the limit
 	if (resume_threshold == 0 ||
@@ -1139,8 +1154,8 @@ static void listen_watcher_cb(EV_P_ ev_io *w, int revents)
 		set_block(fd);
 #endif
 
-		if (GETCONFIG(s)->max_clients > 0 &&
-		    s->stats.active_clients >= GETCONFIG(s)->max_clients) {
+		if (GETRCONFIG(s)->max_clients > 0 &&
+		    s->stats.active_clients >= GETRCONFIG(s)->max_clients) {
 			close(fd);
 			mslog(s, NULL, LOG_INFO,
 			      "reached maximum client limit (active: %u)",
@@ -1156,7 +1171,7 @@ static void listen_watcher_cb(EV_P_ ev_io *w, int revents)
 		}
 
 		if (ws->conn_type != SOCK_TYPE_UNIX &&
-		    !GETCONFIG(s)->listen_proxy_proto) {
+		    !GETRCONFIG(s)->listen_proxy_proto) {
 			memset(&ws->our_addr, 0, sizeof(ws->our_addr));
 			ws->our_addr_len = sizeof(ws->our_addr);
 			if (getsockname(fd, (struct sockaddr *)&ws->our_addr,
@@ -1195,7 +1210,6 @@ static void listen_watcher_cb(EV_P_ ev_io *w, int revents)
 				close(s->sec_mod_instances[i].sec_mod_fd_sync);
 			}
 
-			setproctitle(PACKAGE "-worker");
 			kill_on_parent_kill(SIGTERM);
 
 			set_self_oom_score_adj(s);
@@ -1267,7 +1281,7 @@ static void listen_watcher_cb(EV_P_ ev_io *w, int revents)
 				if (path_length == -1) {
 					mslog(s, NULL, LOG_ERR,
 					      "readlink failed %s",
-					      strerror(ret));
+					      strerror(errno));
 					exit(EXIT_FAILURE);
 				}
 				path[path_length] = '\0';
@@ -1327,8 +1341,8 @@ fork_failed:
 		forward_udp_to_owner(s, ltmp);
 	}
 
-	if (GETCONFIG(s)->max_clients > 0 &&
-	    s->stats.active_clients >= GETCONFIG(s)->max_clients) {
+	if (GETRCONFIG(s)->max_clients > 0 &&
+	    s->stats.active_clients >= GETRCONFIG(s)->max_clients) {
 		ltmp->resume_accept.repeat = ((ev_tstamp)(1));
 		ev_io_stop(loop, &ltmp->io);
 		ev_timer_again(loop, &ltmp->resume_accept);
@@ -1339,7 +1353,7 @@ fork_failed:
 	//   Arm the flow control timer.
 	//   Stop accepting connections.
 	// When the timer fires, it resumes accepting the connections.
-	if (GETCONFIG(s)->rate_limit_ms > 0) {
+	if (GETRCONFIG(s)->rate_limit_ms > 0) {
 		int rqueue = 0;
 		int wqueue = 0;
 		int retval = sockdiag_query_unix_domain_socket_queue_length(
@@ -1351,10 +1365,10 @@ fork_failed:
 		      rqueue, wqueue);
 		if (retval || rqueue > wqueue / 2) {
 			mslog(s, NULL, LOG_INFO, "delaying accepts for %d ms",
-			      GETCONFIG(s)->rate_limit_ms);
+			      GETRCONFIG(s)->rate_limit_ms);
 			// Arm the timer and pause accept
 			ltmp->resume_accept.repeat =
-				((ev_tstamp)(GETCONFIG(s)->rate_limit_ms)) /
+				((ev_tstamp)(GETRCONFIG(s)->rate_limit_ms)) /
 				1000.;
 			ev_io_stop(loop, &ltmp->io);
 			ev_timer_again(loop, &ltmp->resume_accept);
@@ -1568,35 +1582,36 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	if (GETPCONFIG(s)->listen_netns_name &&
-	    open_namespaces(&s->netns, GETPCONFIG(s)) < 0) {
+	if (GETSCONFIG(s)->listen_netns_name &&
+	    open_namespaces(&s->netns, GETSCONFIG(s)) < 0) {
 		fprintf(stderr, "cannot init listen namespaces\n");
 		exit(EXIT_FAILURE);
 	}
 	/* Listen to network ports */
-	ret = listen_ports(s, GETPCONFIG(s), &s->listen_list, &s->netns);
+	ret = listen_ports(s, GETSCONFIG(s), GETRCONFIG(s), &s->listen_list,
+			   &s->netns);
 	if (ret < 0) {
 		fprintf(stderr, "Cannot listen to specified ports\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (GETPCONFIG(s)->syslog) {
+	if (GETSCONFIG(s)->syslog) {
 		flags = LOG_PID | LOG_NDELAY;
 #ifdef LOG_PERROR
-		if (GETPCONFIG(s)->log_stderr && GETPCONFIG(s)->syslog)
+		if (GETSCONFIG(s)->log_stderr && GETSCONFIG(s)->syslog)
 			flags |= LOG_PERROR;
 #endif
-		openlog("ocserv", flags, LOG_DAEMON);
+		openlog("ocserv", flags, GETSCONFIG(s)->syslog_facility);
 		syslog_open = 1;
 	}
 
 #ifdef HAVE_LIBWRAP
-	allow_severity = LOG_DAEMON | LOG_INFO;
-	deny_severity = LOG_DAEMON | LOG_WARNING;
+	allow_severity = GETSCONFIG(s)->syslog_facility | LOG_INFO;
+	deny_severity = GETSCONFIG(s)->syslog_facility | LOG_WARNING;
 #endif
 
-	if (GETPCONFIG(s)->foreground == 0) {
-		if (daemon(GETPCONFIG(s)->no_chdir, 0) == -1) {
+	if (GETSCONFIG(s)->foreground == 0) {
+		if (daemon(GETSCONFIG(s)->no_chdir, 0) == -1) {
 			e = errno;
 			fprintf(stderr, "daemon failed: %s\n", strerror(e));
 			exit(EXIT_FAILURE);
@@ -1613,13 +1628,13 @@ int main(int argc, char *argv[])
 	write_pid_file();
 
 	// Start the configured number of ocserv-sm processes
-	s->sec_mod_instance_count = GETPCONFIG(s)->sec_mod_scale;
+	s->sec_mod_instance_count = GETSCONFIG(s)->sec_mod_scale;
 
 	if (s->sec_mod_instance_count == 0) {
-		if (GETCONFIG(s)->max_clients != 0) {
+		if (GETRCONFIG(s)->max_clients != 0) {
 			// Compute ideal number of clients per sec-mod
 			unsigned int sec_mod_count_for_users =
-				GETCONFIG(s)->max_clients /
+				GETRCONFIG(s)->max_clients /
 					MINIMUM_USERS_PER_SEC_MOD +
 				1;
 			// Limit it to number of processors.
@@ -1659,11 +1674,11 @@ int main(int argc, char *argv[])
 
 	/* chdir to our chroot directory, to allow opening the sec-mod
 	 * socket if necessary. */
-	if (GETPCONFIG(s)->chroot_dir) {
-		if (chdir(GETPCONFIG(s)->chroot_dir) != 0) {
+	if (GETSCONFIG(s)->chroot_dir) {
+		if (chdir(GETSCONFIG(s)->chroot_dir) != 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "cannot chdir to %s: %s",
-			      GETPCONFIG(s)->chroot_dir, strerror(e));
+			      GETSCONFIG(s)->chroot_dir, strerror(e));
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -1672,7 +1687,7 @@ int main(int argc, char *argv[])
 	for (i = 0; i < s->sec_mod_instance_count; i++) {
 		s->sec_mod_instances[i].secmod_addr.sun_family = AF_UNIX;
 		p = s->sec_mod_instances[i].socket_file;
-		if (GETPCONFIG(s)
+		if (GETSCONFIG(s)
 			    ->chroot_dir) /* if we are on chroot make the socket file path relative */
 			while (*p == '/')
 				p++;
@@ -1785,12 +1800,12 @@ int main(int argc, char *argv[])
 	for (i = 0; i < s->sec_mod_instance_count; i++) {
 		remove(s->sec_mod_instances[i].full_socket_file);
 	}
-	remove(GETPCONFIG(s)->occtl_socket_file);
+	remove(GETSCONFIG(s)->occtl_socket_file);
 	remove_pid_file();
 
 	snapshot_terminate(config_snapshot);
 
-	if (GETPCONFIG(s)->listen_netns_name &&
+	if (GETSCONFIG(s)->listen_netns_name &&
 	    close_namespaces(&s->netns) < 0) {
 		fprintf(stderr, "cannot close listen namespaces\n");
 		exit(EXIT_FAILURE);
@@ -1801,7 +1816,7 @@ int main(int argc, char *argv[])
 	talloc_free(s->main_pool);
 	closelog();
 
-	return 0;
+	return s->abnormal_exit ? EXIT_FAILURE : 0;
 }
 
 extern char **pam_auth_group_list;
@@ -1861,11 +1876,15 @@ static bool set_env_from_ws(main_server_st *s)
 		}
 		if (rr < 0) {
 			mslog(s, NULL, LOG_ERR,
-			      "snapshot restoration failed (%d)\n", ret);
+			      "snapshot restoration failed (%d)", rr);
 			goto cleanup;
 		}
 
 		entries[index] = talloc_zero(s, SnapshotEntryMsg);
+		if (entries[index] == NULL) {
+			mslog(s, NULL, LOG_ERR, "memory error");
+			goto cleanup;
+		}
 		*entries[index] = entry_template;
 		entries[index]->file_descriptor = fd;
 		entries[index]->file_name = (char *)file_name;
@@ -1884,31 +1903,31 @@ static bool set_env_from_ws(main_server_st *s)
 	msg_size = worker_startup_msg__get_packed_size(&msg);
 	if (msg_size == 0) {
 		mslog(s, NULL, LOG_ERR,
-		      "worker_startup_msg__get_packed_size failed\n");
+		      "worker_startup_msg__get_packed_size failed");
 		goto cleanup;
 	}
 
 	msg_buffer = talloc_size(ws, msg_size);
 	if (!msg_buffer) {
-		mslog(s, NULL, LOG_ERR, "talloc_size failed\n");
+		mslog(s, NULL, LOG_ERR, "talloc_size failed");
 		goto cleanup;
 	}
 	msg_size = worker_startup_msg__pack(&msg, msg_buffer);
 	if (msg_size == 0) {
-		mslog(s, NULL, LOG_ERR, "worker_startup_msg__pack failed\n");
+		mslog(s, NULL, LOG_ERR, "worker_startup_msg__pack failed");
 		goto cleanup;
 	}
 	string_size = BASE64_ENCODE_RAW_LENGTH(msg_size) + 1;
 	string_buffer = talloc_size(ws, string_size);
 	if (!msg_buffer) {
-		mslog(s, NULL, LOG_ERR, "talloc_size failed\n");
+		mslog(s, NULL, LOG_ERR, "talloc_size failed");
 		goto cleanup;
 	}
 
 	oc_base64_encode((const char *)msg_buffer, msg_size, string_buffer,
 			 string_size);
 	if (setenv(OCSERV_ENV_WORKER_STARTUP_MSG, string_buffer, 1)) {
-		mslog(s, NULL, LOG_ERR, "setenv failed\n");
+		mslog(s, NULL, LOG_ERR, "setenv failed");
 		goto cleanup;
 	}
 

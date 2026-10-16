@@ -121,19 +121,19 @@ int post_kkdcp_handler(worker_st *ws, unsigned int http_ver)
 	int ret, e, fd = -1;
 	struct http_req_st *req = &ws->req;
 	unsigned int i, length;
-	kkdcp_st *kkdcp = NULL;
+	KkdcpConfig *kkdcp = NULL;
 	uint8_t *buf;
 	uint32_t mlength;
 	char realm[128] = "";
 	const char *reason = "Unknown";
-	kkdcp_realm_st *kr;
+	KkdcpRealmConfig *kr;
 
 	oclog(ws, LOG_INFO, "Processing KKDCP request");
 
-	for (i = 0; i < WSCONFIG(ws)->kkdcp_size; i++) {
-		if (WSCONFIG(ws)->kkdcp[i].url &&
-		    strcmp(WSCONFIG(ws)->kkdcp[i].url, req->url) == 0) {
-			kkdcp = &WSCONFIG(ws)->kkdcp[i];
+	for (i = 0; i < WSRCONFIG(ws)->n_kkdcp; i++) {
+		if (WSRCONFIG(ws)->kkdcp[i]->url &&
+		    strcmp(WSRCONFIG(ws)->kkdcp[i]->url, req->url) == 0) {
+			kkdcp = WSRCONFIG(ws)->kkdcp[i];
 			break;
 		}
 	}
@@ -150,7 +150,7 @@ int post_kkdcp_handler(worker_st *ws, unsigned int http_ver)
 		return -1;
 	}
 
-	ws_add_score_to_ip(ws, WSCONFIG(ws)->ban_points_kkdcp, 0, 0);
+	ws_add_score_to_ip(ws, WSRCONFIG(ws)->ban_points_kkdcp, 0, 0);
 	oclog(ws, LOG_HTTP_DEBUG,
 	      "HTTP processing kkdcp framed request: %u bytes",
 	      req->body_length);
@@ -171,13 +171,13 @@ int post_kkdcp_handler(worker_st *ws, unsigned int http_ver)
 		goto fail;
 	}
 
-	kr = &kkdcp->realms[0];
-	if (realm[0] != 0 && kkdcp->realms_size > 1) {
+	kr = kkdcp->realms[0];
+	if (realm[0] != 0 && kkdcp->n_realms > 1) {
 		oclog(ws, LOG_DEBUG, "kkdcp: client asked for '%s'", realm);
 
-		for (i = 0; i < kkdcp->realms_size; i++) {
-			if (strcmp(kkdcp->realms[i].realm, realm) == 0) {
-				kr = &kkdcp->realms[i];
+		for (i = 0; i < kkdcp->n_realms; i++) {
+			if (strcmp(kkdcp->realms[i]->realm, realm) == 0) {
+				kr = kkdcp->realms[i];
 				break;
 			}
 		}
@@ -191,7 +191,7 @@ int post_kkdcp_handler(worker_st *ws, unsigned int http_ver)
 		goto fail;
 	}
 
-	ret = connect(fd, (struct sockaddr *)&kr->addr, kr->addr_len);
+	ret = connect(fd, (struct sockaddr *)kr->addr.data, kr->addr.len);
 	if (ret == -1) {
 		e = errno;
 		oclog(ws, LOG_ERR, "kkdcp: connect error: %s", strerror(e));

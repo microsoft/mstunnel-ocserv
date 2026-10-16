@@ -25,4 +25,4 @@ GNUTLS_NAME="(DTLS1.2)-(PSK)"
 TEST_CONFIG="test-psk-negotiate.config"
 MATCH_CIPHERS=false
 
-. cipher-common.sh
+. ${srcdir}/cipher-common.sh

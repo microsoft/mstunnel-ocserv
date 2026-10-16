@@ -111,26 +111,10 @@ results=$(LD_PRELOAD=libsocket_wrapper.so curl -I -X GET -s https://$ADDRESS:$PO
 CheckHeaders "$results"
 echo "ok"
 
-echo -n "Testing /cert.pem ... "
-results=$(LD_PRELOAD=libsocket_wrapper.so curl -I -X GET -s https://$ADDRESS:$PORT/cert.pem --insecure)
+echo -n "Testing /svc ... "
+results=$(LD_PRELOAD=libsocket_wrapper.so curl -I -X GET -s https://$ADDRESS:$PORT/svc --insecure)
 CheckHeaders "$results"
 echo "ok"
-
-echo -n "Testing /cert.cer ... "
-results=$(LD_PRELOAD=libsocket_wrapper.so curl -I -X GET -s https://$ADDRESS:$PORT/cert.cer --insecure)
-CheckHeaders "$results"
-echo "ok"
-
-echo -n "Testing /ca.pem ... "
-results=$(LD_PRELOAD=libsocket_wrapper.so curl -I -X GET -s https://$ADDRESS:$PORT/ca.pem --insecure)
-CheckHeaders "$results"
-echo "ok"
-
-echo -n "Testing /ca.cer ... "
-results=$(LD_PRELOAD=libsocket_wrapper.so curl -I -X GET -s https://$ADDRESS:$PORT/ca.cer --insecure)
-CheckHeaders "$results"
-echo "ok"
-
 
 cleanup
 

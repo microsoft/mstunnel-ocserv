@@ -22,9 +22,9 @@
 # it sets variables needs by ns.sh. For tests that need two server
 # sets include additionally random-net2.sh
 
-IPCALC=$(which ipcalc-ng 2>/dev/null)
+IPCALC=$(command -v ipcalc-ng)
 if test -z "${IPCALC}"; then
-	IPCALC=$(which ipcalc 2>/dev/null)
+	IPCALC=$(command -v ipcalc)
 fi
 
 if test -z "${IPCALC}"; then

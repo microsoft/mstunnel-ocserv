@@ -20,6 +20,7 @@
 #define OC_ISOLATE_H
 
 void set_worker_fd_limits(struct worker_st *);
+void set_worker_mem_limits(struct worker_st *);
 
 void drop_privileges(struct worker_st *ws, main_server_st *s);
 

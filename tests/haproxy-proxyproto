@@ -26,8 +26,8 @@ CLIPID=oc-pid.$$.tmp
 HACONFIG=haproxy.conf.$$.tmp
 PATH=${PATH}:/usr/sbin
 OCCTL_SOCKET=./occtl-haproxy-$$.socket
-HAPROXY=$(which haproxy)
-IP=$(which ip)
+HAPROXY=$(command -v haproxy)
+IP=$(command -v ip)
 OUTPUT=./proxyproto.tmp
 
 . `dirname $0`/common.sh
@@ -55,15 +55,10 @@ fi
 echo "Testing ocserv connection via haproxy... "
 
 function finish {
-  set +e
   echo " * Cleaning up..."
+  cleanup_client_server
   test -n "${HAPID}" && kill ${HAPID} >/dev/null 2>&1
-  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
-  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
-  test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
-  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
   test -n "${HACONFIG}" && rm -f ${HACONFIG} >/dev/null 2>&1
-  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
   test -n "${NUTTCPPID}" && kill ${NUTTCPPID} >/dev/null 2>&1
   rm -f proxyproto-connect-ok
   rm -f $OUTPUT
@@ -90,7 +85,12 @@ rm -f ${HACONFIG}
 sed -e 's|@HAPORT@|'${HAPORT}'|g' -e 's|@PORT@|'${PORT}'|g' -e 's|@ADDRESS@|'${ADDRESS}'|g' ${srcdir}/data/haproxy-proxyproto.cfg >${HACONFIG}
 ${CMDNS2} ${HAPROXY} -f ${HACONFIG} -d & HAPID=$!
 
-sleep 3
+sleep 1
+if ! kill -0 ${HAPID} 2>/dev/null; then
+	echo "haproxy failed to start (config incompatible with this version?)"
+	exit 1
+fi
+sleep 2
 
 # Run clients
 echo " * Getting cookie from ${ADDRESS}:${HAPORT}..."

@@ -1,8 +1,7 @@
 # ocpasswd(8) -- OpenConnect server password utility
 
 ## SYNOPSIS
-**ocpasswd** [--option-name[=value]] ['username']
-
+**ocpasswd** \[ **-flag** \[<value>\] | **--option-name**\[\[=| \]<value>\] \]... <username>
 
 ## DESCRIPTION
 This  program is openconnect password (ocpasswd) utility. It allows the generation
@@ -10,27 +9,27 @@ and handling of a 'plain' password file used by ocserv.
 
 ## OPTIONS
 
-  * **-c, --passwd**=_FILE_::
+  * **-c, --passwd**=_FILE_:
     Specify the password file to use. Only useful when not using the default
-    location.
+    location. The default is _/etc/ocserv/ocpasswd_.
 
-  * **-g, --group**::
+  * **-g, --group**:
     Specify the user's group name. Note that groups of one character such as
     '*' and 'x', are ignored.
 
-  * **-d, --delete**::
+  * **-d, --delete**:
     Deletes the specified user from the password file.
 
-  * **-l, --lock**::
+  * **-l, --lock**:
     Prevents the specified user from logging in by locking its password.
 
-  * **-u, --unlock**::
+  * **-u, --unlock**:
     Re-enables login for the specified user by unlocking its password.
 
-  * **-h, --help**::
+  * **-h, --help**:
     Display usage information and exit.
 
-  * **-v, --version**::
+  * **-v, --version**:
     Output version of program and exit.
 
 ## EXIT STATUS

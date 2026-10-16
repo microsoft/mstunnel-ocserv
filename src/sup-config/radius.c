@@ -38,7 +38,7 @@
 #include <auth/radius.h>
 #include "log.h"
 
-static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
+static int get_sup_config(ReloadableConfig *cfg, client_entry_st *entry,
 			  SecmSessionReplyMsg *msg, void *pool)
 {
 	struct radius_ctx_st *pctx = entry->auth_ctx;
@@ -66,7 +66,7 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 
 	if (pctx->routes_size > 0) {
 		msg->config->routes =
-			talloc_size(pool, pctx->routes_size * sizeof(char *));
+			talloc_array(pool, char *, pctx->routes_size);
 		if (msg->config->routes != NULL) {
 			for (i = 0; i < pctx->routes_size; i++) {
 				msg->config->routes[i] =
@@ -100,7 +100,7 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 		dns++;
 
 	if (dns > 0) {
-		msg->config->dns = talloc_size(pool, dns * sizeof(char *));
+		msg->config->dns = talloc_array(pool, char *, dns);
 		if (msg->config->dns != NULL) {
 			unsigned int pos = 0;
 

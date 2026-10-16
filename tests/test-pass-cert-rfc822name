@@ -1,0 +1,68 @@
+#!/bin/sh
+#
+# Copyright (C) 2013-2024 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+ISOLATE_WORKERS=false
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+
+echo "Testing local backend with username-password and SAN rfc822name certificate... "
+
+update_config test-user-cert-rfc822name.config
+launch_sr_server -d 1 -f -c ${CONFIG} & PID=$!
+wait_server $PID
+
+echo -n "Connecting to obtain cookie (without certificate)... "
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test@example.org --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) &&
+	fail $PID "Connected without certificate!"
+
+echo ok
+
+echo -n "Connecting to obtain cookie (with certificate)... "
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-san-cert.pem -u test@example.org --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) ||
+	fail $PID "Could not connect with certificate!"
+
+echo ok
+
+echo -n "Connecting to obtain cookie (with incorrect certificate)... "
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert-wrong.pem -u test@example.org --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) &&
+	fail $PID "Should not have connected with wrong certificate!"
+
+echo ok
+
+echo -n "Connecting to obtain cookie (with certificate with different RFC822 name)... "
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert-rfc822name-other.pem -u test@example.org --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) &&
+	fail $PID "Should not have connected with certificate for a different user!"
+
+echo ok
+
+echo -n "Connecting to obtain cookie (with certificate without RFC822 SAN)... "
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert.pem -u test@example.org --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) &&
+	fail $PID "Should not have connected with certificate lacking RFC822 SAN!"
+
+echo ok
+
+cleanup
+
+exit 0

@@ -25,7 +25,7 @@ srcdir=${srcdir:-.}
 
 eval "${GETPORT}"
 
-TCPDUMP=${TCPDUMP:-$(which tcpdump)}
+TCPDUMP=${TCPDUMP:-$(command -v tcpdump)}
 
 if test -z "${TCPDUMP}" || ! test -x ${TCPDUMP};then
 	echo "You need tcpdump to run this test"
@@ -35,17 +35,18 @@ fi
 
 echo "Testing whether replay of DTLS hello breaks client session... "
 
-PIDFILE1="${srcdir}/ci$$-1.pid.tmp"
-PIDFILE2="${srcdir}/ci$$-2.pid.tmp"
+PIDFILE1="ci$$-1.pid.tmp"
+PIDFILE2="ci$$-2.pid.tmp"
 TCPDUMP_FILE="${srcdir}/dtls_hello.pcap"
 rm -f "${PIDFILE1}" "${PIDFILE2}"
 
 function finish {
   set +e
   echo " * Cleaning up..."
-  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
   test -f "${PIDFILE1}" && kill $(cat ${PIDFILE1}) >/dev/null 2>&1
   test -f "${PIDFILE2}" && kill $(cat ${PIDFILE2}) >/dev/null 2>&1
+  sleep 2
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
   test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
   test -n "${TCPDUMP_FILE}" && rm -f "${TCPDUMP_FILE}" >/dev/null 2>&1
   rm -f "${PIDFILE1}" "${PIDFILE2}" 2>&1

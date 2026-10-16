@@ -45,16 +45,31 @@ echo -n "Connecting to obtain cookie (with certificate)... "
 
 echo ok
 
+# Regression test for https://gitlab.com/openconnect/ocserv/-/work_items/323:
+# wrong password on first attempt followed by correct password must succeed.
+echo -n "Connecting with wrong password then correct password with certificate (retry in same session)... "
+( printf "wrongpass\ntest\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --passwd-on-stdin -q $ADDRESS:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert.pem -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly ) ||
+	fail $PID "Could not obtain cookie after password retry with certificate in same session"
+
+echo ok
+
 echo -n "Connecting to obtain cookie (with incorrect certificate)... "
 ( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert-wrong.pem -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Should not have connected with wrong certificate!"
 
 echo ok
 
+echo -n "Connecting to obtain cookie (with certificate with different UID OID)... "
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert-uid-other.pem -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) &&
+	fail $PID "Should not have connected with certificate for a different user!"
 
-#echo "Normal connection... "
-#( echo "test" | $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --script=/bin/true ) ||
-#	fail $PID "Could not connect to server"
+echo ok
+
+echo -n "Connecting to obtain cookie (with certificate without UID OID)... "
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert-no-uid.pem -u test --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly >/dev/null 2>&1 ) &&
+	fail $PID "Should not have connected with certificate lacking UID OID!"
+
+echo ok
 
 cleanup
 

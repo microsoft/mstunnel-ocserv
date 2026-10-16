@@ -26,7 +26,7 @@ srcdir=${srcdir:-.}
 PIDFILE=ocserv-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
 PATH=${PATH}:/usr/sbin
-IP=$(which ip)
+IP=$(command -v ip)
 OUTFILE=traffic.$$.tmp
 
 . `dirname $0`/common.sh
@@ -43,17 +43,19 @@ if test "$(id -u)" != "0";then
 	exit 77
 fi
 
+if echo "${GNUTLS_NAME}" | grep -q "DTLS0.9"; then
+	if ! gnutls-cli --list --priority 'NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-128-CBC:+SHA1:+RSA:+SIGN-ALL:%COMPAT' 2>/dev/null | grep -q "^TLS_"; then
+		echo "GnuTLS does not support DTLS0.9 ciphers, skipping test"
+		exit 77
+	fi
+fi
+
 echo "Testing ocserv connection with ${CIPHER_NAME} under legacy DTLS... "
 
 function finish {
-  set +e
   echo " * Cleaning up..."
-  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
-  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
-  test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
-  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
-  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
-  rm -f ${OUTFILE} 2>&1
+  cleanup_client_server
+  rm -f ${OUTFILE} 2>/dev/null
 }
 trap finish EXIT
 

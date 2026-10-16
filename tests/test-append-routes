@@ -29,7 +29,7 @@ eval "${GETPORT}"
 
 echo "Testing ocserv and user append-route application... "
 
-TMPFILE1=${srcdir}/test-append-routes.tmp
+TMPFILE1=test-append-routes.$$.tmp
 
 rm -f ${TMPFILE1}
 
